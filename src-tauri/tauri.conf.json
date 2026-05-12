@@ -22,12 +22,13 @@
         "title": "Quick Capture",
         "visible": false,
         "width": 540,
-        "height": 320,
+        "height": 220,
         "minWidth": 480,
-        "minHeight": 300,
+        "minHeight": 180,
         "resizable": false,
         "alwaysOnTop": true,
         "decorations": false,
+        "transparent": true,
         "skipTaskbar": true,
         "center": true
       }
