@@ -193,7 +193,7 @@ pub async fn connect_project(
     project_path: String,
     app: AppHandle,
     registry: State<'_, Arc<ProjectRegistry>>,
-    _server_registry: State<'_, Arc<DoltServerRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
     watcher_registry: State<'_, Arc<WatcherRegistry>>,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
 ) -> Result<ProjectMeta, String> {
@@ -231,23 +231,31 @@ pub async fn connect_project(
         .to_string();
 
     let bd_path = settings.lock().unwrap().binary_paths.bd.clone();
+    let dolt_path_override = settings.lock().unwrap().binary_paths.dolt.clone();
     let database_url = if dolt_mode == "embedded" {
-        // One-time migration: BeadSpec previously spawned its own dolt sql-server
-        // against the same directory bd uses in embedded mode, causing noms LOCK
-        // contention. Migrate to bd-managed server mode so both share one instance.
-        let url = ensure_bd_server(
-            &beads_dir,
-            &db_name,
-            None,
-            &canonical_project_path,
-            &bd_path,
-        )
-        .await?;
-        // Update metadata.json so future opens skip this migration path.
+        // Embedded mode: BeadSpec spawns its own Dolt sidecar. After getting the
+        // port, write dolt-server.port and flip metadata.json to server mode so that
+        // bd CLI commands connect to this sidecar instead of opening Dolt in-process.
+        // On the next app session the project will be in server mode and bd dolt start
+        // will manage the server lifecycle — no more competing locks.
+        let embeddeddolt_dir = beads_dir.join("embeddeddolt");
+        recovery::guard(&canonical_project_path, &embeddeddolt_dir)
+            .await
+            .map_err(|e| format!("Dolt recovery failed: {e}"))?;
+        let port = server_registry
+            .spawn_or_get(
+                &canonical_project_path,
+                &embeddeddolt_dir,
+                &dolt_path_override,
+            )
+            .await?;
+        // Write the port file so bd (in server mode) can discover this sidecar.
+        let _ = std::fs::write(beads_dir.join("dolt-server.port"), port.to_string());
+        // Migrate metadata so future sessions use bd dolt start instead of embedded.
         migrate_metadata_to_server_mode(&beads_dir).unwrap_or_else(|e| {
             eprintln!("[warn] metadata migration failed (non-fatal): {e}");
         });
-        url
+        format!("mysql://root:@127.0.0.1:{port}/{db_name}")
     } else {
         let metadata_port = meta.as_ref().and_then(|m| m.dolt_port);
         ensure_bd_server(
