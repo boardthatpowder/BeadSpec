@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { emitTo } from '@tauri-apps/api/event'
+import { emitTo, listen } from '@tauri-apps/api/event'
 import { load } from '@tauri-apps/plugin-store'
 import { commands } from './bindings'
 import type { WorkspaceContext } from './bindings'
+import { ACTIVE_PROJECT_EVENT } from './hooks/useProject'
+import type { ActiveProjectChangedPayload } from './hooks/useProject'
 import './index.css'
 
 // Helper: unwrap tauri-specta typed Result
@@ -42,24 +44,37 @@ export default function QuickCaptureApp() {
   const containerRef = useRef<HTMLDivElement>(null)
   const appWindow = getCurrentWindow()
 
-  // Load workspace context on mount
-  useEffect(() => {
-    ;(async () => {
-      try {
+  const loadActiveProject = useCallback(async (pathOverride?: string | null) => {
+    try {
+      let path = pathOverride
+      if (path === undefined) {
         const store = await load('app.json')
-        const path = await store.get<string>('last-active-project')
-        setProjectPath(path ?? null)
-        if (path) {
-          const ctx = await unwrap(commands.getWorkspaceContext(path))
-          setChips(contextToChips(ctx))
-        }
-      } catch {
-        setProjectPath(null)
-      } finally {
-        setLoadingProject(false)
+        path = await store.get<string>('last-active-project') ?? null
       }
-    })()
+      setProjectPath(path)
+      if (path) {
+        const ctx = await unwrap(commands.getWorkspaceContext(path))
+        setChips(contextToChips(ctx))
+      } else {
+        setChips([])
+      }
+    } catch {
+      setProjectPath(null)
+      setChips([])
+    } finally {
+      setLoadingProject(false)
+    }
   }, [])
+
+  // Load on mount and keep in sync when main window changes the active project
+  useEffect(() => {
+    loadActiveProject()
+    const unlisten = listen<ActiveProjectChangedPayload>(
+      ACTIVE_PROJECT_EVENT,
+      (e) => loadActiveProject(e.payload.path),
+    )
+    return () => { unlisten.then(fn => fn()) }
+  }, [loadActiveProject])
 
   // Auto-focus input when window becomes visible
   useEffect(() => {

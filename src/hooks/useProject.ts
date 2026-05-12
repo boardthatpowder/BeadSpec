@@ -1,15 +1,23 @@
 import { create } from 'zustand'
 import { load } from '@tauri-apps/plugin-store'
+import { emitTo } from '@tauri-apps/api/event'
 import { commands, unwrap } from '../ipc'
 import type { WorkspaceContext } from '../bindings'
 
 const STORE_KEY = 'last-active-project'
 const STORE_FILE = 'app.json'
 
+export const ACTIVE_PROJECT_EVENT = 'active-project://changed'
+export interface ActiveProjectChangedPayload {
+  path: string | null
+  projectId: string | null
+}
+
 async function saveActiveProject(path: string | null) {
   try {
     const store = await load(STORE_FILE)
     await store.set(STORE_KEY, path)
+    await store.save()
   } catch { /* ignore if store not available */ }
 }
 
@@ -28,6 +36,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setActiveProject: (path, projectId = null) => {
     set({ activeProject: path, activeProjectId: projectId })
     saveActiveProject(path)
+    emitTo('quick-capture', ACTIVE_PROJECT_EVENT, { path, projectId } satisfies ActiveProjectChangedPayload).catch(() => {})
   },
   setWorkspaceContext: (ctx) => set({ workspaceContext: ctx }),
 }))
