@@ -24,6 +24,7 @@ async fn spawn_managed_times_out_and_kills_child() {
         &args,
         std::path::Path::new("/tmp"),
         Duration::from_millis(100),
+        &[],
     )
     .await;
 
@@ -48,6 +49,7 @@ async fn spawn_managed_returns_output_for_normal_command() {
         &["-c", "echo hello"],
         std::path::Path::new("/tmp"),
         Duration::from_secs(5),
+        &[],
     )
     .await;
 
