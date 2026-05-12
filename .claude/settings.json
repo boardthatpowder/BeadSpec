@@ -73,8 +73,9 @@
       {
         "hooks": [
           {
-            "command": "openspec list 2\u003e/dev/null | head -20",
-            "type": "command"
+            "command": "openspec list 2>/dev/null | head -20",
+            "type": "command",
+            "timeout": 10
           }
         ]
       },
@@ -82,7 +83,8 @@
         "hooks": [
           {
             "command": "bd prime",
-            "type": "command"
+            "type": "command",
+            "timeout": 10
           }
         ],
         "matcher": ""
@@ -90,8 +92,9 @@
       {
         "hooks": [
           {
-            "command": "source ~/.claude/ruflo/lib/tags.sh 2\u003e/dev/null \u0026\u0026 ruflo memory search -q \"recent context $(git branch --show-current 2\u003e/dev/null)\" 2\u003e/dev/null | head -20 || true",
-            "type": "command"
+            "command": "source ~/.claude/ruflo/lib/tags.sh 2>/dev/null && ruflo memory search -q \"recent context $(git branch --show-current 2>/dev/null)\" 2>/dev/null | head -20 || true",
+            "type": "command",
+            "timeout": 10
           }
         ],
         "matcher": ""
@@ -99,8 +102,9 @@
       {
         "hooks": [
           {
-            "command": "ruflo hooks session-restore 2\u003e/dev/null || true",
-            "type": "command"
+            "command": "ruflo hooks session-restore 2>/dev/null || true",
+            "type": "command",
+            "timeout": 10
           }
         ],
         "matcher": ""

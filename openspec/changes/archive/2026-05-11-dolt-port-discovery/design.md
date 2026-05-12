@@ -1,6 +1,6 @@
 ## Context
 
-In server mode, a project's `dolt sql-server` is spawned and managed by the `bd` CLI (not by beads-ui). The CLI picks an ephemeral port and records it in `.beads/metadata.json` as `dolt_port`. However, the Tauri backend's `BeadsMetadata` struct (`commands/project.rs:21`) only deserialises `dolt_mode` and `dolt_database` — `dolt_port` is silently dropped. The `server_url()` helper then reads `.beads/port` or `.beads/dolt-server.port` (neither written by the current `bd`) and falls back to 3306. Nothing listens on 3306, the pool's 5 s `acquire_timeout` fires, and the user sees an opaque "pool timed out" error.
+In server mode, a project's `dolt sql-server` is spawned and managed by the `bd` CLI (not by BeadSpec). The CLI picks an ephemeral port and records it in `.beads/metadata.json` as `dolt_port`. However, the Tauri backend's `BeadsMetadata` struct (`commands/project.rs:21`) only deserialises `dolt_mode` and `dolt_database` — `dolt_port` is silently dropped. The `server_url()` helper then reads `.beads/port` or `.beads/dolt-server.port` (neither written by the current `bd`) and falls back to 3306. Nothing listens on 3306, the pool's 5 s `acquire_timeout` fires, and the user sees an opaque "pool timed out" error.
 
 Embedded-mode projects already work correctly because `recovery::guard` probes the port before the pool opens and the server is spawned by the app itself.
 

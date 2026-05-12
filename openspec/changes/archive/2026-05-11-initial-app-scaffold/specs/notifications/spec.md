@@ -41,7 +41,7 @@ The system SHALL provide a menu bar item (macOS) and system tray icon (Windows/L
 - **THEN** a compact popover SHALL appear showing:
   - Count of open tasks assigned to the user
   - Quick-create task form (title + priority only)
-  - "Open Beads UI" button to bring the main window to the foreground
+  - "Open BeadSpec" button to bring the main window to the foreground
 
 #### Scenario: User creates a task from the tray
 - **WHEN** the user fills in the quick-create form and submits

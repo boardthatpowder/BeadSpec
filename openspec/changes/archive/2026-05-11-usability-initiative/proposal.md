@@ -1,6 +1,6 @@
 ## Why
 
-beads-ui today surfaces a list/detail view of `bd` issues but exposes almost none of the workflow tooling the user already runs — OpenSpec artifacts live only as colored label chips, `bd` CLI features (health checks, formulas, human queue) are inaccessible from the UI, and there is no awareness of git history, Dolt time-travel, or ruflo memory. This initiative bridges the gap between the daily-use desktop app and the full OpenSpec/bd/ruflo stack it tracks, making beads-ui the central workspace rather than a passive mirror of Dolt.
+BeadSpec today surfaces a list/detail view of `bd` issues but exposes almost none of the workflow tooling the user already runs — OpenSpec artifacts live only as colored label chips, `bd` CLI features (health checks, formulas, human queue) are inaccessible from the UI, and there is no awareness of git history, Dolt time-travel, or ruflo memory. This initiative bridges the gap between the daily-use desktop app and the full OpenSpec/bd/ruflo stack it tracks, making BeadSpec the central workspace rather than a passive mirror of Dolt.
 
 ## What Changes
 

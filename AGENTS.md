@@ -1,6 +1,6 @@
-# Agent Workflow Guide — Beads UI
+# Agent Workflow Guide — BeadSpec
 
-Beads UI is a Tauri 2.0 desktop application (Rust + React/TypeScript) for managing Beads issue-tracking projects. It reads Dolt SQL directly, writes via the `bd` CLI, and syncs in real time via `dolt_log()` polling.
+BeadSpec is a Tauri 2.0 desktop application (Rust + React/TypeScript) for managing Beads issue-tracking projects. It reads Dolt SQL directly, writes via the `bd` CLI, and syncs in real time via `dolt_log()` polling.
 
 ## Working Agreements
 

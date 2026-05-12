@@ -1,7 +1,7 @@
 schema: spec-driven
 
 context: |
-  Beads UI is a Tauri 2.0 desktop app (Rust + React/TypeScript) for managing Beads issue-tracking
+  BeadSpec is a Tauri 2.0 desktop app (Rust + React/TypeScript) for managing Beads issue-tracking
   projects. Data is read directly from Dolt SQL (sqlx/mysql_async) and written via the bd CLI.
   Real-time sync polls dolt_log() every 2s; changed task IDs invalidate TanStack Query cache via
   Tauri events. Cross-platform: macOS, Windows, Linux. Full CRUD. Multi-project (one connection pool

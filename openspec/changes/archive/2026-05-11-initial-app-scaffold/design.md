@@ -1,6 +1,6 @@
 ## Context
 
-Beads UI is a greenfield desktop application. There is no existing codebase to migrate. The only external contracts are: the `bd` CLI (must be on PATH for writes), and the Dolt SQL database that `bd` manages (read directly for performance). The VSCode extension serves as a UX reference but shares no code.
+BeadSpec is a greenfield desktop application. There is no existing codebase to migrate. The only external contracts are: the `bd` CLI (must be on PATH for writes), and the Dolt SQL database that `bd` manages (read directly for performance). The VSCode extension serves as a UX reference but shares no code.
 
 Key constraints:
 - Must ship on macOS, Windows, and Linux from day one

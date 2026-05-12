@@ -1,6 +1,6 @@
 ## Why
 
-The `bd human` queue accumulates issues flagged for human decision (open questions, ambiguous requirements, agent-paused tasks) but is invisible unless the user actively runs `bd human list` in the terminal. Users working primarily in the Beads UI miss these pending decisions entirely, causing agent workflows to stall silently.
+The `bd human` queue accumulates issues flagged for human decision (open questions, ambiguous requirements, agent-paused tasks) but is invisible unless the user actively runs `bd human list` in the terminal. Users working primarily in the BeadSpec miss these pending decisions entirely, causing agent workflows to stall silently.
 
 ## What Changes
 

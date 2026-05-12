@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how the Beads UI resolves which port a server-mode project's Dolt SQL server is running on, probes it before opening a connection pool, and surfaces actionable errors when the server is absent or unresponsive.
+Defines how the BeadSpec resolves which port a server-mode project's Dolt SQL server is running on, probes it before opening a connection pool, and surfaces actionable errors when the server is absent or unresponsive.
 
 ---
 

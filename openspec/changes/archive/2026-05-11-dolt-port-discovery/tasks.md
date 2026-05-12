@@ -16,7 +16,7 @@
 
 ## 4. Immediate Workaround (pre-deploy unblock)
 
-- [x] 4.1 Write `60000` to `/Users/dean/workspaces/beads-ui/.beads/port` so the app can connect now with the current code while the fix is implemented; remove this file once 1.2 lands and the port is read from `metadata.json`
+- [x] 4.1 Write `60000` to `/Users/dean/workspaces/BeadSpec/.beads/port` so the app can connect now with the current code while the fix is implemented; remove this file once 1.2 lands and the port is read from `metadata.json`
 
 ## 5. Verification
 

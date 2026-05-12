@@ -28,7 +28,7 @@
 
 ## 5. Manual Testing
 
-- [x] 5.1 Run health panel on the beads-ui project itself: verify all five sections render, exit codes display correctly, and the "All checks passed" banner appears when appropriate
+- [x] 5.1 Run health panel on the BeadSpec project itself: verify all five sections render, exit codes display correctly, and the "All checks passed" banner appears when appropriate
 - [x] 5.2 Verify issue ID chips appear in output (trigger a lint warning that references an issue ID, or manually inspect a project with known issues) and that clicking a chip navigates to the correct task detail
 - [x] 5.3 Verify "bd not found" state by temporarily renaming/removing the bd binary from PATH and restarting the app
 

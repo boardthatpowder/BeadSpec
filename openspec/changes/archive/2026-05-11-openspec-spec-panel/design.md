@@ -19,7 +19,7 @@ fn resolve_project_root(registry: &ProjectRegistry) -> Result<PathBuf, String> {
 }
 ```
 
-If `AppState` does not yet expose a `current_project_path()` method, the command falls back to reading the first key from the `ProjectRegistry` HashMap. This is acceptable because beads-ui currently supports one active project at a time.
+If `AppState` does not yet expose a `current_project_path()` method, the command falls back to reading the first key from the `ProjectRegistry` HashMap. This is acceptable because BeadSpec currently supports one active project at a time.
 
 **`list_changes` command**
 

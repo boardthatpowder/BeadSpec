@@ -1,6 +1,6 @@
 ## Context
 
-Beads UI currently has no way for the user to manually trigger a data refresh — all cache invalidation is event-driven via the Rust dolt_log() poller. User preferences (density, zoom, actor, notification prefs) live in three different systems: `localStorage`, per-feature Zustand stores, and `@tauri-apps/plugin-store`. Binary paths for the four external runners (`bd`, `openspec`, `ruflo`, `dolt`) are either hardcoded strings or environment-specific auto-detect heuristics in Rust. There is no feature-flag system, making it impossible to ship Beads UI to environments where OpenSpec or Ruflo are not installed.
+BeadSpec currently has no way for the user to manually trigger a data refresh — all cache invalidation is event-driven via the Rust dolt_log() poller. User preferences (density, zoom, actor, notification prefs) live in three different systems: `localStorage`, per-feature Zustand stores, and `@tauri-apps/plugin-store`. Binary paths for the four external runners (`bd`, `openspec`, `ruflo`, `dolt`) are either hardcoded strings or environment-specific auto-detect heuristics in Rust. There is no feature-flag system, making it impossible to ship BeadSpec to environments where OpenSpec or Ruflo are not installed.
 
 ## Goals / Non-Goals
 

@@ -1,6 +1,6 @@
 ## Why
 
-When a user restarts the beads-ui app and switches to a server-mode project, the `connect_project` Tauri command has no reliable way to find the port the `bd`-spawned `dolt sql-server` is actually listening on. It falls through to port 3306 (a hardcoded default), times out after 5 seconds, and surfaces "Cannot connect to Dolt: pool timed out while waiting for an open connection" — giving the user no recovery path.
+When a user restarts the BeadSpec app and switches to a server-mode project, the `connect_project` Tauri command has no reliable way to find the port the `bd`-spawned `dolt sql-server` is actually listening on. It falls through to port 3306 (a hardcoded default), times out after 5 seconds, and surfaces "Cannot connect to Dolt: pool timed out while waiting for an open connection" — giving the user no recovery path.
 
 ## What Changes
 

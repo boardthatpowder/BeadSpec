@@ -2,7 +2,7 @@
 
 ## Why
 
-Ruflo stores rich workflow context (decisions, rationale, notes) as named memories, but those memories are only accessible from the CLI. When a developer opens a task in Beads-UI the relevant memories — why the approach was chosen, what was tried, what was decided — are invisible. The developer either has to remember to run `ruflo memory search` manually, or that context is simply lost. A collapsible "Related memories" section in the task detail pane surfaces the right context at the right time, without making ruflo a hard dependency.
+Ruflo stores rich workflow context (decisions, rationale, notes) as named memories, but those memories are only accessible from the CLI. When a developer opens a task in BeadSpec the relevant memories — why the approach was chosen, what was tried, what was decided — are invisible. The developer either has to remember to run `ruflo memory search` manually, or that context is simply lost. A collapsible "Related memories" section in the task detail pane surfaces the right context at the right time, without making ruflo a hard dependency.
 
 ## What
 
