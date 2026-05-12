@@ -18,6 +18,7 @@ import { BdHumanQueueChip } from '../notifications/BdHumanQueue'
 import { ChangesBrowser } from '../changes-browser/ChangesBrowser'
 import { RefreshButton } from './RefreshButton'
 import { SettingsButton } from './SettingsButton'
+import { HelpButton } from './HelpButton'
 import { useFeatureFlag, useSettings } from '../../contexts/SettingsContext'
 import type { Task } from '../../bindings'
 
@@ -125,7 +126,7 @@ function TopBar() {
               <circle cx="10" cy="10" r="2" />
             </svg>
           </div>
-          <span className="text-sm font-semibold text-white tracking-tight">Beads</span>
+          <span className="text-sm font-semibold text-white tracking-tight">BeadSpec</span>
         </div>
         <div className="w-px h-5 bg-neutral-800" />
         <ProjectSwitcher />
@@ -140,6 +141,7 @@ function TopBar() {
       <ViewSwitcher />
       <BdHumanQueueChip />
       <RefreshButton />
+      <HelpButton />
       <SettingsButton />
     </div>
   )

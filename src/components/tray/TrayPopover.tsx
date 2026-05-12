@@ -65,7 +65,7 @@ export function TrayPopover() {
   return (
     <div className="fixed bottom-16 right-4 z-50 w-72 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-neutral-200">Beads</span>
+        <span className="text-sm font-semibold text-neutral-200">BeadSpec</span>
         <IconButton
           label="Close"
           onClick={() => setOpen(false)}
