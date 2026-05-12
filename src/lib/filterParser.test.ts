@@ -186,7 +186,7 @@ describe('deserializeGroupConfig', () => {
 
 // ─── applyFilters — workspace AND-filter ──────────────────────────────────────
 
-const WS_LABELS = ['branch:main', 'worktree:BeadSpec', 'repo:BeadSpec']
+const WS_LABELS = ['worktree:BeadSpec', 'repo:BeadSpec']
 
 function makeFilterTask(id: string, labels: string[]): Task {
   return makeTask({ id, title: `Task ${id}`, status: 'open', priority: 2, labels })
@@ -194,7 +194,7 @@ function makeFilterTask(id: string, labels: string[]): Task {
 
 describe('applyFilters — workspace AND-filter', () => {
   const taskAllLabels = makeFilterTask('all', WS_LABELS)
-  const taskMissingOne = makeFilterTask('missing', ['branch:main', 'worktree:BeadSpec'])
+  const taskMissingOne = makeFilterTask('missing', ['worktree:BeadSpec'])
   const taskNoLabels = makeFilterTask('none', [])
   const taskExtraLabels = makeFilterTask('extra', [...WS_LABELS, 'openspec:foo'])
 

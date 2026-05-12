@@ -101,7 +101,7 @@ export function useTasks() {
   // Build workspace filter: scope is 'on' unless explicitly set to 'off' in hash
   const workspaceScope = state.workspaceScope === 'off' ? 'off' : 'on'
   const workspaceLabels = workspaceContext
-    ? [workspaceContext.label_branch, workspaceContext.label_worktree, workspaceContext.label_repo]
+    ? [workspaceContext.label_worktree, workspaceContext.label_repo]
     : []
 
   const filteredTasks = applyFilters(allTasks, activeFilters, {
