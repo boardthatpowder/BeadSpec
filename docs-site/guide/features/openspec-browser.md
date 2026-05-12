@@ -28,6 +28,8 @@ The right panel shows:
 - **Spec** — rendered Markdown of the spec
 - **Tasks** — checklist with real-time completion status (linked to Beads issues)
 
+![OpenSpec Browser with change list and task checklist](/screenshots/openspec-browser.png)
+
 Artifacts can also be opened as **doc tabs** in the workspace — useful when you want to keep a spec visible while working on issues side-by-side.
 
 ## Task completion status

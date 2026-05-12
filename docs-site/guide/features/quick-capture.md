@@ -2,6 +2,8 @@
 
 Quick Capture is a small floating window for creating issues without switching apps. It appears over any window and dismisses itself after you submit.
 
+![Quick Capture window with workspace context chips](/screenshots/quick-capture.png)
+
 ## Global shortcut
 
 | Platform | Default shortcut |

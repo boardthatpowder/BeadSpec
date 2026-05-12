@@ -14,6 +14,8 @@ The Checks tab runs a set of `bd` diagnostic commands against the connected proj
 | Stale | `bd stale` | Issues with no recent activity |
 | Orphans | `bd orphans` | Issues with broken or circular dependencies |
 
+![Health Checks tab showing pass and fail rows](/screenshots/health-checks.png)
+
 Each check shows a green tick (pass), red cross (fail), or spinner (running). Click a check row to expand the full output from `bd`.
 
 Click **Re-run** in the top-right to re-run all checks.

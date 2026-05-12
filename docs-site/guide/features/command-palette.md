@@ -2,6 +2,8 @@
 
 The command palette gives you keyboard-first access to tasks, views, and actions from anywhere in the app.
 
+![Command palette with fuzzy search results](/screenshots/command-palette.png)
+
 ## Opening
 
 Press `⌘K` (macOS) or `Ctrl+K` (Windows/Linux) from anywhere in the app. No input field needs to be focused.

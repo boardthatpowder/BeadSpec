@@ -2,6 +2,8 @@
 
 Click any issue in the task list to open its detail panel as a tab. The panel has three sub-tabs: **Details**, **Dependencies**, and **Activity**.
 
+![Task detail panel showing fields and description editor](/screenshots/task-detail.png)
+
 ## Details tab
 
 All fields can be edited inline — no save button needed. Changes are sent to `bd` immediately.
@@ -44,6 +46,8 @@ A chronological log of all changes to the issue:
 **Git history** — each commit that references this issue's ID (e.g. `BEADSPEC-042`) is shown inline, with the commit message, author, and timestamp.
 
 **Dolt revisions** — each Dolt commit that touched this issue's row is shown, letting you see the exact before/after of every field change, even ones not captured in comments.
+
+![Activity tab showing status-change events and Dolt revision rows](/screenshots/task-activity.png)
 
 ### Adding a comment
 

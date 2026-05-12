@@ -16,6 +16,8 @@ When any issues in the project are flagged for human decision, an amber **decisi
 ● N decisions
 ```
 
+![Human Queue chip open showing flagged issues](/screenshots/human-queue.png)
+
 Click the chip to open a popover listing all flagged issues. From the popover you can:
 - Click an issue to navigate to it
 - **Respond** to a decision (calls `bd human respond`)
