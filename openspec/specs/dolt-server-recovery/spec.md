@@ -165,9 +165,9 @@ The system SHALL append JSON-Lines entries to a platform-appropriate recovery lo
 #### Scenario: Log location per platform
 - **WHEN** the recovery layer writes an entry
 - **THEN** the log path SHALL be:
-  - macOS: `~/Library/Logs/beads-ui/recovery.log`
-  - Linux: `~/.local/share/beads-ui/recovery.log`
-  - Windows: `%LOCALAPPDATA%\beads-ui\Logs\recovery.log`
+  - macOS: `~/Library/Logs/BeadSpec/recovery.log`
+  - Linux: `~/.local/share/BeadSpec/recovery.log`
+  - Windows: `%LOCALAPPDATA%\BeadSpec\Logs\recovery.log`
 - **AND** the parent directory SHALL be created if missing
 
 #### Scenario: Entry shape

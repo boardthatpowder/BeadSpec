@@ -2,6 +2,8 @@
 
 The task list is BeadSpec's primary view — a virtualized, filterable list of all issues in your Beads project.
 
+![Task list with KPI bar and grouped issues](/screenshots/task-list.png)
+
 ## Layout
 
 The task list shows issues grouped by a configurable field (status, assignee, priority, or label). Each group shows a count and can be collapsed. Scroll performance is maintained via virtualization even with thousands of issues.
@@ -25,6 +27,11 @@ The filter bar accepts:
 - `priority:0` through `priority:4`
 - `label:bug`, `label:enhancement`, or any label value
 - Combinations: `status:open priority:0`
+
+When the Ruflo integration is enabled, the filter bar also shows **workspace context chips** for the active `branch:`, `worktree:`, and `repo:`. Clicking a chip narrows the list to issues carrying that label. [Quick Capture](/guide/features/quick-capture) applies these labels automatically; issues created via `bd create` in a terminal can carry the same labels to stay visible in the right chip.
+
+![Filter bar with workspace context chips active](/screenshots/filter-bar-chips.png)
+
 
 ## Bulk actions
 

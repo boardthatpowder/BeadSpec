@@ -166,7 +166,7 @@ fn parse_rfc3339_epoch(s: &str) -> Option<u64> {
 }
 
 fn days_from_epoch(y: u64, mo: u64, d: u64) -> Option<u64> {
-    if y < 1970 || mo < 1 || mo > 12 || d < 1 {
+    if y < 1970 || !(1..=12).contains(&mo) || d < 1 {
         return None;
     }
     let mut total = 0u64;
@@ -185,7 +185,7 @@ fn days_from_epoch(y: u64, mo: u64, d: u64) -> Option<u64> {
 }
 
 fn is_leap(y: u64) -> bool {
-    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+    (y.is_multiple_of(4) && !y.is_multiple_of(100)) || y.is_multiple_of(400)
 }
 
 fn month_days(y: u64, mo: u64) -> Option<u64> {

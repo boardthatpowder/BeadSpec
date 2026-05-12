@@ -1,6 +1,6 @@
 ## Context
 
-Beads-UI is a Tauri 2 + React 19 + TypeScript + Tailwind v4 desktop app. Issue creation currently requires navigating to the main window. This change adds a system-wide keyboard shortcut that pops up a minimal second Tauri window for rapid capture, then returns focus to whatever the user was doing.
+BeadSpec is a Tauri 2 + React 19 + TypeScript + Tailwind v4 desktop app. Issue creation currently requires navigating to the main window. This change adds a system-wide keyboard shortcut that pops up a minimal second Tauri window for rapid capture, then returns focus to whatever the user was doing.
 
 ## Goals / Non-Goals
 

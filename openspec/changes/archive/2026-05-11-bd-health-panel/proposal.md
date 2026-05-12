@@ -1,6 +1,6 @@
 ## Why
 
-The `bd` CLI exposes several health-check commands (`bd preflight`, `bd doctor`, `bd lint`, `bd stale`, `bd orphans`) that surface project integrity issues, but these are only accessible from the terminal. Users working primarily in the Beads UI have no way to see or act on this health information without leaving the app.
+The `bd` CLI exposes several health-check commands (`bd preflight`, `bd doctor`, `bd lint`, `bd stale`, `bd orphans`) that surface project integrity issues, but these are only accessible from the terminal. Users working primarily in the BeadSpec have no way to see or act on this health information without leaving the app.
 
 ## What Changes
 

@@ -30,7 +30,7 @@ jobs:
         run: bun run lint
 
       - name: Build frontend
-        run: bun run build
+        run: bunx vite build
 
   rust:
     name: Rust (${{ matrix.os }})
@@ -72,4 +72,26 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
       - name: Test
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib --test spawn_managed_test --test config_security_test
+        timeout-minutes: 10
+
+      - name: Test bindings (needs WebView2/WebKit — skip on Windows)
+        if: matrix.os != 'windows-latest'
+        run: cargo test --manifest-path src-tauri/Cargo.toml --test bindings
+        timeout-minutes: 5
+
+  docs:
+    name: Docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install docs dependencies
+        run: bun install --frozen-lockfile
+        working-directory: docs-site
+
+      - name: Build VitePress site
+        run: bun run docs:build
+        working-directory: docs-site

@@ -1,6 +1,6 @@
 ## Context
 
-Beads UI targets mono-repo workflows where multiple worktrees coexist. Each worktree's tasks carry labels like `branch:main`, `worktree:beads-ui`, and `repo:beads-ui`. Without auto-scoping, the task list shows all projects' issues until the user manually adds label filters each session.
+BeadSpec targets mono-repo workflows where multiple worktrees coexist. Each worktree's tasks carry labels like `branch:main`, `worktree:BeadSpec`, and `repo:BeadSpec`. Without auto-scoping, the task list shows all projects' issues until the user manually adds label filters each session.
 
 The `get_workspace_context()` Tauri command already exists in `src-tauri/src/commands/external.rs` and is registered. TypeScript bindings are already generated in `src/bindings.ts`. The `configurable-list-groupings` change has landed, so `FilterBar` already has a group-by dropdown and is the right place to add the scope chip.
 

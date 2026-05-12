@@ -28,11 +28,21 @@ The right panel shows:
 - **Spec** — rendered Markdown of the spec
 - **Tasks** — checklist with real-time completion status (linked to Beads issues)
 
+![OpenSpec Browser with change list and task checklist](/screenshots/openspec-browser.png)
+
+
 Artifacts can also be opened as **doc tabs** in the workspace — useful when you want to keep a spec visible while working on issues side-by-side.
 
 ## Task completion status
 
 Each task in `tasks.md` that is linked to a Beads issue (via `beads:<id>` reference) shows live status pulled from the database. You can see at a glance how much of a change is implemented.
+
+## How task progress is tracked
+
+Issues imported via **Import to Beads** are automatically labelled `openspec:<change-id>`. The progress panel uses that label to find all related issues and compute completion percentages in real time.
+
+If you create additional issues manually — follow-ups, sub-bugs, or split tasks discovered mid-implementation — apply the same `openspec:<change-id>` label (e.g. `openspec:my-feature-rename`) so those issues roll up into the progress view. Issues without the label are not counted.
+
 
 ## Importing a change to Beads
 

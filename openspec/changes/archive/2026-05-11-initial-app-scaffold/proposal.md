@@ -44,7 +44,7 @@ _(none — this is a greenfield project)_
 
 ## Impact
 
-- **New repo**: `/Users/dean/workspaces/beads-ui` — Tauri 2.0 monorepo (Rust workspace + React frontend)
+- **New repo**: `/Users/dean/workspaces/BeadSpec` — Tauri 2.0 monorepo (Rust workspace + React frontend)
 - **Runtime dependencies**: Tauri 2.0, React 19, TanStack Query, Zustand, TipTap, React Flow, Cytoscape.js, Tailwind CSS, react-hotkeys-hook, specta, tauri-specta, sqlx, mysql_async
 - **External dependencies**: `bd` CLI (must be on PATH), Dolt SQL endpoint (embedded via bd)
 - **Platforms**: macOS (primary), Windows 10+, Linux (GTK)

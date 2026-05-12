@@ -1,6 +1,6 @@
 ## Why
 
-When working on a task in Beads UI, developers have no way to see which Git commits or branches are associated with that task. They must switch to a terminal and manually run `git log --grep=<id>` or scan branch names to trace code changes back to an issue. This context-switching breaks flow and makes it hard to correlate issue history with code history.
+When working on a task in BeadSpec, developers have no way to see which Git commits or branches are associated with that task. They must switch to a terminal and manually run `git log --grep=<id>` or scan branch names to trace code changes back to an issue. This context-switching breaks flow and makes it hard to correlate issue history with code history.
 
 ## What Changes
 

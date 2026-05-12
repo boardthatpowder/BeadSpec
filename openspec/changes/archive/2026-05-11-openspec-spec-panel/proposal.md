@@ -1,6 +1,6 @@
 ## Why
 
-Beads-ui today renders `openspec:<change-name>` labels as plain coloured chips. There is no affordance in the task detail pane to navigate to the underlying OpenSpec artifacts, check how many tasks are done, or confirm that the change is still valid. An engineer working an OpenSpec-backed issue must context-switch to the terminal or Finder to inspect the artifact tree, run `openspec validate`, and reconcile checkbox state with issue status. This friction discourages the spec-driven workflow and makes drift go unnoticed.
+BeadSpec today renders `openspec:<change-name>` labels as plain coloured chips. There is no affordance in the task detail pane to navigate to the underlying OpenSpec artifacts, check how many tasks are done, or confirm that the change is still valid. An engineer working an OpenSpec-backed issue must context-switch to the terminal or Finder to inspect the artifact tree, run `openspec validate`, and reconcile checkbox state with issue status. This friction discourages the spec-driven workflow and makes drift go unnoticed.
 
 The label already carries the change name — the panel just needs to use it. All the data the section would show is either already readable from the filesystem or runs a shell command that `openspec validate` already provides.
 

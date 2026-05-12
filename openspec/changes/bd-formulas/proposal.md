@@ -1,6 +1,6 @@
 ## Why
 
-Beads formulas are pre-configured project templates accessible via `bd formula list` and applied via `bd mol pour <name>`, but they are only discoverable and usable from the terminal. Users working in the Beads UI have no way to browse available formulas or apply them without switching contexts.
+Beads formulas are pre-configured project templates accessible via `bd formula list` and applied via `bd mol pour <name>`, but they are only discoverable and usable from the terminal. Users working in the BeadSpec have no way to browse available formulas or apply them without switching contexts.
 
 ## What Changes
 

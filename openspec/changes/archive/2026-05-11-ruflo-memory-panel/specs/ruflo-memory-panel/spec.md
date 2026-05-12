@@ -51,7 +51,7 @@ The search query SHALL consist of the task title joined with any non-system labe
 
 #### Scenario: Task has mixed system and non-system labels
 
-- **GIVEN** a task with title "Implement retry logic" and labels `["branch:main", "worktree:beads-ui", "openspec:dolt-recovery", "retry", "backend"]`
+- **GIVEN** a task with title "Implement retry logic" and labels `["branch:main", "worktree:BeadSpec", "openspec:dolt-recovery", "retry", "backend"]`
 - **WHEN** the section expands and constructs the search query
 - **THEN** the query SHALL be `"Implement retry logic retry backend"`
 - **AND** labels with prefixes `branch:`, `worktree:`, `repo:`, `openspec:` SHALL be excluded

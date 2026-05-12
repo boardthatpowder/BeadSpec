@@ -1,6 +1,6 @@
 ## Context
 
-The `bd` CLI is the canonical interface for Beads project management. Several diagnostic subcommands (`preflight`, `doctor`, `lint`, `stale`, `orphans`) surface project integrity issues but are only reachable from a terminal. Beads UI currently has no mechanism to shell out to external binaries; all data flows through Dolt SQL or bd-CLI-written files. Adding a generic `run_bd_command` Tauri command establishes a controlled, read-only bridge to the CLI without coupling the UI to individual bd subcommand logic.
+The `bd` CLI is the canonical interface for Beads project management. Several diagnostic subcommands (`preflight`, `doctor`, `lint`, `stale`, `orphans`) surface project integrity issues but are only reachable from a terminal. BeadSpec currently has no mechanism to shell out to external binaries; all data flows through Dolt SQL or bd-CLI-written files. Adding a generic `run_bd_command` Tauri command establishes a controlled, read-only bridge to the CLI without coupling the UI to individual bd subcommand logic.
 
 ## Goals / Non-Goals
 

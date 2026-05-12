@@ -7,7 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::State;
 
-use crate::bd::runner::{find_bd, spawn_managed};
+use crate::bd::runner::{find_bd, invoke_bd_in_project, spawn_managed};
+use crate::db::dolt_server::DoltServerRegistry;
 use crate::db::pool::ProjectRegistry;
 use crate::settings::AppSettings;
 
@@ -124,7 +125,7 @@ async fn run_subprocess(program: &std::path::Path, args: &[String], cwd: &str) -
     let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
     let cwd_path = std::path::Path::new(cwd);
 
-    match spawn_managed(&cmd, &arg_refs, cwd_path, Duration::from_secs(10)).await {
+    match spawn_managed(&cmd, &arg_refs, cwd_path, Duration::from_secs(10), &[]).await {
         Ok(out) => CommandOutput {
             stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
             stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
@@ -158,32 +159,22 @@ async fn resolve_project_cwd(
     project_id: &str,
     registry: &Arc<ProjectRegistry>,
 ) -> Result<String, String> {
-    let pool = registry
-        .get(project_id)
-        .await
-        .map_err(|_| format!("project_not_connected: '{project_id}' — call connect_project first"))?;
+    let pool = registry.get(project_id).await.map_err(|_| {
+        format!("project_not_connected: '{project_id}' — call connect_project first")
+    })?;
     Ok(pool.project_path.clone())
 }
 
-/// Helper: run a bd sub-command via spawn_managed and return stdout on success.
-async fn run_bd_managed(
-    bd_path: std::path::PathBuf,
-    args: &[&str],
-    cwd: &str,
-    timeout: Duration,
-) -> Result<String, String> {
-    let bd_str = bd_path.to_string_lossy().into_owned();
-    let out = spawn_managed(&bd_str, args, std::path::Path::new(cwd), timeout)
-        .await
-        .map_err(|e| e.to_string())?;
-    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
-    let exit_code = out.exit_code.unwrap_or(-1);
-    if exit_code == 0 {
-        Ok(stdout)
-    } else {
-        let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
-        Err(format!("bd exited {exit_code}: {stderr}"))
-    }
+/// Helper: resolve bd path + project cwd + dolt override in one shot for bd Tauri commands.
+fn bd_invocation_args(
+    settings: &State<'_, Arc<Mutex<AppSettings>>>,
+) -> Result<(std::path::PathBuf, String), String> {
+    let guard = settings.lock().unwrap();
+    let bd_path_override = guard.binary_paths.bd.clone();
+    let dolt_path_override = guard.binary_paths.dolt.clone();
+    drop(guard);
+    let bd = find_bd(&bd_path_override).ok_or_else(|| "bd CLI not found".to_string())?;
+    Ok((bd, dolt_path_override))
 }
 
 /// Helper: run a ruflo sub-command via spawn_managed and return stdout on success.
@@ -194,7 +185,7 @@ async fn run_ruflo_managed(
 ) -> Result<String, String> {
     let ruflo_str = ruflo_path.to_string_lossy().into_owned();
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    let out = spawn_managed(&ruflo_str, args, std::path::Path::new(&home), timeout)
+    let out = spawn_managed(&ruflo_str, args, std::path::Path::new(&home), timeout, &[])
         .await
         .map_err(|e| e.to_string())?;
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
@@ -214,11 +205,19 @@ pub async fn bd_preflight(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["preflight"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["preflight"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd doctor --json` in the given project. Read op — 10s timeout.
@@ -228,11 +227,19 @@ pub async fn bd_doctor(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["doctor", "--json"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["doctor", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd lint --json` in the given project. Read op — 10s timeout.
@@ -242,11 +249,19 @@ pub async fn bd_lint(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["lint", "--json"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["lint", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd stale --json` in the given project. Read op — 10s timeout.
@@ -256,25 +271,41 @@ pub async fn bd_stale(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["stale", "--json"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["stale", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
-/// Run `bd orphans --json` in the given project. Read op — 10s timeout.
+/// Run `bd orphans --json` in the given project. Read op — 30s timeout.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_orphans(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["orphans", "--json"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["orphans", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 /// Run `bd formula list --json` in the given project. Read op — 10s timeout.
@@ -284,11 +315,19 @@ pub async fn bd_formula_list(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["formula", "list", "--json"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["formula", "list", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd mol pour <formula_name>` in the given project. Write op — 30s timeout.
@@ -303,8 +342,8 @@ pub async fn bd_formula_pour(
     formula_name: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    // Validate formula_name: only allow safe identifier characters.
     if formula_name.is_empty()
         || !formula_name
             .chars()
@@ -314,10 +353,17 @@ pub async fn bd_formula_pour(
             "invalid formula_name '{formula_name}': only alphanumeric, hyphens, underscores, and dots are allowed"
         ));
     }
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["mol", "pour", &formula_name], &cwd, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["mol", "pour", &formula_name],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 /// Run `bd human list --json` in the given project. Read op — 10s timeout.
@@ -327,18 +373,22 @@ pub async fn bd_human_list(
     project_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["human", "list", "--json"], &cwd, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["human", "list", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
-///
-/// `issue_id` must match the Beads ID pattern (alphanumeric + hyphens, e.g.
-/// `BUI-xmkr`).  `text` is passed as a single argument and is not validated
-/// beyond non-emptiness.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_human_respond(
@@ -347,12 +397,9 @@ pub async fn bd_human_respond(
     text: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    if issue_id.is_empty()
-        || !issue_id
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == '-')
-    {
+    if issue_id.is_empty() || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(format!(
             "invalid issue_id '{issue_id}': only alphanumeric characters and hyphens are allowed"
         ));
@@ -360,15 +407,20 @@ pub async fn bd_human_respond(
     if text.is_empty() {
         return Err("text must not be empty".to_string());
     }
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["human", "respond", &issue_id, &text], &cwd, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["human", "respond", &issue_id, &text],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 /// Run `bd human dismiss <issue_id>` in the given project. Write op — 30s timeout.
-///
-/// `issue_id` must match the Beads ID pattern (alphanumeric + hyphens).
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_human_dismiss(
@@ -376,20 +428,24 @@ pub async fn bd_human_dismiss(
     issue_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    if issue_id.is_empty()
-        || !issue_id
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == '-')
-    {
+    if issue_id.is_empty() || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(format!(
             "invalid issue_id '{issue_id}': only alphanumeric characters and hyphens are allowed"
         ));
     }
-    let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
-    let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
+    let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["human", "dismiss", &issue_id], &cwd, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["human", "dismiss", &issue_id],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 // ── Named ruflo commands ──────────────────────────────────────────────────────
@@ -408,7 +464,12 @@ pub async fn ruflo_memory_search(
     }
     let settings_path = settings.lock().unwrap().binary_paths.ruflo.clone();
     let ruflo = find_ruflo_with_override(&settings_path).ok_or("ruflo CLI not found")?;
-    run_ruflo_managed(ruflo, &["memory", "search", "-q", &query, "--format", "json"], Duration::from_secs(10)).await
+    run_ruflo_managed(
+        ruflo,
+        &["memory", "search", "-q", &query, "--format", "json"],
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `ruflo --version` to probe whether ruflo is available. Read op — 10s timeout.
@@ -432,12 +493,10 @@ pub async fn ruflo_version_probe(
 pub async fn get_workspace_context(project_path: String) -> Result<WorkspaceContext, String> {
     let cwd = std::path::Path::new(&project_path);
     let args = ["-C", &project_path, "rev-parse", "--abbrev-ref", "HEAD"];
-    let out = spawn_managed("git", &args, cwd, Duration::from_secs(10)).await;
+    let out = spawn_managed("git", &args, cwd, Duration::from_secs(10), &[]).await;
 
     let branch = match out {
-        Ok(o) if o.exit_code == Some(0) => {
-            String::from_utf8_lossy(&o.stdout).trim().to_string()
-        }
+        Ok(o) if o.exit_code == Some(0) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         _ => "unknown".to_string(),
     };
 
@@ -479,7 +538,7 @@ pub async fn get_git_refs_for_issue(
         "--format=%H\x1f%s\x1f%ci",
         &grep_arg,
     ];
-    let log_out = spawn_managed("git", &log_args, cwd, Duration::from_secs(10)).await;
+    let log_out = spawn_managed("git", &log_args, cwd, Duration::from_secs(10), &[]).await;
 
     let commits = match log_out {
         Ok(o) if o.exit_code == Some(0) => {
@@ -505,7 +564,7 @@ pub async fn get_git_refs_for_issue(
     // git branch --list "*<id>*"
     let branch_pattern = format!("*{issue_id}*");
     let branch_args = ["-C", &project_path, "branch", "--list", &branch_pattern];
-    let branch_out = spawn_managed("git", &branch_args, cwd, Duration::from_secs(10)).await;
+    let branch_out = spawn_managed("git", &branch_args, cwd, Duration::from_secs(10), &[]).await;
 
     let branches = match branch_out {
         Ok(o) if o.exit_code == Some(0) => {
@@ -625,13 +684,7 @@ mod ipc_allowlist_tests {
     /// Safe identifiers must pass formula name validation.
     #[test]
     fn formula_name_accepts_safe_identifiers() {
-        let safe = [
-            "my-formula",
-            "formula_v2",
-            "v1.0.0",
-            "UPPERCASE",
-            "abc123",
-        ];
+        let safe = ["my-formula", "formula_v2", "v1.0.0", "UPPERCASE", "abc123"];
         for name in &safe {
             assert!(
                 is_valid_formula_name(name),
@@ -646,10 +699,10 @@ mod ipc_allowlist_tests {
     fn issue_id_rejects_metacharacters() {
         let dangerous = [
             "../etc/passwd",
-            "BUI; rm -rf /",
+            "BEADSPEC; rm -rf /",
             "$(whoami)",
-            "BUI`xmkr`",
-            "BUI|xmkr",
+            "BEADSPEC`xmkr`",
+            "BEADSPEC|xmkr",
             "",
         ];
         for id in &dangerous {
@@ -660,10 +713,10 @@ mod ipc_allowlist_tests {
         }
     }
 
-    /// Safe Beads IDs (e.g. `BUI-xmkr`) must pass issue ID validation.
+    /// Safe Beads IDs (e.g. `BEADSPEC-xmkr`) must pass issue ID validation.
     #[test]
     fn issue_id_accepts_beads_format() {
-        let safe = ["BUI-xmkr", "BUI-omqf", "ABC123", "a-b-c"];
+        let safe = ["BEADSPEC-xmkr", "BEADSPEC-omqf", "ABC123", "a-b-c"];
         for id in &safe {
             assert!(
                 is_valid_issue_id(id),
@@ -691,9 +744,8 @@ mod ipc_allowlist_tests {
         // requires a deliberate update to both the implementation and this test.
         let project_id = "bogus-project-id-that-does-not-exist";
         let expected_prefix = "project_not_connected:";
-        let actual_msg = format!(
-            "project_not_connected: '{project_id}' — call connect_project first"
-        );
+        let actual_msg =
+            format!("project_not_connected: '{project_id}' — call connect_project first");
         assert!(
             actual_msg.starts_with(expected_prefix),
             "error message must start with '{expected_prefix}'"
@@ -728,8 +780,8 @@ mod ipc_allowlist_tests {
         //
         // None accept `binary_path` — if they did, this file would fail to
         // compile due to the type mismatch in the Tauri command macro.
-        let _ = super::bd_preflight as fn(_, _, _) -> _;
-        let _ = super::bd_formula_pour as fn(_, _, _, _) -> _;
+        let _ = super::bd_preflight as fn(_, _, _, _) -> _;
+        let _ = super::bd_formula_pour as fn(_, _, _, _, _) -> _;
         let _ = super::ruflo_memory_search as fn(_, _) -> _;
 
         // Explicit runtime assertion documents the intent.

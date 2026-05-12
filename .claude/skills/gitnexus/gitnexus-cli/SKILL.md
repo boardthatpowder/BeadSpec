@@ -12,7 +12,7 @@ All commands work via `npx` — no global install required.
 ### analyze — Build or refresh the index
 
 ```bash
-npx gitnexus.6.3.6.3 analyze
+npx gitnexus analyze
 ```
 
 Run from the project root. This parses all source files, builds the knowledge graph, writes it to `.gitnexus/`, and generates CLAUDE.md / AGENTS.md context files.
@@ -23,12 +23,12 @@ Run from the project root. This parses all source files, builds the knowledge gr
 | `--embeddings` | Enable embedding generation for semantic search (off by default) |
 | `--drop-embeddings` | Drop existing embeddings on rebuild. By default, an `analyze` without `--embeddings` preserves them. |
 
-**When to run:** First time in a project, after major code changes, or when `gitnexus://repo/{name}/context` reports the index is stale. This template also runs `analyze` automatically after `git push`, preserving embeddings if previously generated.
+**When to run:** First time in a project, after major code changes, or when `gitnexus://repo/{name}/context` reports the index is stale. In Claude Code, a PostToolUse hook detects staleness after `git commit` and `git merge` and notifies the agent to run `analyze` — the hook does not run analyze itself, to avoid blocking the agent for up to 120s and risking KuzuDB corruption on timeout.
 
 ### status — Check index freshness
 
 ```bash
-npx gitnexus.6.3.6.3 status
+npx gitnexus status
 ```
 
 Shows whether the current repo has a GitNexus index, when it was last updated, and symbol/relationship counts. Use this to check if re-indexing is needed.
@@ -36,7 +36,7 @@ Shows whether the current repo has a GitNexus index, when it was last updated, a
 ### clean — Delete the index
 
 ```bash
-npx gitnexus.6.3.6.3 clean
+npx gitnexus clean
 ```
 
 Deletes the `.gitnexus/` directory and unregisters the repo from the global registry. Use before re-indexing if the index is corrupt or after removing GitNexus from a project.
@@ -49,7 +49,7 @@ Deletes the `.gitnexus/` directory and unregisters the repo from the global regi
 ### wiki — Generate documentation from the graph
 
 ```bash
-npx gitnexus.6.3.6.3 wiki
+npx gitnexus wiki
 ```
 
 Generates repository documentation from the knowledge graph using an LLM. Requires an API key (saved to `~/.gitnexus/config.json` on first use).
@@ -66,7 +66,7 @@ Generates repository documentation from the knowledge graph using an LLM. Requir
 ### list — Show all indexed repos
 
 ```bash
-npx gitnexus.6.3.6.3 list
+npx gitnexus list
 ```
 
 Lists all repositories registered in `~/.gitnexus/registry.json`. The MCP `list_repos` tool provides the same information.
@@ -79,5 +79,5 @@ Lists all repositories registered in `~/.gitnexus/registry.json`. The MCP `list_
 ## Troubleshooting
 
 - **"Not inside a git repository"**: Run from a directory inside a git repo
-- **Index is stale after re-analyzing**: Restart the assistant runtime to reload the MCP server
+- **Index is stale after re-analyzing**: Restart Claude Code to reload the MCP server
 - **Embeddings slow**: Omit `--embeddings` (it's off by default) or set `OPENAI_API_KEY` for faster API-based embedding

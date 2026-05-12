@@ -26,10 +26,7 @@ pub struct ProjectMeta {
 /// Returns the hex-encoded first 8 bytes of SHA-256(path).
 fn project_id_from_path(canonical_path: &str) -> String {
     let hash = Sha256::digest(canonical_path.as_bytes());
-    hash[..8]
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
+    hash[..8].iter().map(|b| format!("{b:02x}")).collect()
 }
 
 #[cfg(test)]
@@ -48,7 +45,10 @@ mod tests {
     fn project_id_differs_for_different_paths() {
         let id1 = project_id_from_path("/tmp/project-a");
         let id2 = project_id_from_path("/tmp/project-b");
-        assert_ne!(id1, id2, "different paths should have different project IDs");
+        assert_ne!(
+            id1, id2,
+            "different paths should have different project IDs"
+        );
     }
 
     #[test]
@@ -135,6 +135,44 @@ fn server_url(
     Ok((format!("mysql://root:@127.0.0.1:{port}/{db_name}"), port))
 }
 
+/// Ensure bd's managed Dolt server is running. Calls `bd dolt start` if the
+/// server is absent or the port file is missing, then probes for readiness.
+/// Returns the MySQL connection URL.
+async fn ensure_bd_server(
+    beads_dir: &Path,
+    db_name: &str,
+    metadata_port: Option<u16>,
+    project_path: &str,
+    bd_path: &str,
+) -> Result<String, String> {
+    // Fast path: port file exists and server is already healthy.
+    if let Ok((url, port)) = server_url(beads_dir, db_name, metadata_port) {
+        if matches!(
+            recovery::probe_with_deadline(port).await,
+            recovery::DoltHealth::Ok
+        ) {
+            return Ok(url);
+        }
+    }
+    // Server is absent or not responding — start it via bd.
+    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path)
+        .map_err(|e| format!("bd not found, cannot start Dolt server: {e}"))?;
+    runner
+        .run(&["dolt", "start"])
+        .await
+        .map_err(|e| format!("bd dolt start failed: {e}"))?;
+    // Give the server a moment to bind if bd dolt start returns before the port is open.
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    // Re-read the fresh port file written by bd dolt start.
+    let (url, port) = server_url(beads_dir, db_name, metadata_port)?;
+    match recovery::probe_with_deadline(port).await {
+        recovery::DoltHealth::Ok => Ok(url),
+        other => Err(format!(
+            "Dolt server not ready after `bd dolt start` (port {port}): {other:?}"
+        )),
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn connect_project(
@@ -178,12 +216,37 @@ pub async fn connect_project(
         .unwrap_or(&canonical_project_path)
         .to_string();
 
+    let bd_path = settings.lock().unwrap().binary_paths.bd.clone();
     let dolt_path_override = settings.lock().unwrap().binary_paths.dolt.clone();
-    let database_url = if dolt_mode == "embedded" {
+
+    // Determine effective mode: if metadata says "server" but the database only
+    // exists in embeddeddolt/ (bd dolt start uses dolt/ as its data dir), fall
+    // back to embedded so we spawn from the correct directory.
+    let effective_dolt_mode = if dolt_mode == "server"
+        && !beads_dir.join("dolt").join(&db_name).is_dir()
+        && beads_dir.join("embeddeddolt").join(&db_name).is_dir()
+    {
+        eprintln!("[project] server mode requested but db only in embeddeddolt/ — using embedded");
+        "embedded"
+    } else {
+        dolt_mode
+    };
+
+    let database_url = if effective_dolt_mode == "embedded" {
+        // Embedded mode: BeadSpec spawns its own Dolt sidecar from embeddeddolt/.
+        // Write dolt-server.port so bd CLI commands can discover this sidecar.
         let embeddeddolt_dir = beads_dir.join("embeddeddolt");
-        recovery::guard(&canonical_project_path, &embeddeddolt_dir)
+        // Skip recovery when the sidecar is already registered by this session.
+        // The guard's no_clients_connected check would escalate on our own open pool.
+        if server_registry
+            .get_port(&canonical_project_path)
             .await
-            .map_err(|e| format!("Dolt recovery failed: {e}"))?;
+            .is_none()
+        {
+            recovery::guard(&canonical_project_path, &embeddeddolt_dir)
+                .await
+                .map_err(|e| format!("Dolt recovery failed: {e}"))?;
+        }
         let port = server_registry
             .spawn_or_get(
                 &canonical_project_path,
@@ -191,25 +254,18 @@ pub async fn connect_project(
                 &dolt_path_override,
             )
             .await?;
+        let _ = std::fs::write(beads_dir.join("dolt-server.port"), port.to_string());
         format!("mysql://root:@127.0.0.1:{port}/{db_name}")
     } else {
         let metadata_port = meta.as_ref().and_then(|m| m.dolt_port);
-        let (url, port) = server_url(&beads_dir, &db_name, metadata_port)?;
-        match recovery::probe_with_deadline(port).await {
-            recovery::DoltHealth::Ok => {}
-            recovery::DoltHealth::NotRunning => {
-                return Err(format!("server_not_running:{port}"));
-            }
-            recovery::DoltHealth::PortBoundButNotResponding { .. } => {
-                return Err(format!(
-                    "connection_failed:port {port} is bound but not responding to SQL"
-                ));
-            }
-            other => {
-                return Err(format!("connection_failed:{other:?}"));
-            }
-        }
-        url
+        ensure_bd_server(
+            &beads_dir,
+            &db_name,
+            metadata_port,
+            &canonical_project_path,
+            &bd_path,
+        )
+        .await?
     };
 
     let pool = registry
@@ -222,6 +278,7 @@ pub async fn connect_project(
         canonical_project_path.clone(),
         app.clone(),
         settings.inner().clone(),
+        server_registry.inner().clone(),
     )
     .start();
     let openspec_watch_handle = OpenSpecWatcher::new(canonical_project_path.clone(), app).start();

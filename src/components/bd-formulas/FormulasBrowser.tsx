@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { commands, unwrap } from '../../ipc'
 import type { CommandOutput } from '../../bindings'
-import { useActiveProject, useActiveProjectId } from '../../hooks/useProject'
+import { useActiveProject } from '../../hooks/useProject'
 import { renderWithChips } from '../shared/issueChips'
 import { parseFormulaList } from './types'
 import type { Formula } from './types'
@@ -89,7 +89,6 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
 
 export function FormulasBrowser() {
   const project = useActiveProject()
-  const projectId = useActiveProjectId()
   const [formulas, setFormulas] = useState<Formula[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [rawErrorOutput, setRawErrorOutput] = useState<string | null>(null)
@@ -100,14 +99,14 @@ export function FormulasBrowser() {
   const [hasLoaded, setHasLoaded] = useState(false)
 
   const loadFormulas = useCallback(async () => {
-    if (!project || !projectId) return
+    if (!project) return
     setIsLoading(true)
     setRawErrorOutput(null)
     setBdNotFound(false)
     setFormulas([])
 
     try {
-      const stdout = await unwrap(commands.bdFormulaList(projectId))
+      const stdout = await unwrap(commands.bdFormulaList(project))
       const { formulas: parsed, parseError: pe } = parseFormulaList(stdout)
       setFormulas(parsed)
       if (pe) {
@@ -115,7 +114,7 @@ export function FormulasBrowser() {
       }
     } catch (err) {
       const msg = typeof err === 'string' ? err : 'Unknown error'
-      if (msg.toLowerCase().includes('not found') || msg.includes('bd cli not found')) {
+      if (msg.includes('bd CLI not found') || msg.includes('project_not_connected')) {
         setBdNotFound(true)
       } else {
         setRawErrorOutput(msg)
@@ -124,14 +123,14 @@ export function FormulasBrowser() {
 
     setIsLoading(false)
     setHasLoaded(true)
-  }, [project, projectId])
+  }, [project])
 
   // Load on mount / project change
   useEffect(() => {
-    if (project && projectId && !hasLoaded) {
+    if (project && !hasLoaded) {
       loadFormulas()
     }
-  }, [project, projectId, hasLoaded, loadFormulas])
+  }, [project, hasLoaded, loadFormulas])
 
   const handlePourRequest = useCallback((name: string) => {
     setPendingPour(name)
@@ -139,13 +138,13 @@ export function FormulasBrowser() {
   }, [])
 
   const handlePourConfirm = useCallback(async () => {
-    if (!projectId || !pendingPour) return
+    if (!project || !pendingPour) return
     const name = pendingPour
     setPendingPour(null)
     setIsPouring(true)
 
     try {
-      const stdout = await unwrap(commands.bdFormulaPour(projectId, name))
+      const stdout = await unwrap(commands.bdFormulaPour(project, name))
       const output: CommandOutput = { stdout, stderr: '', exit_code: 0 }
       setPourResult({ output, formulaName: name })
     } catch (err) {
@@ -157,7 +156,7 @@ export function FormulasBrowser() {
     }
 
     setIsPouring(false)
-  }, [projectId, pendingPour])
+  }, [project, pendingPour])
 
   const handlePourCancel = useCallback(() => {
     setPendingPour(null)

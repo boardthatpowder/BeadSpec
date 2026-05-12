@@ -1,10 +1,7 @@
 {
-  "database": "dolt",
   "backend": "dolt",
-  "dolt_mode": "server",
-  "dolt_database": "BUI",
-  "dolt_host": "127.0.0.1",
-  "dolt_port": 56341,
-  "dolt_user": "root",
-  "project_id": "e1554916-6bb8-4dfc-85ee-883fd0300450"
+  "database": "dolt",
+  "dolt_database": "BEADSPEC",
+  "dolt_mode": "embedded",
+  "project_id": "3c50deb0-b424-4721-9290-46f59a712b6f"
 }

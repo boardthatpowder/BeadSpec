@@ -145,6 +145,6 @@
 
 - [x] 18.1 Integrate Tauri `tray-icon` plugin; set up menu bar (macOS) and system tray (Windows/Linux) icon
 - [x] 18.2 Implement live badge count: open + in-progress tasks assigned to current user; updates with real-time sync
-- [x] 18.3 Implement tray popover: shows task count, quick-create form (title + priority), "Open Beads UI" button
+- [x] 18.3 Implement tray popover: shows task count, quick-create form (title + priority), "Open BeadSpec" button
 - [x] 18.4 Implement quick-create from tray: invokes `bd create`, shows task ID in success toast, triggers list refresh
 - [x] 18.5 Implement start-at-login tray mode: app launches to tray only (no main window) when configured

@@ -5,10 +5,10 @@ The app SHALL register a system-wide keyboard shortcut that opens a minimal capt
 
 #### Scenario: Shortcut fires while another app is focused
 - **WHEN** the user presses `Cmd+Shift+N` (macOS) while a browser is in focus
-- **THEN** the beads-ui quick-capture window appears in the foreground
+- **THEN** the BeadSpec quick-capture window appears in the foreground
 
-#### Scenario: Shortcut fires when beads-ui is already focused
-- **WHEN** the user presses `Cmd+Shift+N` while beads-ui is the active app
+#### Scenario: Shortcut fires when BeadSpec is already focused
+- **WHEN** the user presses `Cmd+Shift+N` while BeadSpec is the active app
 - **THEN** the quick-capture window opens (or focuses if already open)
 
 #### Scenario: Custom shortcut registered on settings save
@@ -25,7 +25,7 @@ The app SHALL register a system-wide keyboard shortcut that opens a minimal capt
 
 #### Scenario: Shortcut conflicts
 - **WHEN** another application has registered the same global shortcut
-- **THEN** beads-ui logs a warning at startup and disables its own registration; the Settings dialog shows "Shortcut unavailable — change to a different binding"
+- **THEN** BeadSpec logs a warning at startup and disables its own registration; the Settings dialog shows "Shortcut unavailable — change to a different binding"
 
 ### Requirement: Quick-capture window pre-populates workspace labels
 The quick-capture window SHALL pre-populate three label chips (`branch:<HEAD>`, `worktree:<segment>`, `repo:<name>`) derived from the active project's workspace context. The user MAY remove any pre-populated label before submitting. If no project is connected or workspace context is unavailable, no labels are pre-populated.

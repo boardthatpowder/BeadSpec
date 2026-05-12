@@ -122,7 +122,7 @@ export function ProjectSwitcher() {
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm text-neutral-200 hover:bg-neutral-800 transition-colors"
         disabled={connecting}
       >
-        <span className="font-medium">{connecting ? '…' : activeName}</span>
+        <span className="font-medium">{connecting ? '…' : activeProject ? `Project: ${activeName}` : activeName}</span>
         <svg className="w-3 h-3 text-neutral-500" viewBox="0 0 12 12" fill="currentColor">
           <path d="M6 8L1 3h10L6 8z"/>
         </svg>

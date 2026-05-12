@@ -1,6 +1,6 @@
 ## Context
 
-The Beads UI already resolves a project root path from `AppState` for Dolt server management. That same path is used as the working directory for Git subprocess calls. Git is invoked via `std::process::Command` (not via a Git library), keeping the Rust dependency surface minimal. The feature is additive: no existing commands or schemas are modified.
+The BeadSpec already resolves a project root path from `AppState` for Dolt server management. That same path is used as the working directory for Git subprocess calls. Git is invoked via `std::process::Command` (not via a Git library), keeping the Rust dependency surface minimal. The feature is additive: no existing commands or schemas are modified.
 
 ## Goals / Non-Goals
 

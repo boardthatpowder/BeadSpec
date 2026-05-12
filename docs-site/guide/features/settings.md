@@ -2,6 +2,9 @@
 
 Open Settings via **BeadSpec → Settings** (macOS) or **File → Settings** (Windows/Linux), or press `⌘,` / `Ctrl+,`.
 
+![Settings dialog showing Features toggles and Binary Paths](/screenshots/settings.png)
+
+
 ## Features
 
 Toggle optional integrations on or off. Changes take effect immediately.

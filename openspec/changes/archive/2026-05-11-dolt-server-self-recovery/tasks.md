@@ -53,7 +53,7 @@
 
 ## 7. Recovery Log
 
-- [x] 7.1 Implement `log_path()` returning the platform-appropriate location (macOS `~/Library/Logs/beads-ui/recovery.log`, Linux `~/.local/share/beads-ui/recovery.log`, Windows `%LOCALAPPDATA%\beads-ui\Logs\recovery.log`).
+- [x] 7.1 Implement `log_path()` returning the platform-appropriate location (macOS `~/Library/Logs/BeadSpec/recovery.log`, Linux `~/.local/share/BeadSpec/recovery.log`, Windows `%LOCALAPPDATA%\BeadSpec\Logs\recovery.log`).
 - [x] 7.2 Implement `append(entry: LogEntry)` that writes one JSON-Lines record with a file lock to avoid interleaving across processes.
 - [x] 7.3 Implement rotation: when size > 5MB, rename to `.log.1` (overwriting any existing) and start a fresh `.log`.
 - [x] 7.4 Instrument `guard()`, `classify()`, kill sequence, and respawn with appropriate log events (`probe_ok`, `orphan_detected`, `auto_kill`, `force_kill`, `spawn_supervisor`, `modal_shown`, `user_force`).
@@ -69,7 +69,7 @@
 
 ## 9. End-to-End Verification
 
-- [x] 9.1 Reproduce the original wedge: kill the supervisor's parent (e.g. `pkill -9 beads-ui`), confirm a stale `dolt sql-server` survives. Relaunch the app and confirm it auto-recovers without a modal in under 8s, and the recovery log has `auto_kill` + `spawn_supervisor` entries.
+- [x] 9.1 Reproduce the original wedge: kill the supervisor's parent (e.g. `pkill -9 BeadSpec`), confirm a stale `dolt sql-server` survives. Relaunch the app and confirm it auto-recovers without a modal in under 8s, and the recovery log has `auto_kill` + `spawn_supervisor` entries.
 - [x] 9.2 Reproduce the unsafe path: start the app, make and don't commit a dolt edit, kill the app, restart. Confirm the modal appears citing dirty working set. Click "Force kill and retry"; confirm a `user_force` log entry and successful respawn.
 - [x] 9.3 Reproduce the foreign-port case: bind port 49226 (or whatever is configured) with `nc -l` and launch the app. Confirm the modal appears citing `ForeignProcessHoldingPort` and that the "Force kill and retry" button is disabled (or the underlying command refuses) since the holder isn't a dolt process.
 - [x] 9.4 Reproduce the different-user case (skip on single-user dev box): use `sudo -u other` to spawn a dolt sql-server matching this data dir. Confirm the modal appears citing different-user, and that "Force kill and retry" does NOT bypass the ownership predicate.

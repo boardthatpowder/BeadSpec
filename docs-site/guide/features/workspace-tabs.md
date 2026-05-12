@@ -21,6 +21,9 @@ Clicking an issue opens it as a **preview tab** (italic title). Preview tabs are
 
 You can also split by **dragging a tab** to the edge of a pane — a blue edge-drop zone appears when you hover near the left, right, top, or bottom border. Drop the tab on an edge to create a new split in that direction.
 
+![Two-pane split with pinned and preview tabs visible](/screenshots/workspace-split.png)
+
+
 To close a pane, close all its tabs.
 
 ## Navigating tabs
