@@ -56,7 +56,7 @@ impl DoltServerRegistry {
         let db_name = discover_db_name(embeddeddolt_dir)
             .ok_or("Cannot determine Beads DB name from embeddeddolt dir")?;
 
-        // Task 7.4: retry up to 3 times to handle port-race scenarios.
+        // Retry up to 3 times to handle port-race scenarios.
         const MAX_ATTEMPTS: u32 = 3;
         let mut last_error = String::new();
 
@@ -77,28 +77,31 @@ impl DoltServerRegistry {
                 .stderr(std::process::Stdio::null())
                 .spawn();
 
-            let child = match child_result {
+            let mut child = match child_result {
                 Ok(c) => c,
                 Err(e) => {
                     return Err(format!("Failed to spawn dolt sql-server: {e}"));
                 }
             };
 
-            // Wait for the TCP port to accept connections (up to 10 seconds).
-            match wait_for_port_async(port, Duration::from_secs(10)).await {
+            // Wait for the TCP port to accept connections (up to 30 seconds — dolt
+            // cold-starts on large databases can take 10-20s on first launch).
+            match wait_for_port_async(port, Duration::from_secs(30)).await {
                 Ok(()) => {}
                 Err(e) => {
                     last_error = format!("dolt sql-server did not start in time: {e}");
                     eprintln!(
                         "[dolt_server] Sidecar spawn attempt {attempt}: port {port} never accepted connections — {e}"
                     );
+                    child.kill().await.ok();
                     continue;
                 }
             }
 
-            // Task 7.3: verify SQL readiness against the actual Beads DB before
-            // writing .supervisor.pid.  A 3-second timeout guards the whole check;
-            // a quick connection-refused (< 1 second) is treated as a port race.
+            // Verify SQL readiness against the actual Beads DB. Use a 15-second
+            // timeout — dolt may be slow to initialise schema on first open.
+            // On any failure, kill the child before retrying so it releases the
+            // noms LOCK and doesn't block the next spawn attempt.
             match verify_beads_db_ready(port, &db_name).await {
                 Ok(()) => {
                     // SQL is healthy — register and return.
@@ -115,16 +118,15 @@ impl DoltServerRegistry {
                         stolen_port,
                         attempt
                     );
-                    // Loop to retry with a fresh free port.
+                    child.kill().await.ok();
                     continue;
                 }
                 Err(VerifyError::SlowStart { port: p, detail }) => {
-                    // Sidecar started on the right port but is slow to respond — give
-                    // it more time by waiting an additional 5 seconds and re-checking.
+                    // Sidecar is slow to respond — give it 10 more seconds then re-check.
                     eprintln!(
-                        "[warn] Sidecar on port {p} is slow to accept SQL connections ({detail}), waiting 5s"
+                        "[warn] Sidecar on port {p} is slow to accept SQL connections ({detail}), waiting 10s"
                     );
-                    sleep(Duration::from_secs(5)).await;
+                    sleep(Duration::from_secs(10)).await;
                     match verify_beads_db_ready(p, &db_name).await {
                         Ok(()) => {
                             let mut servers = self.servers.write().await;
@@ -134,6 +136,7 @@ impl DoltServerRegistry {
                         Err(e) => {
                             last_error = format!("Sidecar SQL verify failed after extended wait: {e:?}");
                             eprintln!("[warn] Sidecar on port {p} still not ready after extended wait, attempt {attempt}");
+                            child.kill().await.ok();
                             continue;
                         }
                     }
@@ -211,9 +214,9 @@ async fn verify_beads_db_ready(port: u16, db_name: &str) -> Result<(), VerifyErr
         }
     }
 
-    // Issue `SELECT 1` against the actual Beads DB within a 3-second window.
+    // Issue `SELECT 1` against the actual Beads DB within a 15-second window.
     let url = format!("mysql://root:@127.0.0.1:{port}/{db_name}");
-    let sql_result = timeout(Duration::from_secs(3), async {
+    let sql_result = timeout(Duration::from_secs(15), async {
         let pool = sqlx::MySqlPool::connect(&url).await?;
         let r = sqlx::query("SELECT 1").execute(&pool).await;
         pool.close().await;

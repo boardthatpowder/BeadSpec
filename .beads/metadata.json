@@ -1,7 +1,7 @@
 {
-  "database": "dolt",
   "backend": "dolt",
-  "dolt_mode": "embedded",
+  "database": "dolt",
   "dolt_database": "BEADSPEC",
+  "dolt_mode": "embedded",
   "project_id": "3c50deb0-b424-4721-9290-46f59a712b6f"
 }
