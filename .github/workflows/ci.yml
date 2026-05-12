@@ -73,6 +73,7 @@ jobs:
 
       - name: Test
         run: cargo test --manifest-path src-tauri/Cargo.toml
+        timeout-minutes: 10
 
   docs:
     name: Docs build
