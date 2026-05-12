@@ -125,7 +125,7 @@ pub fn run() {
             }
 
             // Set up system tray / menu-bar icon.
-            tray::setup_tray(&app.handle()).ok();
+            tray::setup_tray(app.handle()).ok();
 
             // Flush window state to disk on main window close so it persists even
             // when the process is killed without a clean RunEvent::Exit (e.g. dev mode).

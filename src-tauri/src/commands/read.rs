@@ -91,7 +91,7 @@ fn encode_cursor(priority: i32, created_at: &str, id: &str) -> String {
 
 fn decode_cursor(hex: &str) -> Option<PageCursor> {
     // Decode hex back to bytes
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return None;
     }
     let bytes: Option<Vec<u8>> = (0..hex.len())
@@ -117,6 +117,7 @@ pub struct TasksResponse {
 
 #[tauri::command]
 #[specta::specta]
+#[allow(clippy::too_many_arguments)]
 pub async fn list_tasks(
     project_path: String,
     filters: Option<TaskFilters>,

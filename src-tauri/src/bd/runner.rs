@@ -187,17 +187,13 @@ pub fn find_bd(settings_path: &str) -> Option<PathBuf> {
         &["/opt/homebrew/bin/bd", "/usr/local/bin/bd"]
     } else if cfg!(target_os = "linux") {
         &["~/.local/bin/bd", "/usr/local/bin/bd"]
-    } else if cfg!(windows) {
-        &[
-            // scoop and manual installs — expanded below via home_dir
-        ]
     } else {
         &[]
     };
     for raw in candidates {
-        let path = if raw.starts_with("~/") {
+        let path = if let Some(suffix) = raw.strip_prefix("~/") {
             if let Some(home) = dirs_home() {
-                home.join(&raw[2..])
+                home.join(suffix)
             } else {
                 continue;
             }

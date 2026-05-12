@@ -92,7 +92,7 @@ pub async fn no_clients_connected(port: u16) -> bool {
 /// - `Ok(true)`  — working set is clean (zero staged/working changes).
 /// - `Ok(false)` — working set has uncommitted changes.
 /// - `Err(...)`  — connection failed or timed out; caller must escalate to the
-///                 user rather than assuming clean (task 7.2 safe escalation).
+///   user rather than assuming clean (task 7.2 safe escalation).
 pub async fn working_set_clean(port: u16, db_name: &str) -> Result<bool, String> {
     use std::time::Duration;
     use tokio::time::timeout;

@@ -109,7 +109,7 @@ pub fn append(entry: &LogEntry) -> io::Result<()> {
     // Task 7.3 — rotate before writing if over threshold.
     maybe_rotate(&path)?;
 
-    let json = serde_json::to_string(entry).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string(entry).map_err(io::Error::other)?;
 
     // Platform file lock: fcntl on POSIX, LockFile on Windows.
     let mut file = OpenOptions::new().create(true).append(true).open(&path)?;

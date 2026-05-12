@@ -105,7 +105,7 @@ impl JsonlWatcher {
 
         // Debounce events and emit `task_list_changed` on the Tauri event bus.
         tokio::spawn(async move {
-            while let Some(_) = rx.recv().await {
+            while rx.recv().await.is_some() {
                 if !running_tokio.load(Ordering::SeqCst) {
                     break;
                 }
@@ -215,7 +215,7 @@ impl OpenSpecWatcher {
         });
 
         tokio::spawn(async move {
-            while let Some(_) = rx.recv().await {
+            while rx.recv().await.is_some() {
                 if !running_tokio.load(Ordering::SeqCst) {
                     break;
                 }
@@ -243,6 +243,12 @@ impl OpenSpecWatcher {
 /// Keyed by project path. Thread-safe — intended to be stored in Tauri's `.manage()`.
 pub struct WatcherRegistry {
     inner: Mutex<HashMap<String, (PollHandle, WatchHandle, OpenSpecWatchHandle)>>,
+}
+
+impl Default for WatcherRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WatcherRegistry {
