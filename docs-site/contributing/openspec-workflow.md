@@ -52,6 +52,6 @@ openspec/specs/<feature>/spec.md
 ```
 
 The feature directories match the areas listed in [Architecture](/contributing/architecture):
-`task-list`, `dependency-graph`, `smart-views`, `velocity-burndown`, `quick-capture`, `openspec-change-browser`, `app-settings`, etc.
+`task-list`, `dependency-graph`, `task-workspace`, `bd-health-panel`, `bd-formulas`, `quick-capture`, `openspec-change-browser`, `ruflo-memory-panel`, `notifications`, `app-settings`, etc.
 
 If the spec disagrees with current behavior, the spec is authoritative (unless the spec is wrong — in which case, raise it before implementing).

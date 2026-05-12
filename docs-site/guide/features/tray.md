@@ -1,6 +1,6 @@
 # System Tray
 
-BeadSpec runs a system tray icon so you can access key actions without bringing the main window to the foreground.
+BeadSpec runs a system tray icon so you can create issues and bring the app to the foreground without keeping the main window visible.
 
 ## Tray icon
 
@@ -8,19 +8,17 @@ On macOS the icon appears in the menu bar. On Windows it appears in the notifica
 
 ## Tray popover
 
-Click the tray icon to open a popover showing:
-- **Quick Capture** button — same as the global shortcut
-- **Recent issues** — the last few issues you touched, with status badges
-- **Project name** and connection status
+Click the tray icon to open a popover with:
+- **Quick Create** — a minimal form to create a new issue (title + priority) without opening the main window
 - **Open BeadSpec** — bring the main window to the foreground
+
+## Badge
+
+When there are pending notifications or flagged human-decision items, the tray icon shows a badge count.
 
 ## Hiding the main window
 
 Closing the main window (clicking the red ✕ on macOS or X on Windows) hides it to the tray rather than quitting. To fully quit BeadSpec, use **Tray → Quit BeadSpec** or the **File → Quit** menu.
-
-## Auto-launch
-
-To launch BeadSpec at login, enable it in **Settings → General → Launch at login**.
 
 ## Troubleshooting
 

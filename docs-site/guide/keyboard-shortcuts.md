@@ -1,57 +1,57 @@
 # Keyboard Shortcuts
 
-BeadSpec uses platform-aware shortcuts: `Cmd` on macOS, `Ctrl` on Windows and Linux.
+On macOS, `⌘` is the Command key. On Windows/Linux, `Ctrl` is used instead of `⌘`.
 
-## Global (work from any app)
-
-| Shortcut | Action |
-|---|---|
-| `⌘ Shift Space` / `Ctrl Shift Space` | Open Quick Capture window |
+Press `?` anywhere in the app (when no input is focused) to show the in-app shortcuts reference.
 
 ## Navigation
 
 | Shortcut | Action |
 |---|---|
-| `⌘,` / `Ctrl+,` | Open Settings |
-| `1` | Task List tab |
-| `2` | Dependency Graph tab |
-| `3` | Velocity tab |
-| `4` | Changes (OpenSpec) tab |
-| `G` | Jump to Dependency Graph |
-| `Escape` | Close panel / dismiss dialog |
+| `⌘K` / `Ctrl+K` | Open command palette |
+| `J` | Move selection down (task list, focus only) |
+| `K` | Move selection up (task list, focus only) |
+| `↓` / `↑` | Navigate list, opens preview tab |
+| `Enter` | Pin focused task as a tab |
+| `Backspace` | Navigate back (dependency graph) |
 
-## Task List
+## Task Actions
 
 | Shortcut | Action |
 |---|---|
-| `N` | New issue |
+| `Space` | Quick status change on selected task |
 | `/` | Focus filter input |
-| `↑` / `↓` | Navigate issue list |
-| `Enter` | Open selected issue detail |
-| `S` | Save current filter as Smart View (when filter bar is focused) |
-| `⌘ K` / `Ctrl K` | Open command palette |
+| `N` | New issue (when no input is focused) |
 
-## Issue Detail
+## App
 
 | Shortcut | Action |
 |---|---|
-| `E` | Edit title (when detail panel is open) |
-| `⌘ Enter` / `Ctrl Enter` | Save edits |
-| `Escape` | Cancel edit / close detail |
+| `?` | Show keyboard shortcuts reference |
+| `⌘=` / `Ctrl+=` | Zoom in |
+| `⌘-` / `Ctrl+-` | Zoom out |
+| `⌘0` / `Ctrl+0` | Reset zoom to 100% |
+| `⌘R` / `Ctrl+R` | Refresh all data |
+| `⌘,` / `Ctrl+,` | Open settings |
 
-## Dependency Graph
+## Workspace & Tabs
 
 | Shortcut | Action |
 |---|---|
-| `Scroll` | Zoom in/out |
-| `Click + drag` | Pan |
-| `F` | Fit graph to viewport |
-| `R` | Reset layout |
+| `⌘W` / `Ctrl+W` | Close active tab |
+| `⌘⇧T` / `Ctrl+Shift+T` | Reopen last closed tab |
+| `⌘\` / `Ctrl+\` | Split pane right |
+| `⌘⇧\` / `Ctrl+Shift+\` | Split pane down |
+| `Ctrl+Tab` | Next tab in pane |
+| `Ctrl+Shift+Tab` | Previous tab in pane |
+| `⌘1`–`⌘9` / `Ctrl+1`–`Ctrl+9` | Jump to tab N |
 
-## Command Palette
+## Quick Capture
 
-Press `⌘ K` / `Ctrl K` to open the command palette. Type to search available commands — issue actions, navigation, settings, and more.
+The Quick Capture global shortcut (default: `⌘⇧N` / `Ctrl+Shift+N`) works even when BeadSpec is not in the foreground. It can be changed in **Settings → Quick Capture**.
 
----
-
-Shortcuts can be customized in [Settings → Shortcuts](/guide/features/settings#shortcuts).
+| Shortcut | Action |
+|---|---|
+| `⌘⇧N` / `Ctrl+Shift+N` | Open Quick Capture window (default, configurable) |
+| `Enter` | Submit issue (in Quick Capture window) |
+| `Escape` | Dismiss Quick Capture window |

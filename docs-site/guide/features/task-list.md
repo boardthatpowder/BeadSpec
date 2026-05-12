@@ -6,6 +6,8 @@ The task list is BeadSpec's primary view — a virtualized, filterable list of a
 
 The task list shows issues grouped by a configurable field (status, assignee, priority, or label). Each group shows a count and can be collapsed. Scroll performance is maintained via virtualization even with thousands of issues.
 
+A **KPI bar** above the list shows live status counts (open, in progress, blocked, closed). Clicking a status chip applies a filter for that status.
+
 ## Grouping
 
 Use the **Group by** selector in the toolbar to change grouping. Common groupings:
@@ -24,23 +26,26 @@ The filter bar accepts:
 - `label:bug`, `label:enhancement`, or any label value
 - Combinations: `status:open priority:0`
 
-Save a filter as a [Smart View](/guide/features/smart-views) to jump to it instantly.
+## Bulk actions
+
+Select multiple issues by checking their checkboxes. A **bulk action toolbar** appears with:
+- **Add label** — apply a label to all selected issues at once
+
+More bulk actions may be added in future releases.
 
 ## Issue detail
 
-Click any issue to open its detail panel on the right. From the detail panel you can:
-- Edit the title, description, status, assignee, and priority inline
-- View and manage labels
-- See the issue's dependencies (and open the [dependency graph](/guide/features/dependency-graph))
-- Read the full Markdown description with the rich editor
+Click any issue to open its detail panel as a tab. From the detail panel you can edit all fields inline. See [Task Detail](/guide/features/task-detail) for the full breakdown.
 
 ## Keyboard navigation
 
 | Shortcut | Action |
 |---|---|
-| `↑` / `↓` | Move between issues |
-| `Enter` | Open selected issue detail |
+| `↑` / `↓` | Move between issues (opens preview tab) |
+| `J` / `K` | Move selection down / up (Focus view) |
+| `Enter` | Pin selected issue as a tab |
 | `N` | New issue (when no input is focused) |
+| `Space` | Quick status change |
 | `Escape` | Close detail panel |
 | `/` | Focus filter input |
 
