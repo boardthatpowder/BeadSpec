@@ -56,7 +56,7 @@ impl DoltServerRegistry {
         let db_name = discover_db_name(embeddeddolt_dir)
             .ok_or("Cannot determine Beads DB name from embeddeddolt dir")?;
 
-        // Task 7.4: retry up to 3 times to handle port-race scenarios.
+        // Retry up to 3 times to handle port-race scenarios.
         const MAX_ATTEMPTS: u32 = 3;
         let mut last_error = String::new();
 
@@ -77,63 +77,72 @@ impl DoltServerRegistry {
                 .stderr(std::process::Stdio::null())
                 .spawn();
 
-            let child = match child_result {
+            let mut child = match child_result {
                 Ok(c) => c,
                 Err(e) => {
                     return Err(format!("Failed to spawn dolt sql-server: {e}"));
                 }
             };
 
-            // Wait for the TCP port to accept connections (up to 10 seconds).
-            match wait_for_port_async(port, Duration::from_secs(10)).await {
+            // Wait for the TCP port to accept connections (up to 30 seconds — dolt
+            // cold-starts on large databases can take 10-20s on first launch).
+            match wait_for_port_async(port, Duration::from_secs(30)).await {
                 Ok(()) => {}
                 Err(e) => {
                     last_error = format!("dolt sql-server did not start in time: {e}");
                     eprintln!(
                         "[dolt_server] Sidecar spawn attempt {attempt}: port {port} never accepted connections — {e}"
                     );
+                    child.kill().await.ok();
                     continue;
                 }
             }
 
-            // Task 7.3: verify SQL readiness against the actual Beads DB before
-            // writing .supervisor.pid.  A 3-second timeout guards the whole check;
-            // a quick connection-refused (< 1 second) is treated as a port race.
+            // Verify SQL readiness against the actual Beads DB. Use a 15-second
+            // timeout — dolt may be slow to initialise schema on first open.
+            // On any failure, kill the child before retrying so it releases the
+            // noms LOCK and doesn't block the next spawn attempt.
             match verify_beads_db_ready(port, &db_name).await {
                 Ok(()) => {
-                    // SQL is healthy — register and return.
+                    // SQL is healthy — write PID file so bd can verify the server is
+                    // alive without trying to auto-start a competing Dolt process.
+                    let beads_dir = embeddeddolt_dir.parent().unwrap_or(embeddeddolt_dir);
+                    if let Some(pid) = child.id() {
+                        let _ = std::fs::write(beads_dir.join("dolt-server.pid"), pid.to_string());
+                    }
                     let mut servers = self.servers.write().await;
                     servers.insert(project_path.to_string(), SpawnedServer { port, child });
                     return Ok(port);
                 }
                 Err(VerifyError::PortRace { stolen_port }) => {
-                    last_error = format!(
-                        "Port {stolen_port} was stolen between selection and sidecar bind"
-                    );
+                    last_error =
+                        format!("Port {stolen_port} was stolen between selection and sidecar bind");
                     eprintln!(
                         "[warn] Port {} stolen between selection and sidecar bind (attempt {}), retrying",
                         stolen_port,
                         attempt
                     );
-                    // Loop to retry with a fresh free port.
+                    child.kill().await.ok();
                     continue;
                 }
                 Err(VerifyError::SlowStart { port: p, detail }) => {
-                    // Sidecar started on the right port but is slow to respond — give
-                    // it more time by waiting an additional 5 seconds and re-checking.
+                    // Sidecar is slow to respond — give it 10 more seconds then re-check.
                     eprintln!(
-                        "[warn] Sidecar on port {p} is slow to accept SQL connections ({detail}), waiting 5s"
+                        "[warn] Sidecar on port {p} is slow to accept SQL connections ({detail}), waiting 10s"
                     );
-                    sleep(Duration::from_secs(5)).await;
+                    sleep(Duration::from_secs(10)).await;
                     match verify_beads_db_ready(p, &db_name).await {
                         Ok(()) => {
                             let mut servers = self.servers.write().await;
-                            servers.insert(project_path.to_string(), SpawnedServer { port: p, child });
+                            servers
+                                .insert(project_path.to_string(), SpawnedServer { port: p, child });
                             return Ok(p);
                         }
                         Err(e) => {
-                            last_error = format!("Sidecar SQL verify failed after extended wait: {e:?}");
+                            last_error =
+                                format!("Sidecar SQL verify failed after extended wait: {e:?}");
                             eprintln!("[warn] Sidecar on port {p} still not ready after extended wait, attempt {attempt}");
+                            child.kill().await.ok();
                             continue;
                         }
                     }
@@ -144,6 +153,20 @@ impl DoltServerRegistry {
         Err(format!(
             "Failed to spawn dolt sidecar after {MAX_ATTEMPTS} attempts: {last_error}"
         ))
+    }
+
+    /// Return the port of an already-running sidecar, or None if not registered.
+    pub async fn get_port(&self, project_path: &str) -> Option<u16> {
+        self.servers.read().await.get(project_path).map(|s| s.port)
+    }
+
+    /// Drop the registry entry for `project_path` (does not kill the child).
+    /// Use before a self-heal respawn — the next spawn_or_get will create a fresh sidecar.
+    pub async fn invalidate(&self, project_path: &str) {
+        if let Some(mut s) = self.servers.write().await.remove(project_path) {
+            // Best-effort kill of the now-stale child so we don't leak it.
+            let _ = s.child.kill().await;
+        }
     }
 
     pub async fn stop_all(&self) {
@@ -192,11 +215,7 @@ async fn verify_beads_db_ready(port: u16, db_name: &str) -> Result<(), VerifyErr
 
     // Check TCP reachability quickly (1-second window).
     // If connection is refused this fast, another process stole the port.
-    let tcp_result = timeout(
-        Duration::from_secs(1),
-        TcpStream::connect(&addr),
-    )
-    .await;
+    let tcp_result = timeout(Duration::from_secs(1), TcpStream::connect(&addr)).await;
 
     match tcp_result {
         // Connection refused within 1 second → port race.
@@ -211,9 +230,9 @@ async fn verify_beads_db_ready(port: u16, db_name: &str) -> Result<(), VerifyErr
         }
     }
 
-    // Issue `SELECT 1` against the actual Beads DB within a 3-second window.
+    // Issue `SELECT 1` against the actual Beads DB within a 15-second window.
     let url = format!("mysql://root:@127.0.0.1:{port}/{db_name}");
-    let sql_result = timeout(Duration::from_secs(3), async {
+    let sql_result = timeout(Duration::from_secs(15), async {
         let pool = sqlx::MySqlPool::connect(&url).await?;
         let r = sqlx::query("SELECT 1").execute(&pool).await;
         pool.close().await;
@@ -272,7 +291,11 @@ pub fn find_dolt(settings_override: Option<&str>) -> Option<PathBuf> {
     if let Some(found) = std::env::var_os("PATH").and_then(|path_var| {
         std::env::split_paths(&path_var).find_map(|dir| {
             let candidate = dir.join(bin);
-            if candidate.is_file() { Some(candidate) } else { None }
+            if candidate.is_file() {
+                Some(candidate)
+            } else {
+                None
+            }
         })
     }) {
         return Some(found);
@@ -313,7 +336,10 @@ pub fn find_dolt(settings_override: Option<&str>) -> Option<PathBuf> {
     }
     if cfg!(windows) {
         if let Some(h) = home {
-            for suffix in &[r"AppData\Local\Programs\dolt\bin\dolt.exe", r"scoop\apps\dolt\current\dolt.exe"] {
+            for suffix in &[
+                r"AppData\Local\Programs\dolt\bin\dolt.exe",
+                r"scoop\apps\dolt\current\dolt.exe",
+            ] {
                 let p = h.join(suffix);
                 if p.is_file() {
                     return Some(p);

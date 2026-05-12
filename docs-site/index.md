@@ -4,7 +4,7 @@ layout: home
 hero:
   name: BeadSpec
   text: A desktop GUI for Beads issue tracking
-  tagline: Visualize dependencies, track velocity, and browse OpenSpec changes — without leaving your workflow.
+  tagline: Visualize dependencies, manage issues visually, and browse OpenSpec changes — without leaving your workflow.
   image:
     src: /screenshots/main.png
     alt: BeadSpec screenshot
@@ -23,15 +23,15 @@ features:
   - icon: ⚡
     title: Real-time Sync
     details: Polls dolt_log() for changes. Edits made in the terminal appear in BeadSpec immediately — no manual refresh.
-  - icon: 📋
-    title: Smart Views
-    details: Save filter queries as named views with live counts. Jump to "my in-progress", "blocked", or any custom query instantly.
-  - icon: 📈
-    title: Velocity & Burndown
-    details: Charts showing throughput over time so you can spot slowdowns before they become problems.
+  - icon: 🗂️
+    title: Workspace Tabs
+    details: Open issues as tabs in a multi-pane workspace. Split panes side-by-side and drag tabs between them.
+  - icon: 🏥
+    title: Health & Formulas
+    details: Run bd diagnostics (preflight, doctor, lint, stale, orphans) and pour bd workflow formulas without leaving the app.
   - icon: 📝
     title: OpenSpec Browser
-    details: Browse in-flight change proposals and their implementation status directly inside the app.
+    details: Browse in-flight change proposals and their implementation status directly inside the app. Optional integration.
   - icon: ⌨️
     title: Quick Capture
     details: A global keyboard shortcut opens a floating window for fast issue creation — without switching apps.

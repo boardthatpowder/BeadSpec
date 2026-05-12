@@ -1,6 +1,6 @@
 ## Context
 
-Beads-UI is a Tauri 2 + React 19 + TypeScript + Tailwind v4 desktop app. `run_bd_command` in `external.rs` is the established pattern for shelling out to CLI tools and returning structured output. Ruflo stores workflow context as named memories accessible via `ruflo memory search "<query>" --json`. This change wires that CLI into the task detail panel without making ruflo a hard dependency.
+BeadSpec is a Tauri 2 + React 19 + TypeScript + Tailwind v4 desktop app. `run_bd_command` in `external.rs` is the established pattern for shelling out to CLI tools and returning structured output. Ruflo stores workflow context as named memories accessible via `ruflo memory search "<query>" --json`. This change wires that CLI into the task detail panel without making ruflo a hard dependency.
 
 ## Goals / Non-Goals
 

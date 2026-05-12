@@ -1,8 +1,8 @@
 ## Why
 
-beads-ui has no way to see all OpenSpec changes at a glance, track their progress, or trigger the import workflow without leaving the app and running CLI commands. When a developer asks "what's in flight right now?" they must open a terminal, `ls openspec/changes/`, open each `tasks.md` to count checkboxes, and manually correlate with beads epics. The `openspec-beads-import` action — which creates the epic and all implementation issues for a change — is entirely invisible from the UI.
+BeadSpec has no way to see all OpenSpec changes at a glance, track their progress, or trigger the import workflow without leaving the app and running CLI commands. When a developer asks "what's in flight right now?" they must open a terminal, `ls openspec/changes/`, open each `tasks.md` to count checkboxes, and manually correlate with beads epics. The `openspec-beads-import` action — which creates the epic and all implementation issues for a change — is entirely invisible from the UI.
 
-This change adds a **Changes** top-level view that makes the full OpenSpec change lifecycle visible and actionable from within beads-ui: browse all active and archived changes, see per-change progress at a glance, open any artifact in the system editor, and trigger `openspec-beads-import` with output streaming directly in the app.
+This change adds a **Changes** top-level view that makes the full OpenSpec change lifecycle visible and actionable from within BeadSpec: browse all active and archived changes, see per-change progress at a glance, open any artifact in the system editor, and trigger `openspec-beads-import` with output streaming directly in the app.
 
 ## What Changes
 
@@ -44,7 +44,7 @@ This change adds a **Changes** top-level view that makes the full OpenSpec chang
 **No breaking changes to existing IPC** — all new Tauri commands are additive and independent of existing commands.
 
 **Non-goals**:
-- Editing OpenSpec artifacts from within beads-ui (read + open in system editor only)
+- Editing OpenSpec artifacts from within BeadSpec (read + open in system editor only)
 - Running `openspec validate` from the change card (covered by openspec-spec-panel)
 - Showing per-task breakdown within a card (tasks.md checkbox count only)
 - Streaming import output in real time via Tauri event channel (single `CommandOutput` return is sufficient; stdout capture before return is acceptable)

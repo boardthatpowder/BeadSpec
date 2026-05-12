@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { commands, unwrap } from '../../ipc'
 import type { CommandOutput } from '../../bindings'
-import { useActiveProject, useActiveProjectId } from '../../hooks/useProject'
+import { useActiveProject } from '../../hooks/useProject'
 import { renderWithChips } from '../shared/issueChips'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -30,13 +30,13 @@ const CHECKS: CheckConfig[] = [
 ]
 
 /** Run the named bd command for a given check key. Returns stdout on success, throws on error. */
-async function runNamedBdCheck(projectId: string, key: CheckKey): Promise<string> {
+async function runNamedBdCheck(projectPath: string, key: CheckKey): Promise<string> {
   switch (key) {
-    case 'preflight': return unwrap(commands.bdPreflight(projectId))
-    case 'doctor':    return unwrap(commands.bdDoctor(projectId))
-    case 'lint':      return unwrap(commands.bdLint(projectId))
-    case 'stale':     return unwrap(commands.bdStale(projectId))
-    case 'orphans':   return unwrap(commands.bdOrphans(projectId))
+    case 'preflight': return unwrap(commands.bdPreflight(projectPath))
+    case 'doctor':    return unwrap(commands.bdDoctor(projectPath))
+    case 'lint':      return unwrap(commands.bdLint(projectPath))
+    case 'stale':     return unwrap(commands.bdStale(projectPath))
+    case 'orphans':   return unwrap(commands.bdOrphans(projectPath))
   }
 }
 
@@ -125,11 +125,11 @@ function CheckSection({ label, result, open, onToggle }: CheckSectionProps) {
 
 export function BdHealthPanel() {
   const project = useActiveProject()
-  const projectId = useActiveProjectId()
   const [checks, setChecks] = useState<CheckState>(INITIAL_STATE)
   const [isRunning, setIsRunning] = useState(false)
   const [openSections, setOpenSections] = useState<Set<CheckKey>>(new Set())
   const [bdNotFound, setBdNotFound] = useState(false)
+  const [projectNotConnected, setProjectNotConnected] = useState(false)
   const [hasRun, setHasRun] = useState(false)
 
   const setCheck = useCallback((key: CheckKey, patch: Partial<CheckResult>) => {
@@ -137,58 +137,50 @@ export function BdHealthPanel() {
   }, [])
 
   const runChecks = useCallback(async () => {
-    if (!project || !projectId || isRunning) return
+    if (!project || isRunning) return
 
     setIsRunning(true)
     setHasRun(true)
     setBdNotFound(false)
+    setProjectNotConnected(false)
     setChecks(INITIAL_STATE)
-
-    let foundNotFound = false
+    setOpenSections(new Set())
 
     for (const check of CHECKS) {
       setCheck(check.key, { isRunning: true, output: null, error: null })
       try {
-        const stdout = await runNamedBdCheck(projectId, check.key)
+        const stdout = await runNamedBdCheck(project, check.key)
         const output: CommandOutput = { stdout, stderr: '', exit_code: 0 }
         setCheck(check.key, { isRunning: false, output, error: null })
       } catch (err) {
         const errorMsg = typeof err === 'string' ? err : 'Unknown error'
-        const isMissing = errorMsg.toLowerCase().includes('not found') ||
-          errorMsg.includes('bd cli not found') ||
-          errorMsg.includes('project_not_connected')
+        const isBdMissing = errorMsg.includes('bd CLI not found')
+        const isNotConnected = errorMsg.includes('project_not_connected')
         const syntheticOutput: CommandOutput = { stdout: '', stderr: errorMsg, exit_code: -1 }
         setCheck(check.key, { isRunning: false, output: syntheticOutput, error: errorMsg })
 
-        if (isMissing) {
-          foundNotFound = true
+        if (isBdMissing) {
           setBdNotFound(true)
           break
         }
-      }
-    }
-
-    if (foundNotFound) {
-      // Mark remaining checks as not-run
-      for (const check of CHECKS) {
-        setChecks(prev => {
-          if (!prev[check.key].output && !prev[check.key].isRunning) {
-            return prev
-          }
-          return prev
-        })
+        if (isNotConnected) {
+          setProjectNotConnected(true)
+          break
+        }
+        // Per-check failure: auto-open the section so the error is visible
+        setOpenSections(prev => new Set(prev).add(check.key))
       }
     }
 
     setIsRunning(false)
-  }, [project, projectId, isRunning, setCheck])
+  }, [project, isRunning, setCheck])
 
   // Auto-run on mount
   useEffect(() => {
-    if (project && projectId && !hasRun) {
+    if (project && !hasRun) {
       runChecks()
     }
-  }, [project, projectId, hasRun, runChecks])
+  }, [project, hasRun, runChecks])
 
   const toggleSection = useCallback((key: CheckKey) => {
     setOpenSections(prev => {
@@ -199,7 +191,7 @@ export function BdHealthPanel() {
     })
   }, [])
 
-  const allPassed = hasRun && !isRunning && !bdNotFound &&
+  const allPassed = hasRun && !isRunning && !bdNotFound && !projectNotConnected &&
     CHECKS.every(c => checks[c.key].output?.exit_code === 0)
 
   if (!project) {
@@ -246,6 +238,20 @@ export function BdHealthPanel() {
               <p className="text-xs text-neutral-500 mt-1 max-w-xs">
                 The <code className="font-mono bg-neutral-800 px-1 rounded">bd</code> command was not found on PATH.
                 Install Beads CLI and ensure it is available in your shell, then re-run.
+              </p>
+            </div>
+          </div>
+        ) : projectNotConnected ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+              <svg className="w-6 h-6 text-neutral-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-neutral-200">Project not fully connected</p>
+              <p className="text-xs text-neutral-500 mt-1 max-w-xs">
+                Try reopening the project from the Project menu, then re-run.
               </p>
             </div>
           </div>

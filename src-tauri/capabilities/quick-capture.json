@@ -5,6 +5,7 @@
   "windows": ["quick-capture"],
   "permissions": [
     "core:default",
+    "core:window:allow-hide",
     "store:default"
   ]
 }

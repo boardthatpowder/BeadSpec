@@ -1,6 +1,6 @@
 ## Context
 
-`beads-ui` opens a project by spawning or connecting to a `dolt sql-server` whose port is recorded in `.beads/embeddeddolt/config.yaml`. When the previous process supervising the server dies uncleanly (Tauri force-quit, OOM, laptop sleep, `kill -9`), the dolt process can survive — orphaned but still bound to a port — while the next launch tries to spawn a new server on the configured port and hangs because the data dir is locked. The `bd` CLI, which shares the same backend, exhibits identical symptoms (silent hang). We observed this live during a session: two stale `dolt sql-server` processes (PIDs 51084 from a Friday evening, 42791 from earlier the same day) were running on `:59523` and `:64223` respectively, while the current `config.yaml` pointed at `:49226` with nothing listening, and every `bd` call hung indefinitely.
+`BeadSpec` opens a project by spawning or connecting to a `dolt sql-server` whose port is recorded in `.beads/embeddeddolt/config.yaml`. When the previous process supervising the server dies uncleanly (Tauri force-quit, OOM, laptop sleep, `kill -9`), the dolt process can survive — orphaned but still bound to a port — while the next launch tries to spawn a new server on the configured port and hangs because the data dir is locked. The `bd` CLI, which shares the same backend, exhibits identical symptoms (silent hang). We observed this live during a session: two stale `dolt sql-server` processes (PIDs 51084 from a Friday evening, 42791 from earlier the same day) were running on `:59523` and `:64223` respectively, while the current `config.yaml` pointed at `:49226` with nothing listening, and every `bd` call hung indefinitely.
 
 The recovery layer lives in Rust because that is where the connection pool lives, and because process enumeration + kill is cleanest from a native binary. The frontend's job is to surface the situation when the safe-path remediation is not possible and to provide a one-click override.
 
@@ -11,14 +11,14 @@ The recovery layer lives in Rust because that is where the connection pool lives
 - Launch never hangs. Either we connect, or we surface a user-actionable error within a known deadline (target: 8 seconds from project-open).
 - Automatic remediation when ownership and safety are provable (current user, this project's data dir, no uncommitted working set).
 - Clear escalation when automatic remediation is unsafe: a modal lists offending PIDs/ports, explains why we can't act, and offers a `--force` button the user must opt into.
-- All probe attempts, classification decisions, kill operations, and respawns are logged to `~/Library/Logs/beads-ui/recovery.log` (or platform-equivalent) with enough context that a remote incident can be diagnosed.
+- All probe attempts, classification decisions, kill operations, and respawns are logged to `~/Library/Logs/BeadSpec/recovery.log` (or platform-equivalent) with enough context that a remote incident can be diagnosed.
 - Cross-platform: macOS, Windows, Linux.
 
 **Non-Goals:**
 
 - Mid-session disconnect recovery (the existing "stale" indicator from `data-layer` continues to handle that).
 - Dolt data corruption recovery — out of scope; this addresses supervisor-level wedges only.
-- Modifying the `bd` CLI. The fix lives in `beads-ui`; bd benefits indirectly because the app's recovery clears the same wedge bd is hitting.
+- Modifying the `bd` CLI. The fix lives in `BeadSpec`; bd benefits indirectly because the app's recovery clears the same wedge bd is hitting.
 - A separate steady-state health monitor. We only run the guard at project-open.
 
 ## Decisions
@@ -93,11 +93,11 @@ When the Rust backend cannot safely auto-recover, it emits a Tauri event `dolt-r
 ```json
 {
   "ts": "2026-05-11T14:33:11Z",
-  "project": "/Users/dean/workspaces/beads-ui",
+  "project": "/Users/dean/workspaces/BeadSpec",
   "event": "orphan_detected" | "auto_kill" | "force_kill" | "probe_ok" | "spawn_supervisor" | "modal_shown" | "user_force",
   "pid": 51084,
   "port": 59523,
-  "data_dir": "/Users/dean/workspaces/beads-ui/.beads/embeddeddolt/.dolt",
+  "data_dir": "/Users/dean/workspaces/BeadSpec/.beads/embeddeddolt/.dolt",
   "outcome": "...",
   "duration_ms": 124
 }
@@ -111,7 +111,7 @@ The guard runs unconditionally before any read or write against a freshly opened
 
 ## Risks / Trade-offs
 
-- **False-positive orphan classification**: Two beads-ui windows opening the same project nearly simultaneously could mis-identify each other's supervisor. → Mitigated by writing the supervisor PID atomically and checking process start time (a process older than this launch is not "us").
+- **False-positive orphan classification**: Two BeadSpec windows opening the same project nearly simultaneously could mis-identify each other's supervisor. → Mitigated by writing the supervisor PID atomically and checking process start time (a process older than this launch is not "us").
 - **Process-list permission issues on Windows**: Enumerating other-user processes on Windows requires elevated permissions. → Restrict to current-user processes (predicate 1); if a different user owns the orphan, escalate to the modal with a "can't act, please log out the other session" message.
 - **Stale `.supervisor.pid` after disk-full or crash mid-write**: → Treat unreadable / partial supervisor.pid as "no supervisor"; safer to escalate than to assume.
 - **`sysinfo` crate bloat**: Adds ~1MB to the binary. → Acceptable given the scope of the problem it solves; the alternative (shell out to `ps`/`tasklist`) is more fragile and platform-divergent.
@@ -127,6 +127,6 @@ The guard runs unconditionally before any read or write against a freshly opened
 
 ## Open Questions
 
-- Should the modal include a "Quit beads-ui" button that exits the app cleanly without retrying? **Tentative:** yes, since a user who can't recover should be able to leave with a clean Tauri exit (which itself flushes any uncommitted writes from other projects).
-- Where exactly does `recovery.log` live on Linux? **Tentative:** `~/.local/share/beads-ui/recovery.log` per XDG. macOS: `~/Library/Logs/beads-ui/recovery.log`. Windows: `%LOCALAPPDATA%\beads-ui\Logs\recovery.log`.
+- Should the modal include a "Quit BeadSpec" button that exits the app cleanly without retrying? **Tentative:** yes, since a user who can't recover should be able to leave with a clean Tauri exit (which itself flushes any uncommitted writes from other projects).
+- Where exactly does `recovery.log` live on Linux? **Tentative:** `~/.local/share/BeadSpec/recovery.log` per XDG. macOS: `~/Library/Logs/BeadSpec/recovery.log`. Windows: `%LOCALAPPDATA%\BeadSpec\Logs\recovery.log`.
 - Do we want to bound the recovery.log file size? **Tentative:** rotate at 5MB with one backup file; not load-bearing for v1.

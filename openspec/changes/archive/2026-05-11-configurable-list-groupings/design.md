@@ -1,6 +1,6 @@
 ## Context
 
-beads-ui renders its task list with `@tanstack/react-virtual` (already installed). All tasks are loaded via TanStack Query into a single `Task[]` array; grouping is a pure JS transform on that array applied before the virtual list sees it. The `HashStateContext` serializes view state (filters, selected task ID, view mode) to the URL hash. A Tauri store (`layout.json`) persists layout preferences across hard refreshes. This change extends both persistence mechanisms for the new `groupBy` field.
+BeadSpec renders its task list with `@tanstack/react-virtual` (already installed). All tasks are loaded via TanStack Query into a single `Task[]` array; grouping is a pure JS transform on that array applied before the virtual list sees it. The `HashStateContext` serializes view state (filters, selected task ID, view mode) to the URL hash. A Tauri store (`layout.json`) persists layout preferences across hard refreshes. This change extends both persistence mechanisms for the new `groupBy` field.
 
 ## Goals / Non-Goals
 

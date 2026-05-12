@@ -49,7 +49,7 @@ Each active OpenSpec change SHALL be rendered as a card displaying: change name,
 
 - **WHEN** the user clicks an artifact name link (e.g. "proposal.md") on a change card
 - **THEN** the file SHALL open in the system default editor via `shell::open`
-- **AND** beads-ui SHALL remain open and responsive
+- **AND** BeadSpec SHALL remain open and responsive
 
 #### Scenario: Artifact is absent
 

@@ -7,6 +7,12 @@ This guide gets you from zero to a running BeadSpec session in under five minute
 - `bd` installed and on your `PATH` (see [Installation](/guide/installation))
 - BeadSpec installed
 
+::: tip Recommended companions
+BeadSpec is fully usable with just `bd`. We recommend also installing **OpenSpec** if you work with structured feature specs — it unlocks the Changes view and proposal browser. **Ruflo** is optional and adds cross-session agent memory features. Both can be enabled or disabled at any time in **Settings → Features**.
+
+See [Optional Integrations](/guide/integrations) for installation pointers.
+:::
+
 ## 1. Create or open a Beads project
 
 If you don't have a Beads project yet, create one:
@@ -30,15 +36,17 @@ The **task list** shows all issues from your Beads project, grouped by status by
 
 ## 4. Create your first issue
 
-**From the task list**: click the **+** button in any group header, or press `N` (when no input is focused) to open a new issue dialog.
+**From the task list**: press `N` (when no input is focused) to open a new issue dialog.
 
 **Quick Capture** (fastest): use the global keyboard shortcut to open a floating capture window without switching apps:
-- macOS: `⌘ Shift Space`
-- Windows/Linux: `Ctrl Shift Space`
+- macOS: `⌘⇧N`
+- Windows/Linux: `Ctrl+Shift+N`
 
-## 5. View the dependency graph
+*(The shortcut can be changed in **Settings → Quick Capture**.)*
 
-Click the **Graph** tab (or press `G`) to see all issues as an interactive graph. Drag nodes to rearrange, click an issue to open its detail panel.
+## 5. Open the dependency graph
+
+Click the **Graph** tab in issue detail (or press `G` from anywhere in the app when no input is focused) to see an interactive dependency graph.
 
 ## 6. Switch projects
 
@@ -47,5 +55,7 @@ Use **File → Open Project** (or the project switcher in the sidebar) to open a
 ## What's next?
 
 - [Keyboard shortcuts](/guide/keyboard-shortcuts) — learn the full shortcut list
-- [Smart views](/guide/features/smart-views) — save your common filter queries
+- [Views](/guide/features/views) — understand All, Focus, Ready, Health, and Changes views
+- [Workspace Tabs](/guide/features/workspace-tabs) — multi-tab and split-pane layout
+- [Optional Integrations](/guide/integrations) — OpenSpec and Ruflo
 - [Relationship with bd](/guide/relationship-with-bd) — understand what BeadSpec does vs what `bd` does

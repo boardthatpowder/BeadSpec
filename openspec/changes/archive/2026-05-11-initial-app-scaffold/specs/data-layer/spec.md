@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-Defines how Beads UI connects to Dolt SQL, shells out to the `bd` CLI, maintains real-time sync, and manages connections across multiple projects. This layer is entirely in Rust and exposed to the TypeScript frontend via typed Tauri commands.
+Defines how BeadSpec connects to Dolt SQL, shells out to the `bd` CLI, maintains real-time sync, and manages connections across multiple projects. This layer is entirely in Rust and exposed to the TypeScript frontend via typed Tauri commands.
 
 ### Requirement: Direct Dolt SQL Reads
 

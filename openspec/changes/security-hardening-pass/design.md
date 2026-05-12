@@ -1,6 +1,6 @@
 ## Context
 
-Beads UI's current Tauri security posture treats all renderer-originating calls as trusted. CSP is `null`, the default capability grants `shell:allow-execute`, `shell:allow-open`, and `opener:default` to all windows, and two generic IPC commands (`runBdCommand`, `runRufloCommand`) accept free-form args, cwd, and binary paths supplied by the renderer. A single XSS or supply-chain compromise in a JS dependency can pivot to arbitrary local CLI execution through the app's own trusted IPC.
+BeadSpec's current Tauri security posture treats all renderer-originating calls as trusted. CSP is `null`, the default capability grants `shell:allow-execute`, `shell:allow-open`, and `opener:default` to all windows, and two generic IPC commands (`runBdCommand`, `runRufloCommand`) accept free-form args, cwd, and binary paths supplied by the renderer. A single XSS or supply-chain compromise in a JS dependency can pivot to arbitrary local CLI execution through the app's own trusted IPC.
 
 Correctness gaps compound the risk surface: the label `IN (...)` clause interpolates issue IDs as strings, the 2000-row task cap silently drops tasks in large projects, the Dolt `working_set_clean` predicate queries `information_schema` instead of the Beads DB, and sidecar startup claims success as soon as any TCP listener occupies the port without verifying SQL readiness.
 

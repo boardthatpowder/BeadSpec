@@ -1,6 +1,6 @@
 ## Why
 
-Beads UI has no way to manually trigger a data refresh, and its user preferences are scattered across `localStorage`, Zustand stores, and Tauri Store with no unified surface. Different deployments also require different binary paths (`bd`, `openspec`, `ruflo`, `dolt`) and feature sets, but everything is currently hardcoded — making it impossible to disable OpenSpec or Ruflo for environments that don't have those tools installed.
+BeadSpec has no way to manually trigger a data refresh, and its user preferences are scattered across `localStorage`, Zustand stores, and Tauri Store with no unified surface. Different deployments also require different binary paths (`bd`, `openspec`, `ruflo`, `dolt`) and feature sets, but everything is currently hardcoded — making it impossible to disable OpenSpec or Ruflo for environments that don't have those tools installed.
 
 ## What Changes
 

@@ -411,7 +411,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
           <Tooltip
             label="Workspace scope"
             description={workspaceScope === 'on'
-              ? `Active: ${workspaceContext.label_branch}, ${workspaceContext.label_worktree}, ${workspaceContext.label_repo}`
+              ? `Active: ${workspaceContext.label_worktree}, ${workspaceContext.label_repo}`
               : 'Off — showing all tasks'
             }
           >

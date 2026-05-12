@@ -12,6 +12,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 
 use super::poller::{PollHandle, TaskListChangedPayload};
+use crate::db::dolt_server::DoltServerRegistry;
 use crate::settings::AppSettings;
 
 /// Payload emitted on the `changes_list_changed` event.
@@ -34,14 +35,21 @@ pub struct JsonlWatcher {
     project_path: String,
     app: AppHandle,
     settings: Arc<Mutex<AppSettings>>,
+    server_registry: Arc<DoltServerRegistry>,
 }
 
 impl JsonlWatcher {
-    pub fn new(project_path: String, app: AppHandle, settings: Arc<Mutex<AppSettings>>) -> Self {
+    pub fn new(
+        project_path: String,
+        app: AppHandle,
+        settings: Arc<Mutex<AppSettings>>,
+        server_registry: Arc<DoltServerRegistry>,
+    ) -> Self {
         Self {
             project_path,
             app,
             settings,
+            server_registry,
         }
     }
 
@@ -52,6 +60,7 @@ impl JsonlWatcher {
         let project = self.project_path.clone();
         let app = self.app.clone();
         let settings = self.settings.clone();
+        let server_registry = self.server_registry.clone();
 
         let running = Arc::new(AtomicBool::new(true));
         let running_watch = Arc::clone(&running);
@@ -96,7 +105,7 @@ impl JsonlWatcher {
 
         // Debounce events and emit `task_list_changed` on the Tauri event bus.
         tokio::spawn(async move {
-            while let Some(_) = rx.recv().await {
+            while rx.recv().await.is_some() {
                 if !running_tokio.load(Ordering::SeqCst) {
                     break;
                 }
@@ -107,15 +116,16 @@ impl JsonlWatcher {
                 if running_tokio.load(Ordering::SeqCst) {
                     // Reconcile OpenSpec tasks.md checkboxes before notifying the UI so
                     // the frontend's re-fetch sees up-to-date progress counts.
-                    let bd_path = settings
+                    let (bd_path_override, dolt_path_override) = settings
                         .lock()
-                        .map(|s| s.binary_paths.bd.clone())
+                        .map(|s| (s.binary_paths.bd.clone(), s.binary_paths.dolt.clone()))
                         .unwrap_or_default();
-                    if let Ok(runner) =
-                        crate::bd::runner::BdRunner::new_with_override(&project, &bd_path)
-                    {
+                    if let Some(bd) = crate::bd::runner::find_bd(&bd_path_override) {
                         let _ = crate::commands::openspec::reconcile_tasks_checkboxes(
-                            &project, &runner,
+                            &project,
+                            &bd,
+                            &server_registry,
+                            &dolt_path_override,
                         )
                         .await;
                     }
@@ -205,7 +215,7 @@ impl OpenSpecWatcher {
         });
 
         tokio::spawn(async move {
-            while let Some(_) = rx.recv().await {
+            while rx.recv().await.is_some() {
                 if !running_tokio.load(Ordering::SeqCst) {
                     break;
                 }
@@ -233,6 +243,12 @@ impl OpenSpecWatcher {
 /// Keyed by project path. Thread-safe — intended to be stored in Tauri's `.manage()`.
 pub struct WatcherRegistry {
     inner: Mutex<HashMap<String, (PollHandle, WatchHandle, OpenSpecWatchHandle)>>,
+}
+
+impl Default for WatcherRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WatcherRegistry {

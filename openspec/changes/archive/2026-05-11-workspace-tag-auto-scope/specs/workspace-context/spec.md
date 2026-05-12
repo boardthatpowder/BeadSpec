@@ -67,13 +67,13 @@ The system SHALL serialise the `workspaceScope` toggle state (`'on'` | `'off'`) 
 The system SHALL apply a compound AND-filter on all three workspace labels (`label_branch` AND `label_worktree` AND `label_repo`) in `filterParser.ts` when `workspaceScope` is `'on'` and `workspaceContext` is non-null.
 
 #### Scenario: Scope on — task matching all three labels passes
-- **GIVEN** `workspaceScope` is `'on'` and workspace labels are `branch:main`, `worktree:beads-ui`, `repo:beads-ui`
-- **WHEN** a task has labels including `branch:main`, `worktree:beads-ui`, and `repo:beads-ui`
+- **GIVEN** `workspaceScope` is `'on'` and workspace labels are `branch:main`, `worktree:BeadSpec`, `repo:BeadSpec`
+- **WHEN** a task has labels including `branch:main`, `worktree:BeadSpec`, and `repo:BeadSpec`
 - **THEN** the task SHALL pass the workspace filter and appear in the list
 
 #### Scenario: Scope on — task missing one workspace label is excluded
-- **GIVEN** `workspaceScope` is `'on'` and workspace labels are `branch:main`, `worktree:beads-ui`, `repo:beads-ui`
-- **WHEN** a task has `branch:main` and `repo:beads-ui` but NOT `worktree:beads-ui`
+- **GIVEN** `workspaceScope` is `'on'` and workspace labels are `branch:main`, `worktree:BeadSpec`, `repo:BeadSpec`
+- **WHEN** a task has `branch:main` and `repo:BeadSpec` but NOT `worktree:BeadSpec`
 - **THEN** the task SHALL be excluded from the task list
 
 #### Scenario: Scope off — workspace filter not applied

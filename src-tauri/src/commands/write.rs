@@ -1,7 +1,9 @@
-use crate::bd::runner::{BdError, BdRunner};
+use crate::bd::runner::{find_bd, invoke_bd_in_project};
+use crate::db::dolt_server::DoltServerRegistry;
 use crate::settings::AppSettings;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::State;
 
 static OPTIMISTIC_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -18,16 +20,41 @@ pub struct WriteResult {
     pub output: String,
 }
 
-fn ipc_err(e: BdError) -> String {
-    e.to_string()
+/// 30-second timeout for all write operations (matches the historical
+/// `classify_bd_timeout` behavior for write subcommands).
+const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn resolve_bd_and_overrides(
+    settings: &State<'_, Arc<Mutex<AppSettings>>>,
+) -> Result<(std::path::PathBuf, String), String> {
+    let guard = settings.lock().unwrap();
+    let bd_path_override = guard.binary_paths.bd.clone();
+    let dolt_path_override = guard.binary_paths.dolt.clone();
+    drop(guard);
+    let bd = find_bd(&bd_path_override).ok_or_else(|| "bd CLI not found".to_string())?;
+    Ok((bd, dolt_path_override))
 }
 
-fn make_runner(
+async fn run_write(
     project_path: &str,
+    args: &[&str],
     settings: &State<'_, Arc<Mutex<AppSettings>>>,
-) -> Result<BdRunner, String> {
-    let bd_path = settings.lock().unwrap().binary_paths.bd.clone();
-    BdRunner::new_with_override(project_path, &bd_path).map_err(ipc_err)
+    server_registry: &State<'_, Arc<DoltServerRegistry>>,
+) -> Result<WriteResult, String> {
+    let (bd, dolt_override) = resolve_bd_and_overrides(settings)?;
+    let output = invoke_bd_in_project(
+        &bd,
+        args,
+        project_path,
+        server_registry,
+        &dolt_override,
+        WRITE_TIMEOUT,
+    )
+    .await?;
+    Ok(WriteResult {
+        optimistic_id: next_optimistic_id(),
+        output,
+    })
 }
 
 #[tauri::command]
@@ -39,8 +66,8 @@ pub async fn create_task(
     priority: Option<u8>,
     task_type: Option<String>,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
     let mut args: Vec<String> = vec!["create".into(), format!("--title={}", title)];
     if let Some(desc) = description {
         args.push(format!("--description={}", desc));
@@ -52,14 +79,7 @@ pub async fn create_task(
         args.push(format!("--type={}", t));
     }
     let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-    runner
-        .run(&arg_refs)
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(&project_path, &arg_refs, &settings, &server_registry).await
 }
 
 #[tauri::command]
@@ -70,17 +90,16 @@ pub async fn update_task_field(
     field: String,
     value: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
     let flag = format!("--{}={}", field, value);
-    runner
-        .run(&["update", &issue_id, &flag])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(
+        &project_path,
+        &["update", &issue_id, &flag],
+        &settings,
+        &server_registry,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -91,29 +110,36 @@ pub async fn change_task_status(
     status: String,
     force: bool,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    let run_result = match status.as_str() {
+    match status.as_str() {
         "closed" => {
             let mut args: Vec<&str> = vec!["close", &issue_id];
             if force {
                 args.push("--force");
             }
-            runner.run(&args).await
+            run_write(&project_path, &args, &settings, &server_registry).await
         }
-        "open" => runner.run(&["reopen", &issue_id]).await,
+        "open" => {
+            run_write(
+                &project_path,
+                &["reopen", &issue_id],
+                &settings,
+                &server_registry,
+            )
+            .await
+        }
         _ => {
-            runner
-                .run(&["update", &issue_id, &format!("--status={}", status)])
-                .await
+            let flag = format!("--status={}", status);
+            run_write(
+                &project_path,
+                &["update", &issue_id, &flag],
+                &settings,
+                &server_registry,
+            )
+            .await
         }
-    };
-    run_result
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    }
 }
 
 #[tauri::command]
@@ -123,16 +149,15 @@ pub async fn add_label(
     issue_id: String,
     label: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    runner
-        .run(&["tag", &issue_id, &label])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(
+        &project_path,
+        &["tag", &issue_id, &label],
+        &settings,
+        &server_registry,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -142,16 +167,16 @@ pub async fn remove_label(
     issue_id: String,
     label: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    runner
-        .run(&["update", &issue_id, &format!("--remove-label={}", label)])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    let flag = format!("--remove-label={}", label);
+    run_write(
+        &project_path,
+        &["update", &issue_id, &flag],
+        &settings,
+        &server_registry,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -161,16 +186,15 @@ pub async fn add_comment(
     issue_id: String,
     body: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    runner
-        .run(&["comment", &issue_id, "--body", &body])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(
+        &project_path,
+        &["comment", &issue_id, "--body", &body],
+        &settings,
+        &server_registry,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -179,16 +203,15 @@ pub async fn delete_task(
     project_path: String,
     issue_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    runner
-        .run(&["delete", &issue_id, "--yes"])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(
+        &project_path,
+        &["delete", &issue_id, "--yes"],
+        &settings,
+        &server_registry,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -198,16 +221,15 @@ pub async fn link_dependency(
     blocked_id: String,
     blocking_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    runner
-        .run(&["dep", "add", &blocked_id, &blocking_id])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(
+        &project_path,
+        &["dep", "add", &blocked_id, &blocking_id],
+        &settings,
+        &server_registry,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -217,14 +239,13 @@ pub async fn unlink_dependency(
     blocked_id: String,
     blocking_id: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<WriteResult, String> {
-    let runner = make_runner(&project_path, &settings)?;
-    runner
-        .run(&["dep", "remove", &blocked_id, &blocking_id])
-        .await
-        .map(|output| WriteResult {
-            optimistic_id: next_optimistic_id(),
-            output,
-        })
-        .map_err(ipc_err)
+    run_write(
+        &project_path,
+        &["dep", "remove", &blocked_id, &blocking_id],
+        &settings,
+        &server_registry,
+    )
+    .await
 }

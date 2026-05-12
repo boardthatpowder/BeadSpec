@@ -8,9 +8,9 @@ use std::path::PathBuf;
 
 /// Returns the platform-appropriate path for `recovery.log`.
 ///
-/// - macOS:   `~/Library/Logs/beads-ui/recovery.log`
-/// - Linux:   `~/.local/share/beads-ui/recovery.log`
-/// - Windows: `%LOCALAPPDATA%\beads-ui\Logs\recovery.log`
+/// - macOS:   `~/Library/Logs/BeadSpec/recovery.log`
+/// - Linux:   `~/.local/share/BeadSpec/recovery.log`
+/// - Windows: `%LOCALAPPDATA%\BeadSpec\Logs\recovery.log`
 pub fn log_path() -> PathBuf {
     #[cfg(target_os = "macos")]
     let base = dirs_base_log();
@@ -22,7 +22,7 @@ pub fn log_path() -> PathBuf {
     let base = dirs_base_local_app();
 
     #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
-    let base = std::env::temp_dir().join("beads-ui");
+    let base = std::env::temp_dir().join("BeadSpec");
 
     base.join("recovery.log")
 }
@@ -30,7 +30,7 @@ pub fn log_path() -> PathBuf {
 #[cfg(target_os = "macos")]
 fn dirs_base_log() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(home).join("Library/Logs/beads-ui")
+    PathBuf::from(home).join("Library/Logs/BeadSpec")
 }
 
 #[cfg(target_os = "linux")]
@@ -39,13 +39,13 @@ fn dirs_base_data() -> PathBuf {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         format!("{home}/.local/share")
     });
-    PathBuf::from(xdg).join("beads-ui")
+    PathBuf::from(xdg).join("BeadSpec")
 }
 
 #[cfg(windows)]
 fn dirs_base_local_app() -> PathBuf {
     let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| "C:\\Temp".to_string());
-    PathBuf::from(base).join("beads-ui\\Logs")
+    PathBuf::from(base).join("BeadSpec\\Logs")
 }
 
 // ── Log entry type ────────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ pub fn append(entry: &LogEntry) -> io::Result<()> {
     // Task 7.3 — rotate before writing if over threshold.
     maybe_rotate(&path)?;
 
-    let json = serde_json::to_string(entry).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string(entry).map_err(io::Error::other)?;
 
     // Platform file lock: fcntl on POSIX, LockFile on Windows.
     let mut file = OpenOptions::new().create(true).append(true).open(&path)?;

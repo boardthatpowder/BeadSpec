@@ -30,7 +30,7 @@ export const commands = {
 	searchTasks: (projectPath: string, query: string) => typedError<SearchResult[], string>(__TAURI_INVOKE("search_tasks", { projectPath, query })),
 	focusMainWindow: () => typedError<null, string>(__TAURI_INVOKE("focus_main_window")),
 	/**
-	 *  BUI-4g6 (18.2): Update the tray icon badge with the current open-task count.
+	 *  BEADSPEC-4g6 (18.2): Update the tray icon badge with the current open-task count.
 	 * 
 	 *  The frontend computes the count after each sync and calls this command.
 	 *  On macOS the count appears as menu-bar text beside the icon; on other
@@ -38,7 +38,7 @@ export const commands = {
 	 */
 	updateTrayBadge: (count: number) => typedError<null, string>(__TAURI_INVOKE("update_tray_badge", { count })),
 	/**
-	 *  BUI-ghp (18.5): Enable or disable launch-at-login.
+	 *  BEADSPEC-ghp (18.5): Enable or disable launch-at-login.
 	 * 
 	 *  Actual OS-level autostart registration requires tauri-plugin-autostart,
 	 *  which is not yet in Cargo.toml. This stub stores the intent so the
@@ -48,7 +48,7 @@ export const commands = {
 	 */
 	setStartAtLogin: (enabled: boolean) => typedError<null, string>(__TAURI_INVOKE("set_start_at_login", { enabled })),
 	/**
-	 *  BUI-ghp (18.5): Hide the main window so only the tray icon is visible.
+	 *  BEADSPEC-ghp (18.5): Hide the main window so only the tray icon is visible.
 	 * 
 	 *  Called by the frontend when the user enables tray-only mode, and
 	 *  automatically at startup when `BEADS_TRAY_ONLY` env-var is set.
@@ -93,7 +93,7 @@ export const commands = {
 	 *  Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
 	 * 
 	 *  `issue_id` must match the Beads ID pattern (alphanumeric + hyphens, e.g.
-	 *  `BUI-xmkr`).  `text` is passed as a single argument and is not validated
+	 *  `BEADSPEC-xmkr`).  `text` is passed as a single argument and is not validated
 	 *  beyond non-emptiness.
 	 */
 	bdHumanRespond: (projectId: string, issueId: string, text: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_respond", { projectId, issueId, text })),

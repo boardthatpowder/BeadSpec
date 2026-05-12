@@ -1,6 +1,6 @@
 # BeadSpec
 
-> A native desktop GUI for the [Beads](https://github.com/gastownhall/beads) issue tracker — visualize dependencies, track velocity, and browse OpenSpec changes without leaving your workflow.
+> A native desktop GUI for the [Beads](https://github.com/gastownhall/beads) issue tracker — visualize dependencies, manage issues visually, and browse OpenSpec changes without leaving your workflow.
 
 [![CI](https://github.com/boardthatpowder/BeadSpec/actions/workflows/ci.yml/badge.svg)](https://github.com/boardthatpowder/BeadSpec/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/boardthatpowder/BeadSpec)](https://github.com/boardthatpowder/BeadSpec/releases/latest)
@@ -15,9 +15,9 @@
 
 ## Why BeadSpec?
 
-- **See the whole picture** — dependency graphs, velocity charts, and smart views that would take dozens of `bd` commands to reconstruct mentally.
+- **See the whole picture** — dependency graphs, workspace tabs, and views that would take dozens of `bd` commands to reconstruct mentally.
 - **Stay in flow** — a global quick-capture shortcut and system tray let you log issues without switching apps.
-- **Spec-first** — browse OpenSpec change proposals and their implementation status directly inside the app, keeping design and code in sync.
+- **Spec-first** — optionally browse OpenSpec change proposals and their implementation status directly inside the app, keeping design and code in sync.
 
 BeadSpec is a frontend. The `bd` CLI remains the source of truth — BeadSpec reads Dolt SQL directly for speed and writes through `bd` to preserve its hook logic, ID assignment, and branch tracking.
 
@@ -25,21 +25,33 @@ BeadSpec is a frontend. The `bd` CLI remains the source of truth — BeadSpec re
 
 ## Features
 
+### Core features
+
 | Feature | Description |
 |---|---|
-| Task list | Grouped, filtered, virtualized issue list with inline editing |
+| Task list | Grouped, filtered, virtualized issue list with inline editing and bulk actions |
 | Dependency graph | Interactive visual graph (React Flow + Cytoscape.js) |
-| Smart views | Saved filter queries with live counts |
-| Velocity / burndown | Charts showing throughput over time (Recharts) |
-| OpenSpec browser | Browse in-flight change proposals and spec status |
-| Quick capture | Global keyboard shortcut opens a floating issue-creation window |
-| System tray | Access recent issues and quick capture from the menu bar |
-| Markdown editor | Rich description editor (TipTap) with task lists and code blocks |
+| Workspace tabs | IDE-style multi-tab split-pane layout |
+| Command palette | `⌘K` / `Ctrl+K` — fuzzy search across tasks, views, and actions |
+| Health & formulas | Run `bd` diagnostics and pour workflow formulas from the UI |
+| Human decision queue | Flag and respond to issues requiring human decisions |
+| Quick capture | Global shortcut opens a floating issue-creation window |
+| System tray | Create issues from the menu bar without opening the app |
+| Rich description editor | TipTap Markdown editor with slash commands and task references |
 | Real-time sync | Auto-refreshes via `dolt_log()` polling — no manual refresh needed |
 | Multi-project | Switch between Beads repos; each gets its own isolated connection |
 | Keyboard shortcuts | Platform-aware (Cmd on macOS, Ctrl elsewhere) throughout |
 | Recovery dialog | Detects and recovers from Dolt server crashes automatically |
-| Settings | Override `bd` binary path, adjust density, configure appearance |
+| Settings | Binary path overrides, density, zoom, tooltips, notifications |
+
+### Optional integrations
+
+Both require the corresponding CLI tool to be installed. Each can be toggled in **Settings → Features**.
+
+| Integration | Adds |
+|---|---|
+| **OpenSpec** | Changes browser, spec doc tabs, import to Beads, validate |
+| **Ruflo** | Memory search panel, Ruflo filter chips |
 
 ---
 
@@ -104,7 +116,8 @@ Full documentation is at **[boardthatpowder.github.io/BeadSpec](https://boardtha
 
 - [Installation guide](https://boardthatpowder.github.io/BeadSpec/guide/installation) — platform-specific notes
 - [Quick start](https://boardthatpowder.github.io/BeadSpec/guide/quick-start)
-- [Feature guides](https://boardthatpowder.github.io/BeadSpec/guide/features/task-list)
+- [Feature guides](https://boardthatpowder.github.io/BeadSpec/guide/features/views)
+- [Optional integrations](https://boardthatpowder.github.io/BeadSpec/guide/integrations)
 - [Keyboard shortcuts](https://boardthatpowder.github.io/BeadSpec/guide/keyboard-shortcuts)
 - [Troubleshooting](https://boardthatpowder.github.io/BeadSpec/guide/troubleshooting)
 - [Contributing guide](https://boardthatpowder.github.io/BeadSpec/contributing/)

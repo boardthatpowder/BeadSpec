@@ -25,7 +25,7 @@ BeadSpec is a **visual frontend** for the `bd` CLI. They are additive, not mutua
 
 **Writes** always go through the `bd` CLI. This preserves:
 - `bd` hook logic (pre/post-write automation)
-- ID assignment (`BUI-001`, `BUI-002`, ...)
+- ID assignment (`BEADSPEC-001`, `BEADSPEC-002`, ...)
 - Label normalization
 - Dolt branch tracking and commit history
 
@@ -33,15 +33,16 @@ BeadSpec is a **visual frontend** for the `bd` CLI. They are additive, not mutua
 
 | Task | Terminal (`bd`) | BeadSpec GUI |
 |---|---|---|
-| Create an issue | `bd create --title="..."` | Click **+** or press `N` |
+| Create an issue | `bd create --title="..."` | Press `N` or use Quick Capture |
 | Edit an issue | `bd update <id> --title="..."` | Click field inline |
 | Close an issue | `bd close <id>` | Click status → Closed |
 | View issues | `bd list` | Task list with filters |
 | Filter by status | `bd list --status=open` | Filter bar |
-| Dependency graph | `bd dep list <id>` | Graph tab |
-| Smart views | `bd list --filter=...` | Smart Views panel (saved) |
-| Velocity chart | — | Velocity tab |
-| OpenSpec browser | `openspec list` | Changes tab |
+| Dependency graph | `bd dep list <id>` | Dependency tab / graph |
+| Health checks | `bd doctor`, `bd preflight`, etc. | Health view → Checks tab |
+| Formulas | `bd formula list`, `bd mol pour` | Health view → Formulas tab |
+| Human queue | `bd human list/respond/dismiss` | Human queue chip |
+| OpenSpec browser | `openspec list` | Changes view (optional) |
 | Quick issue entry | — | Quick Capture window |
 | Scripting / CI | Yes | No |
 | Hooks | Yes | Delegated to `bd` |
@@ -54,9 +55,9 @@ BeadSpec adds visual workflows that would require many CLI commands to reconstru
 
 - **Dependency graph** — see all issue relationships at once
 - **Real-time sync** — changes from `bd` in the terminal appear in BeadSpec within seconds
-- **Smart views** — save named filter queries and jump to them instantly
-- **Velocity charts** — throughput over time without writing shell scripts
-- **OpenSpec browser** — design specs and their implementation status side-by-side
+- **Workspace tabs** — open multiple issues side-by-side in a split-pane layout
+- **Health dashboard** — run all `bd` diagnostics in one click and see results at a glance
+- **OpenSpec browser** — design specs and their implementation status side-by-side (optional)
 - **Quick Capture** — create issues without switching from your current app
 
 ## When to use which
@@ -70,7 +71,7 @@ Use **`bd` in the terminal** when:
 Use **BeadSpec** when:
 - Reviewing all issues and their relationships visually
 - Doing sprint planning with the dependency graph open
-- Tracking velocity over time
+- Running health checks across the project
 - Capturing quick ideas with the global shortcut
 - Reviewing an OpenSpec change and its associated issues together
 

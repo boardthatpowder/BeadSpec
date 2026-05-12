@@ -2,9 +2,13 @@
 
 The task list is BeadSpec's primary view — a virtualized, filterable list of all issues in your Beads project.
 
+![Task list with KPI bar and grouped issues](/screenshots/task-list.png)
+
 ## Layout
 
 The task list shows issues grouped by a configurable field (status, assignee, priority, or label). Each group shows a count and can be collapsed. Scroll performance is maintained via virtualization even with thousands of issues.
+
+A **KPI bar** above the list shows live status counts (open, in progress, blocked, closed). Clicking a status chip applies a filter for that status.
 
 ## Grouping
 
@@ -24,23 +28,30 @@ The filter bar accepts:
 - `label:bug`, `label:enhancement`, or any label value
 - Combinations: `status:open priority:0`
 
-Save a filter as a [Smart View](/guide/features/smart-views) to jump to it instantly.
+When the Ruflo integration is enabled, the filter bar also shows **workspace context chips** for the active `branch:`, `worktree:`, and `repo:`. Clicking a chip narrows the list to issues carrying that label. [Quick Capture](/guide/features/quick-capture) applies these labels automatically; issues created via `bd create` in a terminal can carry the same labels to stay visible in the right chip.
+
+![Filter bar with workspace context chips active](/screenshots/filter-bar-chips.png)
+
+## Bulk actions
+
+Select multiple issues by checking their checkboxes. A **bulk action toolbar** appears with:
+- **Add label** — apply a label to all selected issues at once
+
+More bulk actions may be added in future releases.
 
 ## Issue detail
 
-Click any issue to open its detail panel on the right. From the detail panel you can:
-- Edit the title, description, status, assignee, and priority inline
-- View and manage labels
-- See the issue's dependencies (and open the [dependency graph](/guide/features/dependency-graph))
-- Read the full Markdown description with the rich editor
+Click any issue to open its detail panel as a tab. From the detail panel you can edit all fields inline. See [Task Detail](/guide/features/task-detail) for the full breakdown.
 
 ## Keyboard navigation
 
 | Shortcut | Action |
 |---|---|
-| `↑` / `↓` | Move between issues |
-| `Enter` | Open selected issue detail |
+| `↑` / `↓` | Move between issues (opens preview tab) |
+| `J` / `K` | Move selection down / up (Focus view) |
+| `Enter` | Pin selected issue as a tab |
 | `N` | New issue (when no input is focused) |
+| `Space` | Quick status change |
 | `Escape` | Close detail panel |
 | `/` | Focus filter input |
 

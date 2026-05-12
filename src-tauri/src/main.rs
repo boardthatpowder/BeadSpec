@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    beads_ui_lib::run()
+    beadspec_lib::run()
 }

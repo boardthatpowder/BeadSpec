@@ -125,7 +125,7 @@ pub fn run() {
             }
 
             // Set up system tray / menu-bar icon.
-            tray::setup_tray(&app.handle()).ok();
+            tray::setup_tray(app.handle()).ok();
 
             // Flush window state to disk on main window close so it persists even
             // when the process is killed without a clean RunEvent::Exit (e.g. dev mode).
@@ -139,7 +139,7 @@ pub fn run() {
                 });
             }
 
-            // BUI-ghp (18.5): If launched in tray-only mode (e.g. at-login),
+            // BEADSPEC-ghp (18.5): If launched in tray-only mode (e.g. at-login),
             // hide the main window immediately so only the tray icon is visible.
             if std::env::var("BEADS_TRAY_ONLY").is_ok() {
                 if let Some(window) = app.get_webview_window("main") {

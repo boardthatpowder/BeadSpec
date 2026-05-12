@@ -26,10 +26,10 @@ pub fn update_badge<R: Runtime>(app: &AppHandle<R>, count: u32) {
 /// On macOS this appears as a menu-bar extra; on Windows/Linux it is a
 /// notification-area (system tray) icon.
 ///
-/// Left-click toggles window visibility; the menu provides "Open Beads UI"
+/// Left-click toggles window visibility; the menu provides "Open BeadSpec"
 /// and "Quit" items.
 pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-    let open_item = MenuItem::with_id(app, "open", "Open Beads UI", true, None::<&str>)?;
+    let open_item = MenuItem::with_id(app, "open", "Open BeadSpec", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
 

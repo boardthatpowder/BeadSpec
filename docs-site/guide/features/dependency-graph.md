@@ -2,6 +2,8 @@
 
 The dependency graph visualizes all issue relationships as an interactive node graph. It uses React Flow for rendering and Cytoscape.js for layout computation.
 
+![Dependency graph with nodes coloured by status](/screenshots/dependency-graph.png)
+
 ## Opening the graph
 
 Click the **Graph** tab in the main navigation, or press `G` from anywhere in the app (when no input is focused).

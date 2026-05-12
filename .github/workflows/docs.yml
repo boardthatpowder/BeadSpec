@@ -27,7 +27,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install docs dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
         working-directory: docs-site
 
       - name: Build VitePress site

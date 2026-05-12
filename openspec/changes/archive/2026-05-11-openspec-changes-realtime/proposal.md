@@ -4,7 +4,7 @@ The OpenSpec changes page does not update in real time: edits to `tasks.md`
 (task check-off), newly created artifacts (`proposal.md`, `design.md`, spec
 files), and archiving/unarchiving changes all require a manual app refresh to
 appear. This breaks the workflow loop where a terminal session (agents, CLI)
-and the Beads UI are open side-by-side.
+and the BeadSpec are open side-by-side.
 
 ## What Changes
 

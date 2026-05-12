@@ -11,21 +11,29 @@ beadspec/
 │   ├── contexts/         # React context providers (Settings, HashState, Density)
 │   ├── hooks/            # Custom React hooks (TanStack Query wrappers)
 │   ├── stores/           # Zustand UI state stores
+│   │   ├── workspace.ts      # Multi-tab/pane workspace state
+│   │   ├── settingsStore.ts  # App settings (persisted via @tauri-apps/plugin-store)
+│   │   └── zoomStore.ts      # Zoom level
 │   ├── lib/ utils/       # Helpers and utilities
+│   │   └── paneTree.ts       # Pane tree data structure (split, close, move)
 │   ├── bindings.ts       # Generated Tauri IPC types (DO NOT EDIT MANUALLY)
 │   ├── ipc.ts            # IPC wrapper
-│   ├── App.tsx           # Root component
-│   └── quick-capture.tsx # Separate entry for the Quick Capture window
+│   ├── App.tsx           # Root component (main window)
+│   └── QuickCaptureApp.tsx # Separate entry for the Quick Capture window
 │
 ├── src-tauri/            # Rust Tauri backend
 │   ├── src/
 │   │   ├── bd/           # bd CLI discovery and runner
 │   │   ├── commands/     # Tauri IPC command handlers
-│   │   ├── db/           # Dolt server lifecycle, sqlx pools, watchers
+│   │   │   ├── app.rs        # Focus, tray badge, zoom, shortcuts
+│   │   │   ├── openspec.rs   # OpenSpec integration commands
+│   │   │   └── recovery.rs   # Dolt health probe and recovery
+│   │   ├── db/           # Dolt server lifecycle, sqlx pools, watchers, poller
 │   │   ├── notifications/ # Notification manager
+│   │   ├── recovery_log.rs # Recovery event log
 │   │   ├── tray/         # System tray
 │   │   ├── settings.rs   # App settings persistence
-│   │   └── lib.rs        # Tauri setup and plugin registration
+│   │   └── lib.rs        # Tauri setup, plugin registration, command registration
 │   └── tauri.conf.json   # Tauri configuration
 │
 ├── openspec/             # OpenSpec feature specs and in-flight changes
@@ -63,9 +71,57 @@ Each Beads project gets its own `sqlx::Pool` and Dolt server instance. There is 
 
 `src-tauri/src/db/watchers.rs` polls `dolt_log()` on a 2-second interval. When the log changes, it emits a Tauri event. TanStack Query on the frontend responds by invalidating relevant queries, triggering a refetch. No WebSocket or SSE — just polling.
 
+### Workspace pane tree
+
+`src/utils/paneTree.ts` implements a binary tree of panes. Each node is either a `SplitPane` (horizontal or vertical, with two children) or a `LeafPane` (a list of tabs). The `workspace.ts` Zustand store drives the tree — split, close, move, and reorder operations all produce a new tree that React renders.
+
+Layout is persisted to `layout.json` via `workspacePersist.ts` and restored on boot.
+
+### Settings persistence
+
+`src/stores/settingsStore.ts` uses `@tauri-apps/plugin-store` to persist settings to `settings.json` in the app config directory. Settings include:
+- `features.openspec` / `features.ruflo` — feature flag toggles
+- `binaryPaths.bd/openspec/ruflo/dolt` — path overrides
+- `actor` — identity for Focus view
+- `quickCaptureShortcut` — global shortcut string
+- `density` / `zoom` — appearance
+- `tooltips` — tooltip behavior
+- `notificationPrefs` — notification toggles
+
 ### Keyboard shortcuts
 
 Use `react-hotkeys-hook` with platform detection. Never hardcode `Ctrl` or `Cmd` — use the `mod` modifier provided by the library, which maps to `Cmd` on macOS and `Ctrl` elsewhere.
+
+## IPC command surface
+
+Commands are registered in `src-tauri/src/lib.rs`. Grouped by domain:
+
+**Writes (via bd CLI)**
+`create_task`, `update_task_field`, `change_task_status`, `add_label`, `remove_label`, `add_comment`, `delete_task`, `link_dependency`, `unlink_dependency`
+
+**Reads (via Dolt SQL)**
+`list_tasks`, `get_task`, `get_task_history`, `search_tasks`
+
+**Project management**
+`connect_project`, `disconnect_project`, `list_projects`
+
+**App / window**
+`focus_main_window`, `update_tray_badge`, `set_start_at_login` *(stub — not yet implemented)*, `launch_to_tray`, `get_shortcut_status`, `register_quick_capture_shortcut`, `validate_binary_path`
+
+**Recovery**
+`probe_dolt_health`, `attempt_dolt_recovery`
+
+**External bd tools**
+`bd_preflight`, `bd_doctor`, `bd_lint`, `bd_stale`, `bd_orphans`, `bd_formula_list`, `bd_formula_pour`, `bd_human_list`, `bd_human_respond`, `bd_human_dismiss`
+
+**Ruflo (optional)**
+`ruflo_memory_search`, `ruflo_version_probe`
+
+**Workspace context**
+`get_workspace_context`, `get_git_refs_for_issue`, `get_dolt_history_for_issue`
+
+**OpenSpec (optional)**
+`list_changes`, `read_change_artifact`, `get_change_progress`, `run_openspec_validate`, `import_change_to_beads`, `reconcile_openspec_checkboxes`
 
 ## Technology stack
 
@@ -80,7 +136,6 @@ Use `react-hotkeys-hook` with platform detection. Never hardcode `Ctrl` or `Cmd`
 | Styling | Tailwind CSS 4 |
 | Rich text | TipTap 3 |
 | Graphs | React Flow + Cytoscape.js |
-| Charts | Recharts |
 | Drag and drop | dnd-kit |
 | Keyboard shortcuts | `react-hotkeys-hook` |
 | Error types | `thiserror` |

@@ -32,14 +32,27 @@ export default defineConfig({
       {
         text: 'Features',
         items: [
+          { text: 'Views', link: '/guide/features/views' },
           { text: 'Task List', link: '/guide/features/task-list' },
+          { text: 'Task Detail', link: '/guide/features/task-detail' },
           { text: 'Dependency Graph', link: '/guide/features/dependency-graph' },
-          { text: 'Smart Views', link: '/guide/features/smart-views' },
-          { text: 'Velocity & Burndown', link: '/guide/features/velocity' },
-          { text: 'OpenSpec Browser', link: '/guide/features/openspec-browser' },
+          { text: 'Workspace Tabs', link: '/guide/features/workspace-tabs' },
+          { text: 'Command Palette', link: '/guide/features/command-palette' },
+          { text: 'Health & Formulas', link: '/guide/features/health-and-formulas' },
+          { text: 'Human Decision Queue', link: '/guide/features/human-queue' },
           { text: 'Quick Capture', link: '/guide/features/quick-capture' },
           { text: 'System Tray', link: '/guide/features/tray' },
+          { text: 'Notifications', link: '/guide/features/notifications' },
+          { text: 'Recovery', link: '/guide/features/recovery' },
           { text: 'Settings', link: '/guide/features/settings' },
+        ],
+      },
+      {
+        text: 'Integrations',
+        items: [
+          { text: 'Integrations Overview', link: '/guide/integrations' },
+          { text: 'OpenSpec Browser', link: '/guide/features/openspec-browser' },
+          { text: 'Ruflo Memory', link: '/guide/features/ruflo-memory' },
         ],
       },
       {

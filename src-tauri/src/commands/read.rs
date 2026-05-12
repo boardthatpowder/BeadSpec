@@ -56,7 +56,7 @@ pub struct HistoryEntry {
 pub struct TaskFilters {
     pub status: Vec<String>,
     pub priority: Vec<i32>,
-    pub labels: Vec<String>, // e.g. ["branch:main", "repo:beads-ui"]
+    pub labels: Vec<String>, // e.g. ["branch:main", "repo:BeadSpec"]
     pub search: Option<String>,
 }
 
@@ -91,7 +91,7 @@ fn encode_cursor(priority: i32, created_at: &str, id: &str) -> String {
 
 fn decode_cursor(hex: &str) -> Option<PageCursor> {
     // Decode hex back to bytes
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return None;
     }
     let bytes: Option<Vec<u8>> = (0..hex.len())
@@ -117,6 +117,7 @@ pub struct TasksResponse {
 
 #[tauri::command]
 #[specta::specta]
+#[allow(clippy::too_many_arguments)]
 pub async fn list_tasks(
     project_path: String,
     filters: Option<TaskFilters>,
@@ -166,7 +167,11 @@ pub async fn list_tasks(
                 }
             }
         }
-        if combined.is_empty() { None } else { Some(combined) }
+        if combined.is_empty() {
+            None
+        } else {
+            Some(combined)
+        }
     };
 
     let effective_labels: Option<Vec<String>> = {
@@ -178,7 +183,11 @@ pub async fn list_tasks(
                 }
             }
         }
-        if combined.is_empty() { None } else { Some(combined) }
+        if combined.is_empty() {
+            None
+        } else {
+            Some(combined)
+        }
     };
 
     // Decode keyset cursor once so we can use it in both the data query and the
@@ -324,9 +333,9 @@ pub async fn list_tasks(
 
     // ── Build next_cursor ─────────────────────────────────────────────────────
     let next_cursor: Option<String> = if has_next {
-        tasks.last().map(|last| {
-            encode_cursor(last.priority, &last.created_at, &last.id)
-        })
+        tasks
+            .last()
+            .map(|last| encode_cursor(last.priority, &last.created_at, &last.id))
     } else {
         None
     };
@@ -529,7 +538,7 @@ pub async fn search_tasks(
         })
         .collect();
 
-    results.sort_by(|a, b| b.score.cmp(&a.score));
+    results.sort_by_key(|a| std::cmp::Reverse(a.score));
     results.truncate(20);
     Ok(results)
 }
@@ -630,12 +639,7 @@ mod tests {
     #[test]
     fn cursor_roundtrip_with_sql_special_chars() {
         // IDs that would break interpolation-based SQL
-        let tricky_ids = [
-            "abc'def",
-            "x,y",
-            "'; DROP TABLE issues; --",
-            r#"a"b"c"#,
-        ];
+        let tricky_ids = ["abc'def", "x,y", "'; DROP TABLE issues; --", r#"a"b"c"#];
         for id in &tricky_ids {
             let encoded = encode_cursor(42, "2024-01-01T00:00:00Z", id);
             let decoded = decode_cursor(&encoded).expect("round-trip should succeed");
@@ -664,10 +668,7 @@ mod tests {
     fn query_builder_uses_placeholders_not_interpolation() {
         // Build the same IN() query as list_tasks and verify the SQL text uses ?
         // placeholders, not the literal issue IDs.
-        let issue_ids = vec![
-            "abc'def".to_string(),
-            "x,y;z".to_string(),
-        ];
+        let issue_ids = vec!["abc'def".to_string(), "x,y;z".to_string()];
         let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
             "SELECT issue_id, label FROM labels WHERE issue_id IN (",
         );
@@ -709,7 +710,7 @@ mod pagination_tests {
     fn page_cursor_roundtrip() {
         let priority = 2_i32;
         let created_at = "2024-01-01T00:00:00Z";
-        let id = "BUI-abc";
+        let id = "BEADSPEC-abc";
 
         let encoded = encode_cursor(priority, created_at, id);
         let decoded = decode_cursor(&encoded);
@@ -742,11 +743,7 @@ mod pagination_tests {
 
         let decoded = decode_cursor(&encoded);
         assert!(decoded.is_some(), "decode_cursor should succeed");
-        assert_eq!(
-            decoded.unwrap().id,
-            id,
-            "ID must survive roundtrip exactly"
-        );
+        assert_eq!(decoded.unwrap().id, id, "ID must survive roundtrip exactly");
     }
 
     /// 8.9 — decode_cursor returns None for invalid (non-hex) input.

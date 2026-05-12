@@ -2,7 +2,7 @@
 
 ## Why
 
-Creating a new issue in Beads-UI currently requires the main application window to be focused and visible. When a developer is deep in another tool — IDE, browser, terminal — context-switching to the full Beads-UI window breaks flow. A system-wide keyboard shortcut that opens a minimal capture window lets users record work-items instantly from anywhere and then return to what they were doing, with near-zero friction.
+Creating a new issue in BeadSpec currently requires the main application window to be focused and visible. When a developer is deep in another tool — IDE, browser, terminal — context-switching to the full BeadSpec window breaks flow. A system-wide keyboard shortcut that opens a minimal capture window lets users record work-items instantly from anywhere and then return to what they were doing, with near-zero friction.
 
 ## What
 
