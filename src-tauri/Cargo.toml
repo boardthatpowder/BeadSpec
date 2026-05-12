@@ -1,0 +1,57 @@
+[package]
+name = "beadspec"
+version = "0.1.0"
+description = "A native desktop GUI for the Beads issue tracker"
+authors = ["Dean Hart"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/boardthatpowder/BeadSpec"
+homepage = "https://boardthatpowder.github.io/BeadSpec"
+edition = "2021"
+
+[lib]
+name = "beads_ui_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-store = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-updater = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Data layer — Dolt SQL direct reads
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "mysql", "macros", "chrono"] }
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+# Type-safe IPC bindings generation
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta-typescript = { version = "0.0.12" }
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+# Structured error handling
+thiserror = "2"
+# Async traits
+async-trait = "0.1"
+# File-system change detection (JSONL watcher fallback)
+notify = "6"
+# Cross-platform process enumeration (orphan dolt-server detection)
+sysinfo = "0.33"
+# SHA-256 for opaque project_id derivation
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+
+[patch.crates-io]
+# Patched local copy: removes the nightly `fmt::from_fn` usage gated by
+# debug_closure_helpers (tracking issue #117729) which is not yet stable in
+# Rust 1.90. Replaced with an equivalent local Debug wrapper struct.
+specta = { path = "vendor/specta" }
+specta-serde = { path = "vendor/specta-serde" }

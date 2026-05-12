@@ -1,0 +1,53 @@
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/pid
+.beads/port
+.beads/*.log
+.beads/*.lock
+.beads/dolt/
+
+# Rust build artifacts
+target/
+src-tauri/target/
+
+# Frontend
+dist/
+node_modules/
+
+# Tauri generated
+src-tauri/gen/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+
+# Local vector store
+ruvector.db
+
+# Dolt server supervisor PID (runtime file, never committed)
+.beads/embeddeddolt/.supervisor.pid
+
+# Agent tooling (machine-local state, hardcoded paths, runtime sessions)
+.agents/
+.codex/
+.claude-flow/
+
+# SQLite sidecars (*.db covers the main file, but not these)
+*.db-shm
+*.db-wal
+*.db-journal
+
+# AgentDB / RuVector runtime (data file + lockfile)
+agentdb.rvf
+agentdb.rvf.lock
+
+# VitePress docs site build outputs
+docs-site/.vitepress/dist
+docs-site/.vitepress/cache

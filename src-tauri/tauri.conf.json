@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BeadSpec",
+  "version": "0.1.0",
+  "identifier": "com.beadsspec.app",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "BeadSpec",
+        "width": 800,
+        "height": 600
+      },
+      {
+        "label": "quick-capture",
+        "url": "quick-capture.html",
+        "title": "Quick Capture",
+        "visible": false,
+        "width": 540,
+        "height": 320,
+        "minWidth": 480,
+        "minHeight": 300,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ4MjdCMDAxRkVCOUQzREYKUldUZjA3bitBYkFuU1BjcjVYREJKSU1pTm1UcHZsRjg2Ulkyci94c3liUWo0enJpOFNhYXptOUwK",
+      "endpoints": [
+        "https://github.com/boardthatpowder/BeadSpec/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

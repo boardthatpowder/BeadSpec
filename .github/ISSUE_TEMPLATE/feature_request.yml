@@ -1,0 +1,42 @@
+name: Feature Request
+description: Suggest an idea or improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before requesting a feature, check whether it belongs in BeadSpec (the GUI) or in [bd](https://github.com/boardthatpowder/beads) (the CLI/database). BeadSpec adds visual workflows on top of `bd` — it doesn't replace `bd` functionality.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the workflow pain point, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see added or changed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds have you tried?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where does this belong?
+      options:
+        - BeadSpec GUI (this repo)
+        - bd CLI (upstream — boardthatpowder/beads)
+        - Both
+        - Not sure
+    validations:
+      required: true

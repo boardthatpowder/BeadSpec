@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  Beads UI is a Tauri 2.0 desktop app (Rust + React/TypeScript) for managing Beads issue-tracking
+  projects. Data is read directly from Dolt SQL (sqlx/mysql_async) and written via the bd CLI.
+  Real-time sync polls dolt_log() every 2s; changed task IDs invalidate TanStack Query cache via
+  Tauri events. Cross-platform: macOS, Windows, Linux. Full CRUD. Multi-project (one connection pool
+  per project). IPC contract: specta + tauri-specta auto-generate TypeScript bindings from Rust.
+  State: TanStack Query (server) + Zustand (UI) + Tauri events (cross-window). Frontend: React,
+  Tailwind, react-hotkeys-hook (platform-aware shortcuts), React Flow / Cytoscape.js (dep graph),
+  TipTap (rich text editor). Label prefix parsing: split on first colon only.
+  Specs live in openspec/specs/: data-layer, layout-shell, task-list, task-detail, dependency-graph,
+  smart-views, notifications.
+
+rules:
+  proposal:
+    - Keep scope explicit.
+    - Include non-goals when they prevent likely ambiguity.
+    - State which Tauri commands and React components are affected.
+  tasks:
+    - Break implementation into independently verifiable chunks.
+    - Include validation commands when they are known.
+    - Each task should be completable without holding up other tasks where possible.
