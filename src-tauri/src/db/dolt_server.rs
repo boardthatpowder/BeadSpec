@@ -104,7 +104,12 @@ impl DoltServerRegistry {
             // noms LOCK and doesn't block the next spawn attempt.
             match verify_beads_db_ready(port, &db_name).await {
                 Ok(()) => {
-                    // SQL is healthy — register and return.
+                    // SQL is healthy — write PID file so bd can verify the server is
+                    // alive without trying to auto-start a competing Dolt process.
+                    let beads_dir = embeddeddolt_dir.parent().unwrap_or(embeddeddolt_dir);
+                    if let Some(pid) = child.id() {
+                        let _ = std::fs::write(beads_dir.join("dolt-server.pid"), pid.to_string());
+                    }
                     let mut servers = self.servers.write().await;
                     servers.insert(project_path.to_string(), SpawnedServer { port, child });
                     return Ok(port);
