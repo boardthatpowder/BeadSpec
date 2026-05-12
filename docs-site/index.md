@@ -6,8 +6,8 @@ hero:
   text: A desktop GUI for Beads issue tracking
   tagline: Visualize dependencies, manage issues visually, and browse OpenSpec changes — without leaving your workflow.
   image:
-    src: /screenshots/main.png
-    alt: BeadSpec screenshot
+    src: /screenshots/demo.webp
+    alt: BeadSpec demo
   actions:
     - theme: brand
       text: Get Started
