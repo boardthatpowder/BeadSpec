@@ -26,6 +26,7 @@
   "scripts": {
     "dev": "vite",
     "build": "bun run gen-bindings && tsc && vite build",
+    "build:no-bindings": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "gen-bindings": "cd src-tauri && cargo test --test bindings",

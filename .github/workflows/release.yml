@@ -16,10 +16,13 @@ jobs:
         include:
           - os: macos-14
             args: --target universal-apple-darwin
+            before-build-cmd: 'bun run build'
           - os: windows-latest
             args: ''
+            before-build-cmd: 'bun run build:no-bindings'
           - os: ubuntu-22.04
             args: ''
+            before-build-cmd: 'bun run build'
 
     runs-on: ${{ matrix.os }}
 
@@ -74,4 +77,5 @@ jobs:
             See the [README](https://github.com/boardthatpowder/BeadSpec#prerequisites) for full setup instructions.
           releaseDraft: true
           prerelease: false
+          beforeBuildCommand: ${{ matrix.before-build-cmd }}
           args: ${{ matrix.args }}
