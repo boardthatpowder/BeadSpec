@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { emitTo } from '@tauri-apps/api/event'
-import { IconButton } from './components/ui/IconButton'
 import { load } from '@tauri-apps/plugin-store'
 import { commands } from './bindings'
 import type { WorkspaceContext } from './bindings'
@@ -205,14 +204,15 @@ export default function QuickCaptureApp() {
               className="flex items-center gap-1 bg-neutral-700 text-neutral-300 text-xs px-2 py-0.5 rounded-full"
             >
               {chip}
-              <IconButton
-                label={`Remove ${chip}`}
+              <button
+                type="button"
+                aria-label={`Remove ${chip}`}
                 onClick={() => removeChip(chip)}
                 className="text-neutral-500 hover:text-neutral-200 leading-none"
                 tabIndex={-1}
               >
                 ×
-              </IconButton>
+              </button>
             </span>
           ))}
         </div>
