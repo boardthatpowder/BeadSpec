@@ -72,8 +72,13 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
       - name: Test
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib --test spawn_managed_test --test config_security_test
         timeout-minutes: 10
+
+      - name: Test bindings (needs WebView2/WebKit — skip on Windows)
+        if: matrix.os != 'windows-latest'
+        run: cargo test --manifest-path src-tauri/Cargo.toml --test bindings
+        timeout-minutes: 5
 
   docs:
     name: Docs build
