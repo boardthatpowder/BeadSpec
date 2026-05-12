@@ -30,7 +30,7 @@ jobs:
         run: bun run lint
 
       - name: Build frontend
-        run: bun run build
+        run: bunx vite build
 
   rust:
     name: Rust (${{ matrix.os }})

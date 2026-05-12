@@ -193,7 +193,9 @@ mod tests {
         }
         // Ensure no execute bit
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&file_path).expect("metadata").permissions();
+        let mut perms = std::fs::metadata(&file_path)
+            .expect("metadata")
+            .permissions();
         perms.set_mode(0o644);
         std::fs::set_permissions(&file_path, perms).expect("set permissions");
 

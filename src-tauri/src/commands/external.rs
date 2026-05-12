@@ -159,10 +159,9 @@ async fn resolve_project_cwd(
     project_id: &str,
     registry: &Arc<ProjectRegistry>,
 ) -> Result<String, String> {
-    let pool = registry
-        .get(project_id)
-        .await
-        .map_err(|_| format!("project_not_connected: '{project_id}' — call connect_project first"))?;
+    let pool = registry.get(project_id).await.map_err(|_| {
+        format!("project_not_connected: '{project_id}' — call connect_project first")
+    })?;
     Ok(pool.project_path.clone())
 }
 
@@ -210,7 +209,15 @@ pub async fn bd_preflight(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["preflight"], &cwd, &server_registry, &dolt_override, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["preflight"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd doctor --json` in the given project. Read op — 10s timeout.
@@ -224,7 +231,15 @@ pub async fn bd_doctor(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["doctor", "--json"], &cwd, &server_registry, &dolt_override, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["doctor", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd lint --json` in the given project. Read op — 10s timeout.
@@ -238,7 +253,15 @@ pub async fn bd_lint(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["lint", "--json"], &cwd, &server_registry, &dolt_override, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["lint", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd stale --json` in the given project. Read op — 10s timeout.
@@ -252,7 +275,15 @@ pub async fn bd_stale(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["stale", "--json"], &cwd, &server_registry, &dolt_override, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["stale", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd orphans --json` in the given project. Read op — 30s timeout.
@@ -266,7 +297,15 @@ pub async fn bd_orphans(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["orphans", "--json"], &cwd, &server_registry, &dolt_override, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["orphans", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 /// Run `bd formula list --json` in the given project. Read op — 10s timeout.
@@ -280,7 +319,15 @@ pub async fn bd_formula_list(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["formula", "list", "--json"], &cwd, &server_registry, &dolt_override, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["formula", "list", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd mol pour <formula_name>` in the given project. Write op — 30s timeout.
@@ -308,7 +355,15 @@ pub async fn bd_formula_pour(
     }
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["mol", "pour", &formula_name], &cwd, &server_registry, &dolt_override, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["mol", "pour", &formula_name],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 /// Run `bd human list --json` in the given project. Read op — 10s timeout.
@@ -322,7 +377,15 @@ pub async fn bd_human_list(
 ) -> Result<String, String> {
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["human", "list", "--json"], &cwd, &server_registry, &dolt_override, Duration::from_secs(10)).await
+    invoke_bd_in_project(
+        &bd,
+        &["human", "list", "--json"],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
@@ -336,9 +399,7 @@ pub async fn bd_human_respond(
     registry: State<'_, Arc<ProjectRegistry>>,
     server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    if issue_id.is_empty()
-        || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-')
-    {
+    if issue_id.is_empty() || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(format!(
             "invalid issue_id '{issue_id}': only alphanumeric characters and hyphens are allowed"
         ));
@@ -348,7 +409,15 @@ pub async fn bd_human_respond(
     }
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["human", "respond", &issue_id, &text], &cwd, &server_registry, &dolt_override, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["human", "respond", &issue_id, &text],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 /// Run `bd human dismiss <issue_id>` in the given project. Write op — 30s timeout.
@@ -361,16 +430,22 @@ pub async fn bd_human_dismiss(
     registry: State<'_, Arc<ProjectRegistry>>,
     server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    if issue_id.is_empty()
-        || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-')
-    {
+    if issue_id.is_empty() || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(format!(
             "invalid issue_id '{issue_id}': only alphanumeric characters and hyphens are allowed"
         ));
     }
     let (bd, dolt_override) = bd_invocation_args(&settings)?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(&bd, &["human", "dismiss", &issue_id], &cwd, &server_registry, &dolt_override, Duration::from_secs(30)).await
+    invoke_bd_in_project(
+        &bd,
+        &["human", "dismiss", &issue_id],
+        &cwd,
+        &server_registry,
+        &dolt_override,
+        Duration::from_secs(30),
+    )
+    .await
 }
 
 // ── Named ruflo commands ──────────────────────────────────────────────────────
@@ -389,7 +464,12 @@ pub async fn ruflo_memory_search(
     }
     let settings_path = settings.lock().unwrap().binary_paths.ruflo.clone();
     let ruflo = find_ruflo_with_override(&settings_path).ok_or("ruflo CLI not found")?;
-    run_ruflo_managed(ruflo, &["memory", "search", "-q", &query, "--format", "json"], Duration::from_secs(10)).await
+    run_ruflo_managed(
+        ruflo,
+        &["memory", "search", "-q", &query, "--format", "json"],
+        Duration::from_secs(10),
+    )
+    .await
 }
 
 /// Run `ruflo --version` to probe whether ruflo is available. Read op — 10s timeout.
@@ -416,9 +496,7 @@ pub async fn get_workspace_context(project_path: String) -> Result<WorkspaceCont
     let out = spawn_managed("git", &args, cwd, Duration::from_secs(10), &[]).await;
 
     let branch = match out {
-        Ok(o) if o.exit_code == Some(0) => {
-            String::from_utf8_lossy(&o.stdout).trim().to_string()
-        }
+        Ok(o) if o.exit_code == Some(0) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         _ => "unknown".to_string(),
     };
 
@@ -606,13 +684,7 @@ mod ipc_allowlist_tests {
     /// Safe identifiers must pass formula name validation.
     #[test]
     fn formula_name_accepts_safe_identifiers() {
-        let safe = [
-            "my-formula",
-            "formula_v2",
-            "v1.0.0",
-            "UPPERCASE",
-            "abc123",
-        ];
+        let safe = ["my-formula", "formula_v2", "v1.0.0", "UPPERCASE", "abc123"];
         for name in &safe {
             assert!(
                 is_valid_formula_name(name),
@@ -672,9 +744,8 @@ mod ipc_allowlist_tests {
         // requires a deliberate update to both the implementation and this test.
         let project_id = "bogus-project-id-that-does-not-exist";
         let expected_prefix = "project_not_connected:";
-        let actual_msg = format!(
-            "project_not_connected: '{project_id}' — call connect_project first"
-        );
+        let actual_msg =
+            format!("project_not_connected: '{project_id}' — call connect_project first");
         assert!(
             actual_msg.starts_with(expected_prefix),
             "error message must start with '{expected_prefix}'"

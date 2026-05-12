@@ -1,5 +1,5 @@
-use std::fs;
 use serde_json::Value;
+use std::fs;
 
 /// Resolve a path relative to the src-tauri directory (the Cargo manifest dir).
 fn src_tauri(rel: &str) -> std::path::PathBuf {
@@ -16,7 +16,10 @@ fn csp_is_not_null() {
     .expect("tauri.conf.json is not valid JSON");
 
     let csp = conf.pointer("/app/security/csp");
-    assert!(csp.is_some(), "app.security.csp is missing from tauri.conf.json");
+    assert!(
+        csp.is_some(),
+        "app.security.csp is missing from tauri.conf.json"
+    );
     assert!(
         !csp.unwrap().is_null(),
         "app.security.csp must not be null in tauri.conf.json"
@@ -44,10 +47,8 @@ fn no_capability_grants_broad_shell_permissions() {
         if path.extension().map(|e| e == "json").unwrap_or(false) {
             let raw = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("failed to read {:?}: {e}", path));
-            let content: Value =
-                serde_json::from_str(&raw).unwrap_or_else(|e| {
-                    panic!("invalid JSON in capability file {:?}: {e}", path)
-                });
+            let content: Value = serde_json::from_str(&raw)
+                .unwrap_or_else(|e| panic!("invalid JSON in capability file {:?}: {e}", path));
 
             let perms = content.get("permissions").and_then(|p| p.as_array());
             if let Some(perms) = perms {

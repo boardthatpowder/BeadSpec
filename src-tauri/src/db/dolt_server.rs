@@ -115,9 +115,8 @@ impl DoltServerRegistry {
                     return Ok(port);
                 }
                 Err(VerifyError::PortRace { stolen_port }) => {
-                    last_error = format!(
-                        "Port {stolen_port} was stolen between selection and sidecar bind"
-                    );
+                    last_error =
+                        format!("Port {stolen_port} was stolen between selection and sidecar bind");
                     eprintln!(
                         "[warn] Port {} stolen between selection and sidecar bind (attempt {}), retrying",
                         stolen_port,
@@ -135,11 +134,13 @@ impl DoltServerRegistry {
                     match verify_beads_db_ready(p, &db_name).await {
                         Ok(()) => {
                             let mut servers = self.servers.write().await;
-                            servers.insert(project_path.to_string(), SpawnedServer { port: p, child });
+                            servers
+                                .insert(project_path.to_string(), SpawnedServer { port: p, child });
                             return Ok(p);
                         }
                         Err(e) => {
-                            last_error = format!("Sidecar SQL verify failed after extended wait: {e:?}");
+                            last_error =
+                                format!("Sidecar SQL verify failed after extended wait: {e:?}");
                             eprintln!("[warn] Sidecar on port {p} still not ready after extended wait, attempt {attempt}");
                             child.kill().await.ok();
                             continue;
@@ -214,11 +215,7 @@ async fn verify_beads_db_ready(port: u16, db_name: &str) -> Result<(), VerifyErr
 
     // Check TCP reachability quickly (1-second window).
     // If connection is refused this fast, another process stole the port.
-    let tcp_result = timeout(
-        Duration::from_secs(1),
-        TcpStream::connect(&addr),
-    )
-    .await;
+    let tcp_result = timeout(Duration::from_secs(1), TcpStream::connect(&addr)).await;
 
     match tcp_result {
         // Connection refused within 1 second → port race.
@@ -294,7 +291,11 @@ pub fn find_dolt(settings_override: Option<&str>) -> Option<PathBuf> {
     if let Some(found) = std::env::var_os("PATH").and_then(|path_var| {
         std::env::split_paths(&path_var).find_map(|dir| {
             let candidate = dir.join(bin);
-            if candidate.is_file() { Some(candidate) } else { None }
+            if candidate.is_file() {
+                Some(candidate)
+            } else {
+                None
+            }
         })
     }) {
         return Some(found);
@@ -335,7 +336,10 @@ pub fn find_dolt(settings_override: Option<&str>) -> Option<PathBuf> {
     }
     if cfg!(windows) {
         if let Some(h) = home {
-            for suffix in &[r"AppData\Local\Programs\dolt\bin\dolt.exe", r"scoop\apps\dolt\current\dolt.exe"] {
+            for suffix in &[
+                r"AppData\Local\Programs\dolt\bin\dolt.exe",
+                r"scoop\apps\dolt\current\dolt.exe",
+            ] {
                 let p = h.join(suffix);
                 if p.is_file() {
                     return Some(p);

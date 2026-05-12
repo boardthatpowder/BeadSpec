@@ -5,8 +5,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::bd::runner::{find_bd, invoke_bd_in_project};
-use crate::db::dolt_server::DoltServerRegistry;
 use crate::commands::external::CommandOutput;
+use crate::db::dolt_server::DoltServerRegistry;
 use crate::settings::AppSettings;
 
 // ── Data types ────────────────────────────────────────────────────────────────

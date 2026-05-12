@@ -120,7 +120,15 @@ pub async fn change_task_status(
             }
             run_write(&project_path, &args, &settings, &server_registry).await
         }
-        "open" => run_write(&project_path, &["reopen", &issue_id], &settings, &server_registry).await,
+        "open" => {
+            run_write(
+                &project_path,
+                &["reopen", &issue_id],
+                &settings,
+                &server_registry,
+            )
+            .await
+        }
         _ => {
             let flag = format!("--status={}", status);
             run_write(

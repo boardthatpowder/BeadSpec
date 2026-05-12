@@ -26,10 +26,7 @@ pub struct ProjectMeta {
 /// Returns the hex-encoded first 8 bytes of SHA-256(path).
 fn project_id_from_path(canonical_path: &str) -> String {
     let hash = Sha256::digest(canonical_path.as_bytes());
-    hash[..8]
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
+    hash[..8].iter().map(|b| format!("{b:02x}")).collect()
 }
 
 #[cfg(test)]
@@ -48,7 +45,10 @@ mod tests {
     fn project_id_differs_for_different_paths() {
         let id1 = project_id_from_path("/tmp/project-a");
         let id2 = project_id_from_path("/tmp/project-b");
-        assert_ne!(id1, id2, "different paths should have different project IDs");
+        assert_ne!(
+            id1, id2,
+            "different paths should have different project IDs"
+        );
     }
 
     #[test]
@@ -147,14 +147,19 @@ async fn ensure_bd_server(
 ) -> Result<String, String> {
     // Fast path: port file exists and server is already healthy.
     if let Ok((url, port)) = server_url(beads_dir, db_name, metadata_port) {
-        if matches!(recovery::probe_with_deadline(port).await, recovery::DoltHealth::Ok) {
+        if matches!(
+            recovery::probe_with_deadline(port).await,
+            recovery::DoltHealth::Ok
+        ) {
             return Ok(url);
         }
     }
     // Server is absent or not responding — start it via bd.
     let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path)
         .map_err(|e| format!("bd not found, cannot start Dolt server: {e}"))?;
-    runner.run(&["dolt", "start"]).await
+    runner
+        .run(&["dolt", "start"])
+        .await
         .map_err(|e| format!("bd dolt start failed: {e}"))?;
     // Give the server a moment to bind if bd dolt start returns before the port is open.
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -233,7 +238,11 @@ pub async fn connect_project(
         let embeddeddolt_dir = beads_dir.join("embeddeddolt");
         // Skip recovery when the sidecar is already registered by this session.
         // The guard's no_clients_connected check would escalate on our own open pool.
-        if server_registry.get_port(&canonical_project_path).await.is_none() {
+        if server_registry
+            .get_port(&canonical_project_path)
+            .await
+            .is_none()
+        {
             recovery::guard(&canonical_project_path, &embeddeddolt_dir)
                 .await
                 .map_err(|e| format!("Dolt recovery failed: {e}"))?;

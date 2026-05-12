@@ -97,10 +97,9 @@ impl BdRunner {
         match tokio::time::timeout(timeout, wait_and_collect).await {
             Ok(Ok((stdout, status))) => {
                 let mut err = Vec::new();
-                let _ = tokio::time::timeout(
-                    Duration::from_secs(2),
-                    stderr_pipe.read_to_end(&mut err),
-                ).await;
+                let _ =
+                    tokio::time::timeout(Duration::from_secs(2), stderr_pipe.read_to_end(&mut err))
+                        .await;
                 if status.success() {
                     Ok(String::from_utf8_lossy(&stdout).into_owned())
                 } else {
@@ -119,12 +118,11 @@ impl BdRunner {
                 let _ = tokio::time::timeout(
                     Duration::from_millis(500),
                     stderr_pipe.read_to_end(&mut stderr_bytes),
-                ).await;
+                )
+                .await;
                 let stderr_str = String::from_utf8_lossy(&stderr_bytes).trim().to_string();
                 let _ = tokio::time::timeout(Duration::from_secs(2), child.wait()).await;
-                eprintln!(
-                    "warn: BdRunner::run timed out after {timeout_ms}ms for args: {args:?}"
-                );
+                eprintln!("warn: BdRunner::run timed out after {timeout_ms}ms for args: {args:?}");
                 if !stderr_str.is_empty() {
                     eprintln!("  bd stderr: {stderr_str}");
                 }
@@ -140,7 +138,14 @@ impl BdRunner {
 /// trigger Dolt commits and network I/O; they need more headroom.
 fn classify_bd_timeout(args: &[&str]) -> Duration {
     let write_subcommands = [
-        "create", "update", "close", "respond", "dismiss", "pour", "push", "dolt-push",
+        "create",
+        "update",
+        "close",
+        "respond",
+        "dismiss",
+        "pour",
+        "push",
+        "dolt-push",
     ];
     let first = args.first().copied().unwrap_or("");
     let second = args.get(1).copied().unwrap_or("");
@@ -168,22 +173,20 @@ pub fn find_bd(settings_path: &str) -> Option<PathBuf> {
     if let Some(found) = std::env::var_os("PATH").and_then(|path_var| {
         std::env::split_paths(&path_var).find_map(|dir| {
             let candidate = dir.join(bin);
-            if candidate.is_file() { Some(candidate) } else { None }
+            if candidate.is_file() {
+                Some(candidate)
+            } else {
+                None
+            }
         })
     }) {
         return Some(found);
     }
     // Common install locations per OS, checked after PATH misses
     let candidates: &[&str] = if cfg!(target_os = "macos") {
-        &[
-            "/opt/homebrew/bin/bd",
-            "/usr/local/bin/bd",
-        ]
+        &["/opt/homebrew/bin/bd", "/usr/local/bin/bd"]
     } else if cfg!(target_os = "linux") {
-        &[
-            "~/.local/bin/bd",
-            "/usr/local/bin/bd",
-        ]
+        &["~/.local/bin/bd", "/usr/local/bin/bd"]
     } else if cfg!(windows) {
         &[
             // scoop and manual installs — expanded below via home_dir
@@ -193,7 +196,11 @@ pub fn find_bd(settings_path: &str) -> Option<PathBuf> {
     };
     for raw in candidates {
         let path = if raw.starts_with("~/") {
-            if let Some(home) = dirs_home() { home.join(&raw[2..]) } else { continue }
+            if let Some(home) = dirs_home() {
+                home.join(&raw[2..])
+            } else {
+                continue;
+            }
         } else {
             PathBuf::from(raw)
         };
@@ -202,10 +209,7 @@ pub fn find_bd(settings_path: &str) -> Option<PathBuf> {
         }
     }
     if cfg!(windows) {
-        for suffix in &[
-            r"AppData\Local\Programs\bd\bd.exe",
-            r"scoop\shims\bd.exe",
-        ] {
+        for suffix in &[r"AppData\Local\Programs\bd\bd.exe", r"scoop\shims\bd.exe"] {
             if let Some(home) = dirs_home() {
                 let p = home.join(suffix);
                 if p.is_file() {
@@ -237,7 +241,10 @@ pub fn bd_available() -> bool {
 fn bd_env(port: u16) -> [(String, String); 5] {
     [
         ("BEADS_DOLT_SERVER_MODE".to_string(), "1".to_string()),
-        ("BEADS_DOLT_SERVER_HOST".to_string(), "127.0.0.1".to_string()),
+        (
+            "BEADS_DOLT_SERVER_HOST".to_string(),
+            "127.0.0.1".to_string(),
+        ),
         ("BEADS_DOLT_SERVER_PORT".to_string(), port.to_string()),
         ("BEADS_DOLT_SERVER_USER".to_string(), "root".to_string()),
         ("BD_NON_INTERACTIVE".to_string(), "1".to_string()),
@@ -337,7 +344,11 @@ pub struct ManagedOutput {
 #[derive(Debug, thiserror::Error)]
 pub enum SpawnError {
     #[error("Process timed out after {timeout_ms}ms: {cmd}{}", if stderr.is_empty() { String::new() } else { format!(" — {stderr}") })]
-    Timeout { cmd: String, timeout_ms: u64, stderr: String },
+    Timeout {
+        cmd: String,
+        timeout_ms: u64,
+        stderr: String,
+    },
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -432,7 +443,8 @@ pub async fn spawn_managed(
             let _ = tokio::time::timeout(
                 std::time::Duration::from_millis(500),
                 stderr_pipe.read_to_end(&mut stderr_bytes),
-            ).await;
+            )
+            .await;
             let _ = tokio::time::timeout(std::time::Duration::from_secs(2), child.wait()).await;
             let stderr = String::from_utf8_lossy(&stderr_bytes).trim().to_string();
             if !stderr.is_empty() {

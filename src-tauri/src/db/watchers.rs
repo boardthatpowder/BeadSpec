@@ -118,9 +118,7 @@ impl JsonlWatcher {
                     // the frontend's re-fetch sees up-to-date progress counts.
                     let (bd_path_override, dolt_path_override) = settings
                         .lock()
-                        .map(|s| {
-                            (s.binary_paths.bd.clone(), s.binary_paths.dolt.clone())
-                        })
+                        .map(|s| (s.binary_paths.bd.clone(), s.binary_paths.dolt.clone()))
                         .unwrap_or_default();
                     if let Some(bd) = crate::bd::runner::find_bd(&bd_path_override) {
                         let _ = crate::commands::openspec::reconcile_tasks_checkboxes(
