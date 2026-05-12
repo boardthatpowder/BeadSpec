@@ -1,95 +1,122 @@
 {
+  "enabledPlugins": {
+    "ruflo-agentdb@ruflo": true,
+    "ruflo-autopilot@ruflo": true,
+    "ruflo-core@ruflo": true,
+    "ruflo-cost-tracker@ruflo": true,
+    "ruflo-intelligence@ruflo": true,
+    "ruflo-loop-workers@ruflo": true,
+    "ruflo-rag-memory@ruflo": true,
+    "ruflo-security-audit@ruflo": true,
+    "ruflo-swarm@ruflo": true
+  },
   "hooks": {
-    "SessionStart": [
+    "PostToolUse": [
       {
-        "hooks": [
-          { "type": "command", "command": "openspec list 2>/dev/null | head -20" }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "bd prime" }
-        ]
-      },
-      {
-        "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "source ~/.claude/ruflo/lib/tags.sh 2>/dev/null && ruflo memory search -q \"recent context $(git branch --show-current 2>/dev/null)\" 2>/dev/null | head -20 || true"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-push.sh",
+            "type": "command"
+          },
+          {
+            "async": true,
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-analyze.sh",
+            "statusMessage": "Updating GitNexus index...",
+            "timeout": 300,
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Bash"
       },
       {
-        "matcher": "",
         "hooks": [
-          { "type": "command", "command": "ruflo hooks session-restore 2>/dev/null || true" }
-        ]
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-edit.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write"
       }
     ],
     "PreCompact": [
       {
-        "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bd prime" }
-        ]
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-edit.sh" }
-        ]
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-edit.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit"
       },
       {
-        "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-commit.sh" }
-        ]
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-commit.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
-    "PostToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-push.sh" },
           {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-analyze.sh",
-            "async": true,
-            "timeout": 300,
-            "statusMessage": "Updating GitNexus index..."
+            "command": "openspec list 2\u003e/dev/null | head -20",
+            "type": "command"
           }
         ]
       },
       {
-        "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-edit.sh" }
-        ]
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
+            "command": "source ~/.claude/ruflo/lib/tags.sh 2\u003e/dev/null \u0026\u0026 ruflo memory search -q \"recent context $(git branch --show-current 2\u003e/dev/null)\" 2\u003e/dev/null | head -20 || true",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
+            "command": "ruflo hooks session-restore 2\u003e/dev/null || true",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ],
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-session-end.sh" }
-        ]
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-session-end.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ]
   },
-  "skillListingBudgetFraction": 0.2,
-  "enabledPlugins": {
-    "ruflo-core@ruflo": true,
-    "ruflo-cost-tracker@ruflo": true,
-    "ruflo-security-audit@ruflo": true,
-    "ruflo-loop-workers@ruflo": true,
-    "ruflo-agentdb@ruflo": true,
-    "ruflo-rag-memory@ruflo": true,
-    "ruflo-swarm@ruflo": true,
-    "ruflo-intelligence@ruflo": true,
-    "ruflo-autopilot@ruflo": true
-  }
+  "skillListingBudgetFraction": 0.2
 }

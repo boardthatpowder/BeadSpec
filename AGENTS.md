@@ -27,7 +27,7 @@ Beads UI is a Tauri 2.0 desktop application (Rust + React/TypeScript) for managi
 | Tool | Role |
 |---|---|
 | OpenSpec | Owns agreed behavior, requirements, and done criteria |
-| Beads (`bd`) | Owns durable task tracking and dependency state (prefix: BUI) |
+| Beads (`bd`) | Owns durable task tracking and dependency state (prefix: BEADSPEC) |
 | Ruflo | Owns cross-session memory and background workers |
 | GitNexus | Owns code graph, impact analysis, and symbol-aware refactors |
 
@@ -44,83 +44,49 @@ openspec validate <change-id>
 openspec status --change <change-id>
 ```
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:beads-ui hash:workflow-beads-ui -->
-## Beads
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
+## Beads Issue Tracker
 
-Issue prefix: `BUI`. Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists. Run `bd prime` at session start.
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
 
-```bash
-bd ready
-bd show <id>
-bd update <id> --claim
-bd close <id> --reason "<summary>"
-bd blocked
-bd dolt push
-```
-
-Every `bd create` must be tagged immediately with branch, worktree, and repo labels:
+### Quick Reference
 
 ```bash
-source ~/.claude/ruflo/lib/tags.sh
-PREFIX=$(ruflo_key_prefix)
-bd tag <id> "$(echo "$PREFIX" | awk -F'|' '{print $1}')"
-bd tag <id> "$(echo "$PREFIX" | awk -F'|' '{print $2}')"
-bd tag <id> "$(echo "$PREFIX" | awk -F'|' '{print $3}')"
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
 ```
 
-Verify with `bd show <id>` — LABELS must include all three before the issue is considered ready.
+### Rules
 
-## Ruflo
-
-Persistent memory goes through Ruflo AgentDB. Do not use `bd remember` or write `MEMORY.md` files for cross-session state.
-
-```bash
-source ~/.claude/ruflo/lib/tags.sh
-KEY="$(ruflo_key_prefix)|type:<type>|ts:$(date +%s)"
-ruflo memory store -k "$KEY" -v "<content>"
-ruflo memory search -q "<semantic query>"
-```
-
-Never run `ruflo init` in this repository.
-
-## GitNexus
-
-Use GitNexus before risky symbol edits:
-
-- Run impact analysis before editing an existing Rust function, React component, or Tauri command.
-- Warn the user before proceeding if impact analysis reports HIGH or CRITICAL risk.
-- Use `gitnexus_rename` or `npx gitnexus rename` for renames; do not use find-and-replace.
-- Run GitNexus change detection before committing when code changes touch indexed symbols.
-
-```bash
-npx gitnexus analyze
-npx gitnexus impact <symbol>
-npx gitnexus detect-changes
-```
-
-## Key Architecture Rules
-
-- **Reads**: always via `sqlx` / `mysql_async` direct to Dolt SQL — never through `bd` CLI for reads
-- **Writes**: always via `bd` CLI — preserves ID assignment, hooks, label normalization
-- **Label prefix parsing**: split on **first colon only** (`url:https://...` → prefix `url`, value `https://...`)
-- **IPC**: never call raw `invoke()` strings — always use the `specta`/`tauri-specta` generated typed wrappers
-- **Multi-project**: one `sqlx::Pool` per project path — no shared singleton
-- **Keyboard shortcuts**: always use `react-hotkeys-hook` with platform detection, never hardcode Cmd or Ctrl
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
 ## Session Completion
 
-Before calling work complete:
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 
-1. Tick the `tasks.md` checkbox for completed tasks (`- [x]`).
-2. Run `cargo test` and `bun test` (or explain why not applicable).
-3. Close related Beads issues with `bd close`.
-4. Commit and push:
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
 
-Work is NOT complete until `git push` succeeds.
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
