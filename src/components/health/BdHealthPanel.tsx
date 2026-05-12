@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { commands, unwrap } from '../../ipc'
 import type { CommandOutput } from '../../bindings'
-import { useActiveProject, useActiveProjectId } from '../../hooks/useProject'
+import { useActiveProject } from '../../hooks/useProject'
 import { renderWithChips } from '../shared/issueChips'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -30,13 +30,13 @@ const CHECKS: CheckConfig[] = [
 ]
 
 /** Run the named bd command for a given check key. Returns stdout on success, throws on error. */
-async function runNamedBdCheck(projectId: string, key: CheckKey): Promise<string> {
+async function runNamedBdCheck(projectPath: string, key: CheckKey): Promise<string> {
   switch (key) {
-    case 'preflight': return unwrap(commands.bdPreflight(projectId))
-    case 'doctor':    return unwrap(commands.bdDoctor(projectId))
-    case 'lint':      return unwrap(commands.bdLint(projectId))
-    case 'stale':     return unwrap(commands.bdStale(projectId))
-    case 'orphans':   return unwrap(commands.bdOrphans(projectId))
+    case 'preflight': return unwrap(commands.bdPreflight(projectPath))
+    case 'doctor':    return unwrap(commands.bdDoctor(projectPath))
+    case 'lint':      return unwrap(commands.bdLint(projectPath))
+    case 'stale':     return unwrap(commands.bdStale(projectPath))
+    case 'orphans':   return unwrap(commands.bdOrphans(projectPath))
   }
 }
 
@@ -125,7 +125,6 @@ function CheckSection({ label, result, open, onToggle }: CheckSectionProps) {
 
 export function BdHealthPanel() {
   const project = useActiveProject()
-  const projectId = useActiveProjectId()
   const [checks, setChecks] = useState<CheckState>(INITIAL_STATE)
   const [isRunning, setIsRunning] = useState(false)
   const [openSections, setOpenSections] = useState<Set<CheckKey>>(new Set())
@@ -138,7 +137,7 @@ export function BdHealthPanel() {
   }, [])
 
   const runChecks = useCallback(async () => {
-    if (!project || !projectId || isRunning) return
+    if (!project || isRunning) return
 
     setIsRunning(true)
     setHasRun(true)
@@ -150,7 +149,7 @@ export function BdHealthPanel() {
     for (const check of CHECKS) {
       setCheck(check.key, { isRunning: true, output: null, error: null })
       try {
-        const stdout = await runNamedBdCheck(projectId, check.key)
+        const stdout = await runNamedBdCheck(project, check.key)
         const output: CommandOutput = { stdout, stderr: '', exit_code: 0 }
         setCheck(check.key, { isRunning: false, output, error: null })
       } catch (err) {
@@ -174,14 +173,14 @@ export function BdHealthPanel() {
     }
 
     setIsRunning(false)
-  }, [project, projectId, isRunning, setCheck])
+  }, [project, isRunning, setCheck])
 
   // Auto-run on mount
   useEffect(() => {
-    if (project && projectId && !hasRun) {
+    if (project && !hasRun) {
       runChecks()
     }
-  }, [project, projectId, hasRun, runChecks])
+  }, [project, hasRun, runChecks])
 
   const toggleSection = useCallback((key: CheckKey) => {
     setOpenSections(prev => {

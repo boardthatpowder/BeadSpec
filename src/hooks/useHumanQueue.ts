@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { commands } from '../ipc'
 import { unwrap } from '../ipc'
-import { useActiveProject, useActiveProjectId } from './useProject'
+import { useActiveProject } from './useProject'
 
 export interface HumanQueueItem {
   id: string
@@ -28,25 +28,23 @@ function parseHumanList(stdout: string): HumanQueueItem[] {
 }
 
 function isBdNotFound(err: unknown): boolean {
-  const msg = typeof err === 'string' ? err.toLowerCase() : ''
-  return msg.includes('not found') || msg.includes('no such file') ||
-    msg.includes('bd cli not found') || msg.includes('project_not_connected')
+  const msg = typeof err === 'string' ? err : ''
+  return msg.includes('bd CLI not found') || msg.includes('project_not_connected')
 }
 
 export function useHumanQueue(): UseHumanQueueResult {
   const project = useActiveProject()
-  const projectId = useActiveProjectId()
   const [items, setItems] = useState<HumanQueueItem[]>([])
   const [bdUnavailable, setBdUnavailable] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const poll = useCallback(async () => {
-    if (!project || !projectId) return
+    if (!project) return
     if (document.visibilityState !== 'visible') return
     if (bdUnavailable) return
 
     try {
-      const stdout = await unwrap(commands.bdHumanList(projectId))
+      const stdout = await unwrap(commands.bdHumanList(project))
       const parsed = parseHumanList(stdout)
       setItems(parsed)
     } catch (err) {
@@ -56,7 +54,7 @@ export function useHumanQueue(): UseHumanQueueResult {
         console.warn('[useHumanQueue] poll error:', err)
       }
     }
-  }, [project, projectId, bdUnavailable])
+  }, [project, bdUnavailable])
 
   // Initial load + interval setup
   useEffect(() => {
@@ -78,31 +76,31 @@ export function useHumanQueue(): UseHumanQueueResult {
     }
   }, [project]) // eslint-disable-line react-hooks/exhaustive-deps
   // Note: intentionally omit `poll` from deps to avoid resetting interval on every render;
-  // poll is stable enough via project/projectId/bdUnavailable memo boundary.
+  // poll is stable enough via project/bdUnavailable memo boundary.
 
   const respond = useCallback(async (id: string, text: string) => {
     // Optimistic removal
     setItems(prev => prev.filter(item => item.id !== id))
     try {
-      if (projectId) {
-        await unwrap(commands.bdHumanRespond(projectId, id, text))
+      if (project) {
+        await unwrap(commands.bdHumanRespond(project, id, text))
       }
     } catch (err) {
       console.warn('[useHumanQueue] respond error:', err)
     }
-  }, [projectId])
+  }, [project])
 
   const dismiss = useCallback(async (id: string) => {
     // Optimistic removal
     setItems(prev => prev.filter(item => item.id !== id))
     try {
-      if (projectId) {
-        await unwrap(commands.bdHumanDismiss(projectId, id))
+      if (project) {
+        await unwrap(commands.bdHumanDismiss(project, id))
       }
     } catch (err) {
       console.warn('[useHumanQueue] dismiss error:', err)
     }
-  }, [projectId])
+  }, [project])
 
   if (bdUnavailable) {
     return { items: [], respond, dismiss }
