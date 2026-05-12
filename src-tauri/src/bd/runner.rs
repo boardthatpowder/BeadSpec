@@ -478,15 +478,9 @@ mod tests {
         let (cmd, args_vec) = long_running_cmd();
         let args: Vec<&str> = args_vec.iter().map(|s| *s).collect();
         let start = std::time::Instant::now();
+        let tmp = std::env::temp_dir();
 
-        let result = spawn_managed(
-            cmd,
-            &args,
-            std::path::Path::new("/tmp"),
-            Duration::from_millis(100),
-            &[],
-        )
-        .await;
+        let result = spawn_managed(cmd, &args, &tmp, Duration::from_millis(100), &[]).await;
 
         let elapsed = start.elapsed();
         assert!(
@@ -505,14 +499,13 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_managed_returns_output_for_normal_command() {
-        let result = spawn_managed(
-            "sh",
-            &["-c", "echo hello"],
-            std::path::Path::new("/tmp"),
-            Duration::from_secs(5),
-            &[],
-        )
-        .await;
+        let tmp = std::env::temp_dir();
+        #[cfg(not(target_os = "windows"))]
+        let (cmd, args): (&str, &[&str]) = ("sh", &["-c", "echo hello"]);
+        #[cfg(target_os = "windows")]
+        let (cmd, args): (&str, &[&str]) = ("cmd", &["/c", "echo hello"]);
+
+        let result = spawn_managed(cmd, args, &tmp, Duration::from_secs(5), &[]).await;
 
         let out = result.expect("command should succeed");
         assert!(
