@@ -244,8 +244,8 @@ pub struct ManagedOutput {
 /// Errors that can occur when spawning a managed subprocess.
 #[derive(Debug, thiserror::Error)]
 pub enum SpawnError {
-    #[error("Process timed out after {timeout_ms}ms: {cmd}")]
-    Timeout { cmd: String, timeout_ms: u64 },
+    #[error("Process timed out after {timeout_ms}ms: {cmd}{}", if stderr.is_empty() { String::new() } else { format!(" — {stderr}") })]
+    Timeout { cmd: String, timeout_ms: u64, stderr: String },
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -266,17 +266,22 @@ pub async fn spawn_managed(
     args: &[&str],
     cwd: &std::path::Path,
     timeout: std::time::Duration,
+    env: &[(&str, &str)],
 ) -> Result<ManagedOutput, SpawnError> {
     use tokio::io::AsyncReadExt;
 
-    let mut child = Command::new(cmd)
+    let mut builder = Command::new(cmd);
+    builder
         .args(args)
         .current_dir(cwd)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .spawn()?;
+        .kill_on_drop(true);
+    for (k, v) in env {
+        builder.env(k, v);
+    }
+    let mut child = builder.spawn()?;
 
     let timeout_ms = timeout.as_millis() as u64;
 
@@ -329,12 +334,22 @@ pub async fn spawn_managed(
         }
         Ok(Err(io_err)) => Err(SpawnError::Io(io_err)),
         Err(_elapsed) => {
-            // Timeout: kill explicitly, then wait up to 2 s for the child to exit.
             let _ = child.kill().await;
+            // Drain whatever the process wrote to stderr before being killed.
+            let mut stderr_bytes = Vec::new();
+            let _ = tokio::time::timeout(
+                std::time::Duration::from_millis(500),
+                stderr_pipe.read_to_end(&mut stderr_bytes),
+            ).await;
             let _ = tokio::time::timeout(std::time::Duration::from_secs(2), child.wait()).await;
+            let stderr = String::from_utf8_lossy(&stderr_bytes).trim().to_string();
+            if !stderr.is_empty() {
+                eprintln!("warn: spawn_managed timeout for {cmd}: {stderr}");
+            }
             Err(SpawnError::Timeout {
                 cmd: cmd.to_string(),
                 timeout_ms,
+                stderr,
             })
         }
     }
@@ -369,6 +384,7 @@ mod tests {
             &args,
             std::path::Path::new("/tmp"),
             Duration::from_millis(100),
+            &[],
         )
         .await;
 
@@ -394,6 +410,7 @@ mod tests {
             &["-c", "echo hello"],
             std::path::Path::new("/tmp"),
             Duration::from_secs(5),
+            &[],
         )
         .await;
 

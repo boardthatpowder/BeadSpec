@@ -124,7 +124,7 @@ async fn run_subprocess(program: &std::path::Path, args: &[String], cwd: &str) -
     let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
     let cwd_path = std::path::Path::new(cwd);
 
-    match spawn_managed(&cmd, &arg_refs, cwd_path, Duration::from_secs(10)).await {
+    match spawn_managed(&cmd, &arg_refs, cwd_path, Duration::from_secs(10), &[]).await {
         Ok(out) => CommandOutput {
             stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
             stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
@@ -173,7 +173,8 @@ async fn run_bd_managed(
     timeout: Duration,
 ) -> Result<String, String> {
     let bd_str = bd_path.to_string_lossy().into_owned();
-    let out = spawn_managed(&bd_str, args, std::path::Path::new(cwd), timeout)
+    let out = spawn_managed(&bd_str, args, std::path::Path::new(cwd), timeout,
+        &[("BD_NON_INTERACTIVE", "1")])
         .await
         .map_err(|e| e.to_string())?;
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
@@ -194,7 +195,7 @@ async fn run_ruflo_managed(
 ) -> Result<String, String> {
     let ruflo_str = ruflo_path.to_string_lossy().into_owned();
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    let out = spawn_managed(&ruflo_str, args, std::path::Path::new(&home), timeout)
+    let out = spawn_managed(&ruflo_str, args, std::path::Path::new(&home), timeout, &[])
         .await
         .map_err(|e| e.to_string())?;
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
@@ -432,7 +433,7 @@ pub async fn ruflo_version_probe(
 pub async fn get_workspace_context(project_path: String) -> Result<WorkspaceContext, String> {
     let cwd = std::path::Path::new(&project_path);
     let args = ["-C", &project_path, "rev-parse", "--abbrev-ref", "HEAD"];
-    let out = spawn_managed("git", &args, cwd, Duration::from_secs(10)).await;
+    let out = spawn_managed("git", &args, cwd, Duration::from_secs(10), &[]).await;
 
     let branch = match out {
         Ok(o) if o.exit_code == Some(0) => {
@@ -479,7 +480,7 @@ pub async fn get_git_refs_for_issue(
         "--format=%H\x1f%s\x1f%ci",
         &grep_arg,
     ];
-    let log_out = spawn_managed("git", &log_args, cwd, Duration::from_secs(10)).await;
+    let log_out = spawn_managed("git", &log_args, cwd, Duration::from_secs(10), &[]).await;
 
     let commits = match log_out {
         Ok(o) if o.exit_code == Some(0) => {
@@ -505,7 +506,7 @@ pub async fn get_git_refs_for_issue(
     // git branch --list "*<id>*"
     let branch_pattern = format!("*{issue_id}*");
     let branch_args = ["-C", &project_path, "branch", "--list", &branch_pattern];
-    let branch_out = spawn_managed("git", &branch_args, cwd, Duration::from_secs(10)).await;
+    let branch_out = spawn_managed("git", &branch_args, cwd, Duration::from_secs(10), &[]).await;
 
     let branches = match branch_out {
         Ok(o) if o.exit_code == Some(0) => {
