@@ -159,6 +159,15 @@ impl DoltServerRegistry {
         self.servers.read().await.get(project_path).map(|s| s.port)
     }
 
+    /// Drop the registry entry for `project_path` (does not kill the child).
+    /// Use before a self-heal respawn — the next spawn_or_get will create a fresh sidecar.
+    pub async fn invalidate(&self, project_path: &str) {
+        if let Some(mut s) = self.servers.write().await.remove(project_path) {
+            // Best-effort kill of the now-stale child so we don't leak it.
+            let _ = s.child.kill().await;
+        }
+    }
+
     pub async fn stop_all(&self) {
         let mut servers = self.servers.write().await;
         for (_, mut s) in servers.drain() {

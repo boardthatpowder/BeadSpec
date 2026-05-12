@@ -269,6 +269,7 @@ pub async fn connect_project(
         canonical_project_path.clone(),
         app.clone(),
         settings.inner().clone(),
+        server_registry.inner().clone(),
     )
     .start();
     let openspec_watch_handle = OpenSpecWatcher::new(canonical_project_path.clone(), app).start();

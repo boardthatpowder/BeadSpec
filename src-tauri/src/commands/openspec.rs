@@ -4,7 +4,8 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use crate::bd::runner::BdRunner;
+use crate::bd::runner::{find_bd, invoke_bd_in_project};
+use crate::db::dolt_server::DoltServerRegistry;
 use crate::commands::external::CommandOutput;
 use crate::settings::AppSettings;
 
@@ -367,7 +368,12 @@ pub async fn import_change_to_beads(
 /// `closed → [x]`, anything else → `[ ]`.
 /// Lines that have no backing bd issue are left unchanged.
 /// This function never returns an error — failures are collected in `SyncReport::errors`.
-pub async fn reconcile_tasks_checkboxes(project_path: &str, runner: &BdRunner) -> SyncReport {
+pub async fn reconcile_tasks_checkboxes(
+    project_path: &str,
+    bd_path: &std::path::Path,
+    server_registry: &DoltServerRegistry,
+    dolt_path_override: &str,
+) -> SyncReport {
     let mut report = SyncReport {
         changes_scanned: 0_u32,
         lines_flipped: 0_u32,
@@ -401,7 +407,16 @@ pub async fn reconcile_tasks_checkboxes(project_path: &str, runner: &BdRunner) -
 
         // Query bd for all issues tagged with this change.
         let label_arg = format!("--label=openspec:{change_id}");
-        let json_out = match runner.run(&["list", &label_arg, "--json"]).await {
+        let json_out = match invoke_bd_in_project(
+            bd_path,
+            &["list", &label_arg, "--json"],
+            project_path,
+            server_registry,
+            dolt_path_override,
+            std::time::Duration::from_secs(10),
+        )
+        .await
+        {
             Ok(s) => s,
             Err(e) => {
                 report
@@ -501,10 +516,17 @@ pub async fn reconcile_tasks_checkboxes(project_path: &str, runner: &BdRunner) -
 pub async fn reconcile_openspec_checkboxes(
     project_path: String,
     settings: tauri::State<'_, Arc<Mutex<AppSettings>>>,
+    server_registry: tauri::State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<SyncReport, String> {
-    let bd_path = settings.lock().unwrap().binary_paths.bd.clone();
-    let runner = BdRunner::new_with_override(&project_path, &bd_path).map_err(|e| e.to_string())?;
-    Ok(reconcile_tasks_checkboxes(&project_path, &runner).await)
+    let (bd_path_override, dolt_path_override) = {
+        let guard = settings.lock().unwrap();
+        (
+            guard.binary_paths.bd.clone(),
+            guard.binary_paths.dolt.clone(),
+        )
+    };
+    let bd = find_bd(&bd_path_override).ok_or_else(|| "bd CLI not found".to_string())?;
+    Ok(reconcile_tasks_checkboxes(&project_path, &bd, &server_registry, &dolt_path_override).await)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

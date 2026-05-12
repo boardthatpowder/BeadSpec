@@ -228,6 +228,98 @@ pub fn bd_available() -> bool {
     find_bd("").is_some()
 }
 
+// ── Unified bd invocation ────────────────────────────────────────────────────
+
+/// Server-mode env block applied to every bd invocation from the supervisor.
+/// Forces bd to act as a pure MySQL client against our managed Dolt sidecar —
+/// no port-file probing, no PID-liveness fallback, no auto-start. See
+/// `docs/DOLT.md` in the beads repo for the BEADS_DOLT_SERVER_* contract.
+fn bd_env(port: u16) -> [(String, String); 5] {
+    [
+        ("BEADS_DOLT_SERVER_MODE".to_string(), "1".to_string()),
+        ("BEADS_DOLT_SERVER_HOST".to_string(), "127.0.0.1".to_string()),
+        ("BEADS_DOLT_SERVER_PORT".to_string(), port.to_string()),
+        ("BEADS_DOLT_SERVER_USER".to_string(), "root".to_string()),
+        ("BD_NON_INTERACTIVE".to_string(), "1".to_string()),
+    ]
+}
+
+/// Invoke `bd` against the project's running Dolt sidecar, with one-shot self-heal.
+///
+/// - Reads the live port from `DoltServerRegistry`. Returns an error if no sidecar is
+///   registered for this project (caller should connect the project first).
+/// - On the first attempt: spawns bd with the server-mode env block, cwd = project root,
+///   stdin closed.
+/// - If bd reports a MySQL connection error (sidecar died mid-session), invalidates the
+///   registry entry, respawns the sidecar via `spawn_or_get`, and retries the command once.
+/// - Returns stdout on success, or a formatted error string on failure.
+pub async fn invoke_bd_in_project(
+    bd_path: &std::path::Path,
+    args: &[&str],
+    project_path: &str,
+    server_registry: &crate::db::dolt_server::DoltServerRegistry,
+    dolt_path_override: &str,
+    timeout: Duration,
+) -> Result<String, String> {
+    let port = server_registry
+        .get_port(project_path)
+        .await
+        .ok_or_else(|| {
+            format!("project_not_connected: '{project_path}' — call connect_project first")
+        })?;
+
+    let cwd = std::path::Path::new(project_path);
+    let result = run_bd_once(bd_path, args, cwd, port, timeout).await;
+
+    // Self-heal: if bd reports a MySQL connection failure, the sidecar likely died.
+    // Respawn it from the embedded data dir and retry the command once.
+    if let Err(ref e) = result {
+        if is_dolt_connection_error(e) {
+            eprintln!("[bd] sidecar appears dead ({e}) — respawning and retrying");
+            server_registry.invalidate(project_path).await;
+            let embeddeddolt_dir = cwd.join(".beads/embeddeddolt");
+            let new_port = server_registry
+                .spawn_or_get(project_path, &embeddeddolt_dir, dolt_path_override)
+                .await
+                .map_err(|e| format!("self-heal respawn failed: {e}"))?;
+            return run_bd_once(bd_path, args, cwd, new_port, timeout).await;
+        }
+    }
+    result
+}
+
+async fn run_bd_once(
+    bd_path: &std::path::Path,
+    args: &[&str],
+    cwd: &std::path::Path,
+    port: u16,
+    timeout: Duration,
+) -> Result<String, String> {
+    let bd_str = bd_path.to_string_lossy().into_owned();
+    let env = bd_env(port);
+    let env_refs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let out = spawn_managed(&bd_str, args, cwd, timeout, &env_refs)
+        .await
+        .map_err(|e| e.to_string())?;
+    let exit_code = out.exit_code.unwrap_or(-1);
+    if exit_code == 0 {
+        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+    } else {
+        let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+        Err(format!("bd exited {exit_code}: {stderr}"))
+    }
+}
+
+fn is_dolt_connection_error(msg: &str) -> bool {
+    let m = msg.to_lowercase();
+    m.contains("connection refused")
+        || m.contains("can't connect")
+        || m.contains("connect: connection")
+        || m.contains("dial tcp")
+        || m.contains("broken pipe")
+        || m.contains("eof")
+}
+
 // ── spawn_managed ─────────────────────────────────────────────────────────────
 
 /// Maximum combined stdout + stderr size before output is truncated (1 MiB).
