@@ -8,8 +8,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](#install)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-24C8DB)](https://tauri.app/)
 
-<!-- TODO: add a hero screenshot or GIF here once the app is running in CI -->
-<!-- ![BeadSpec screenshot](docs-site/public/screenshots/main.png) -->
+![BeadSpec feature tour](docs-site/public/screenshots/demo.webp)
 
 ---
 
@@ -17,7 +16,7 @@
 
 - **See the whole picture** — dependency graphs, workspace tabs, and views that would take dozens of `bd` commands to reconstruct mentally.
 - **Stay in flow** — a global quick-capture shortcut and system tray let you log issues without switching apps.
-- **Spec-first** — optionally browse OpenSpec change proposals and their implementation status directly inside the app, keeping design and code in sync.
+- **Spec-first** — BeadSpec is the only Beads GUI that surfaces [OpenSpec](https://github.com/gastownhall/openspec) change proposals alongside your task list. Browse in-flight specs, see which Beads issues were imported from a change, and validate implementation status — without leaving the app. If you use OpenSpec to drive development, BeadSpec closes the loop between "what we agreed to build" and "what's been built."
 
 BeadSpec is a frontend. The `bd` CLI remains the source of truth — BeadSpec reads Dolt SQL directly for speed and writes through `bd` to preserve its hook logic, ID assignment, and branch tracking.
 
@@ -50,8 +49,20 @@ Both require the corresponding CLI tool to be installed. Each can be toggled in 
 
 | Integration | Adds |
 |---|---|
-| **OpenSpec** | Changes browser, spec doc tabs, import to Beads, validate |
+| **OpenSpec** | See below |
 | **Ruflo** | Memory search panel, Ruflo filter chips |
+
+#### OpenSpec integration
+
+When `openspec` is installed, BeadSpec gains a dedicated **OpenSpec tab** and several cross-cutting features:
+
+| Feature | What it does |
+|---|---|
+| Changes browser | List and filter in-flight OpenSpec change proposals by status and progress |
+| Spec doc tabs | Open any artifact (proposal, design, tasks) in a side-by-side tab alongside your issue list |
+| Import to Beads | Create Beads issues from an OpenSpec change's task list in one click |
+| Validate | Run `openspec validate` against a change and surface pass/fail results in the UI |
+| Status overlay | Each Beads issue shows which OpenSpec change it was imported from and the change's current progress |
 
 ---
 
@@ -165,13 +176,28 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide.
 
 ---
 
-## Project Workflow
+## Development Tool Chain
 
-BeadSpec uses **OpenSpec** for agreed behavior specs and **Beads** (`bd`) for task tracking — both are committed to this repository:
+BeadSpec is built with a layered set of tools, each with a distinct responsibility:
 
-- `openspec/specs/` — canonical feature specifications
-- `openspec/changes/` — in-flight change proposals
-- `.beads/` — Beads issue database (version-controlled; do not delete)
+| Tool | Responsibility |
+|---|---|
+| **[OpenSpec](https://github.com/gastownhall/openspec)** | Agrees on behavior before code is written — owns requirements, acceptance criteria, and "done" definitions. Every non-trivial change starts here. |
+| **[Beads (`bd`)](https://github.com/gastownhall/beads)** | Tracks implementation work — owns tasks, dependencies, status, and history. Issues are imported from OpenSpec changes; completion closes the loop back to the spec. |
+| **[GitNexus](https://github.com/gastownhall/gitnexus)** | Owns the code graph — impact analysis, symbol-aware navigation, and blast-radius checks before edits. Answers "what breaks if I change X?" before you find out the hard way. |
+| **[Ruflo](https://github.com/gastownhall/ruflo)** | Owns cross-session AI memory and background workers — persists context between sessions, routes tasks to the right agents, and runs recurring checks. |
+| **[Claude Code](https://claude.ai/claude-code)** | AI coding assistant operating inside this tool chain — reads GitNexus for code graph context, uses OpenSpec for spec context, and tracks work in Beads. |
+
+### How a change flows
+
+1. **Spec** — Write or review the OpenSpec change proposal (`openspec/changes/`)
+2. **Import** — `openspec-beads-import` creates Beads issues from the change's task list
+3. **Understand** — GitNexus impact analysis identifies what the change touches before any editing
+4. **Code** — Claude Code implements the change, guided by the spec and impact graph
+5. **Validate** — `openspec validate` checks implementation against acceptance criteria
+6. **Close** — Beads issues are closed; the change is archived to `openspec/specs/`
+
+The repository captures all of this: `openspec/specs/` (canonical specs), `openspec/changes/` (in-flight proposals), and `.beads/` (version-controlled issue database).
 
 Contributors working with these tools: see [Contributing / OpenSpec Workflow](https://boardthatpowder.github.io/BeadSpec/contributing/openspec-workflow) in the docs.
 
