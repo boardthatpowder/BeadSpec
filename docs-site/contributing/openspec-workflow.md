@@ -43,6 +43,18 @@ If you're an external contributor without the `openspec` CLI set up, you don't n
 
 The maintainer will create the OpenSpec artifacts as needed and link them to the PR.
 
+## How issues link back to changes
+
+When you use **Import to Beads** (via the OpenSpec Browser in BeadSpec, or the `openspec-beads-import` skill), each created Beads issue is automatically labelled `openspec:<change-id>`. BeadSpec uses that label to find related issues and compute live progress in the Changes view.
+
+If you hand-create follow-up issues or sub-tasks for an in-flight change — rather than importing them — apply the same label:
+
+```bash
+bd tag <issue-id> openspec:<change-id>
+```
+
+Issues without the label are invisible to the progress panel.
+
 ## Reviewing existing specs
 
 Before implementing a feature or fix, check whether a spec exists:

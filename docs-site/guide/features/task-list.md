@@ -26,6 +26,8 @@ The filter bar accepts:
 - `label:bug`, `label:enhancement`, or any label value
 - Combinations: `status:open priority:0`
 
+When the Ruflo integration is enabled, the filter bar also shows **workspace context chips** for the active `branch:`, `worktree:`, and `repo:`. Clicking a chip narrows the list to issues carrying that label. [Quick Capture](/guide/features/quick-capture) applies these labels automatically; issues created via `bd create` in a terminal can carry the same labels to stay visible in the right chip.
+
 ## Bulk actions
 
 Select multiple issues by checking their checkboxes. A **bulk action toolbar** appears with:

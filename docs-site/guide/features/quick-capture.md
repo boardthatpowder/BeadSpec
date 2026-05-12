@@ -23,7 +23,7 @@ More fields (labels, description, assignee) can be added after capture by openin
 
 ## Workspace context chips
 
-If BeadSpec has an active project open, Quick Capture automatically shows label chips for the current **branch**, **worktree**, and **repo** — and applies those labels to the new issue. This means issues created via Quick Capture are automatically tagged with the right context, making them easy to find later with `bd list` or the filter bar.
+If BeadSpec has an active project open, Quick Capture automatically shows label chips for the current **branch**, **worktree**, and **repo** — and applies those labels to the new issue. This means issues created via Quick Capture are automatically tagged with the right context, making them easy to find later with `bd list` or the filter bar. The same `branch:`/`worktree:`/`repo:` label convention is used by the [Ruflo filter chips](/guide/integrations#ruflo) in the full task list.
 
 ## Submitting
 

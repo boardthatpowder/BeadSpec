@@ -33,7 +33,7 @@ OpenSpec is a structured specification workflow. When enabled, BeadSpec adds:
 - **Changes view** (in the top navigation) — browse in-flight and archived change proposals from your project's `openspec/changes/` directory
 - **OpenSpec doc tabs** — open proposal, spec, design, and tasks artifacts as read-only tabs in the workspace
 - **Task progress panel** — see live completion status for tasks linked to Beads issues
-- **Import to Beads** — create Beads issues from a change's `tasks.md` in one click
+- **Import to Beads** — create Beads issues from a change's `tasks.md` in one click. Each imported issue is automatically labelled `openspec:<change-id>`, which is how the task progress panel tracks completion. If you create a related issue manually (a follow-up or sub-bug discovered mid-change), apply the same label so it rolls up into the progress view.
 - **Validate** — run `openspec validate` on a change from inside the app
 
 If the `openspec` binary is not found, these surfaces are hidden and the rest of the app continues normally.
@@ -45,7 +45,7 @@ To install OpenSpec, see the [OpenSpec project](https://github.com/gastownhall/o
 Ruflo is a cross-session memory and agent-tooling CLI. When enabled, BeadSpec adds:
 
 - **Ruflo memory panel** — search and review memories stored by `ruflo` in the current project
-- **Ruflo filter chips** — filter tasks by Ruflo-tagged labels
+- **Ruflo filter chips** — filter the task list by workspace context labels. BeadSpec reads the current `branch`, `worktree`, and `repo` from the active project and surfaces chips for `branch:<name>`, `worktree:<name>`, and `repo:<name>`. Clicking a chip narrows the task list to issues carrying that label. [Quick Capture](/guide/features/quick-capture) applies these labels automatically; issues created via `bd create` in the terminal can carry the same labels manually to stay visible in the right chip.
 
 If the `ruflo` binary is not found, the panel hides silently. No error is shown — Ruflo is entirely optional.
 
