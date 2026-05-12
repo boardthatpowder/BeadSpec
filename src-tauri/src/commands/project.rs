@@ -231,9 +231,13 @@ pub async fn connect_project(
         // Embedded mode: BeadSpec spawns its own Dolt sidecar from embeddeddolt/.
         // Write dolt-server.port so bd CLI commands can discover this sidecar.
         let embeddeddolt_dir = beads_dir.join("embeddeddolt");
-        recovery::guard(&canonical_project_path, &embeddeddolt_dir)
-            .await
-            .map_err(|e| format!("Dolt recovery failed: {e}"))?;
+        // Skip recovery when the sidecar is already registered by this session.
+        // The guard's no_clients_connected check would escalate on our own open pool.
+        if server_registry.get_port(&canonical_project_path).await.is_none() {
+            recovery::guard(&canonical_project_path, &embeddeddolt_dir)
+                .await
+                .map_err(|e| format!("Dolt recovery failed: {e}"))?;
+        }
         let port = server_registry
             .spawn_or_get(
                 &canonical_project_path,

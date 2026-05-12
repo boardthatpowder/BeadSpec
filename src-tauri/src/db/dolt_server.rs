@@ -154,6 +154,11 @@ impl DoltServerRegistry {
         ))
     }
 
+    /// Return the port of an already-running sidecar, or None if not registered.
+    pub async fn get_port(&self, project_path: &str) -> Option<u16> {
+        self.servers.read().await.get(project_path).map(|s| s.port)
+    }
+
     pub async fn stop_all(&self) {
         let mut servers = self.servers.write().await;
         for (_, mut s) in servers.drain() {
