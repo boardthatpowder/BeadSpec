@@ -36,6 +36,8 @@ export default function QuickCaptureApp() {
   const [error, setError] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [projectPath, setProjectPath] = useState<string | null>(null)
+  const [loadingProject, setLoadingProject] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const appWindow = getCurrentWindow()
@@ -45,13 +47,16 @@ export default function QuickCaptureApp() {
     ;(async () => {
       try {
         const store = await load('app.json')
-        const projectPath = await store.get<string>('last-active-project')
-        if (projectPath) {
-          const ctx = await unwrap(commands.getWorkspaceContext(projectPath))
+        const path = await store.get<string>('last-active-project')
+        setProjectPath(path ?? null)
+        if (path) {
+          const ctx = await unwrap(commands.getWorkspaceContext(path))
           setChips(contextToChips(ctx))
         }
       } catch {
-        // Graceful degradation — no chips if project not set
+        setProjectPath(null)
+      } finally {
+        setLoadingProject(false)
       }
     })()
   }, [])
@@ -78,19 +83,19 @@ export default function QuickCaptureApp() {
     setTitle('')
     setError(null)
     setSubmitError(null)
-    appWindow.hide()
+    appWindow.hide().catch(e => console.error('[QuickCapture] hide failed:', e))
   }, [appWindow])
 
   // Blur-to-close: hide when window loses focus
   useEffect(() => {
     const unlisten = appWindow.onFocusChanged(({ payload: focused }) => {
-      if (!focused) appWindow.hide()
+      if (!focused) appWindow.hide().catch(() => {})
     })
     return () => { unlisten.then(fn => fn()) }
   }, [appWindow])
 
   const handleSubmit = useCallback(async () => {
-    if (submitting) return
+    if (submitting || !projectPath) return
     const trimmedTitle = title.trim()
     if (!trimmedTitle) {
       setError('Title required')
@@ -100,15 +105,6 @@ export default function QuickCaptureApp() {
     setSubmitError(null)
     setSubmitting(true)
     try {
-      // Get the active project path
-      const store = await load('app.json')
-      const projectPath = await store.get<string>('last-active-project')
-      if (!projectPath) {
-        setSubmitError('No active project — open a project in the main window first')
-        setSubmitting(false)
-        return
-      }
-
       // Create the issue
       const result = await unwrap(commands.createTask(projectPath, trimmedTitle, null, null, null))
 
@@ -134,7 +130,7 @@ export default function QuickCaptureApp() {
     } finally {
       setSubmitting(false)
     }
-  }, [title, chips, submitting, hide])
+  }, [title, chips, submitting, projectPath, hide])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -156,7 +152,7 @@ export default function QuickCaptureApp() {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col gap-0 bg-neutral-900/95 backdrop-blur-xl border border-neutral-800 rounded-xl shadow-2xl h-full overflow-hidden"
+      className="flex flex-col gap-0 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl h-full overflow-hidden"
       onKeyDown={handleKeyDown}
     >
       {/* Header */}
@@ -175,78 +171,93 @@ export default function QuickCaptureApp() {
       </div>
 
       {/* Body */}
-      <div className="flex flex-col gap-3 px-5 py-4 flex-1">
-        {/* Title input */}
-        <div className="flex flex-col gap-1">
-          <input
-            ref={inputRef}
-            type="text"
-            value={title}
-            onChange={e => {
-              setTitle(e.target.value)
-              if (error) setError(null)
-            }}
-            placeholder="Issue title…"
-            className={[
-              'w-full bg-neutral-950 border rounded-lg px-3 py-2.5 text-neutral-100 text-sm',
-              'placeholder-neutral-500 outline-none transition-all',
-              'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60',
-              error ? 'border-red-500' : 'border-neutral-700',
-            ].join(' ')}
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {error && (
-            <span className="text-red-400 text-xs">{error}</span>
+      {loadingProject ? (
+        <div className="flex flex-col flex-1 items-center justify-center px-5 py-4">
+          <span className="text-neutral-500 text-sm">Loading…</span>
+        </div>
+      ) : !projectPath ? (
+        <div className="flex flex-col flex-1 items-center justify-center gap-1.5 px-5 py-4 text-center">
+          <span className="text-neutral-300 text-sm font-medium">No active project</span>
+          <span className="text-neutral-500 text-xs">Open a project in BeadSpec to use Quick Capture.</span>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 px-5 py-4 flex-1">
+          {/* Title input */}
+          <div className="flex flex-col gap-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={title}
+              onChange={e => {
+                setTitle(e.target.value)
+                if (error) setError(null)
+              }}
+              placeholder="Issue title…"
+              className={[
+                'w-full bg-neutral-950 border rounded-lg px-3 py-2.5 text-neutral-100 text-sm',
+                'placeholder-neutral-500 outline-none transition-all',
+                'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60',
+                error ? 'border-red-500' : 'border-neutral-700',
+              ].join(' ')}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {error && (
+              <span className="text-red-400 text-xs">{error}</span>
+            )}
+          </div>
+
+          {/* Label chips */}
+          {chips.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {chips.map(chip => (
+                <span
+                  key={chip}
+                  className="flex items-center gap-1 bg-neutral-800 text-neutral-300 text-xs px-2 py-0.5 rounded-full border border-neutral-700"
+                >
+                  {chip}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${chip}`}
+                    onClick={() => removeChip(chip)}
+                    className="text-neutral-500 hover:text-neutral-200 leading-none transition-colors"
+                    tabIndex={-1}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Submit error */}
+          {submitError && (
+            <div className="border border-red-900/50 bg-red-950/30 text-red-300 text-xs px-3 py-2 rounded-md break-words">
+              {submitError}
+            </div>
           )}
         </div>
-
-        {/* Label chips */}
-        {chips.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {chips.map(chip => (
-              <span
-                key={chip}
-                className="flex items-center gap-1 bg-neutral-800 text-neutral-300 text-xs px-2 py-0.5 rounded-full border border-neutral-700"
-              >
-                {chip}
-                <button
-                  type="button"
-                  aria-label={`Remove ${chip}`}
-                  onClick={() => removeChip(chip)}
-                  className="text-neutral-500 hover:text-neutral-200 leading-none transition-colors"
-                  tabIndex={-1}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Submit error */}
-        {submitError && (
-          <span className="text-red-400 text-xs">{submitError}</span>
-        )}
-      </div>
+      )}
 
       {/* Footer / actions */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-800">
         <span className="text-neutral-600 text-xs">
           <kbd className="font-sans">Esc</kbd> to cancel
         </span>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className={[
-            'px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all',
-            submitting
-              ? 'bg-blue-600 text-white opacity-50 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-500/30',
-          ].join(' ')}
-        >
-          {submitting ? 'Creating…' : 'Create Issue'}
-        </button>
+        {projectPath && (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className={[
+              'px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all',
+              submitting
+                ? 'bg-blue-600 text-white opacity-50 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-500/30',
+            ].join(' ')}
+          >
+            {submitting ? 'Creating…' : 'Create Issue'}
+          </button>
+        )}
       </div>
     </div>
   )

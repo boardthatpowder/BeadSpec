@@ -135,13 +135,65 @@ fn server_url(
     Ok((format!("mysql://root:@127.0.0.1:{port}/{db_name}"), port))
 }
 
+/// Switch a project's metadata.json from `dolt_mode: "embedded"` to `"server"`.
+/// Runs once at first connect after Phase C is deployed.
+fn migrate_metadata_to_server_mode(beads_dir: &Path) -> Result<(), String> {
+    let metadata_path = beads_dir.join("metadata.json");
+    let content = std::fs::read_to_string(&metadata_path)
+        .map_err(|e| format!("failed to read metadata.json: {e}"))?;
+    let mut val: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("failed to parse metadata.json: {e}"))?;
+    if let Some(obj) = val.as_object_mut() {
+        obj.insert("dolt_mode".into(), serde_json::Value::String("server".into()));
+    }
+    let updated = serde_json::to_string_pretty(&val)
+        .map_err(|e| format!("failed to serialize metadata.json: {e}"))?;
+    std::fs::write(&metadata_path, updated)
+        .map_err(|e| format!("failed to write metadata.json: {e}"))?;
+    eprintln!("[project] Migrated .beads/metadata.json to dolt_mode=server");
+    Ok(())
+}
+
+/// Ensure bd's managed Dolt server is running. Calls `bd dolt start` if the
+/// server is absent or the port file is missing, then probes for readiness.
+/// Returns the MySQL connection URL.
+async fn ensure_bd_server(
+    beads_dir: &Path,
+    db_name: &str,
+    metadata_port: Option<u16>,
+    project_path: &str,
+    bd_path: &str,
+) -> Result<String, String> {
+    // Fast path: port file exists and server is already healthy.
+    if let Ok((url, port)) = server_url(beads_dir, db_name, metadata_port) {
+        if matches!(recovery::probe_with_deadline(port).await, recovery::DoltHealth::Ok) {
+            return Ok(url);
+        }
+    }
+    // Server is absent or not responding — start it via bd.
+    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path)
+        .map_err(|e| format!("bd not found, cannot start Dolt server: {e}"))?;
+    runner.run(&["dolt", "start"]).await
+        .map_err(|e| format!("bd dolt start failed: {e}"))?;
+    // Give the server a moment to bind if bd dolt start returns before the port is open.
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    // Re-read the fresh port file written by bd dolt start.
+    let (url, port) = server_url(beads_dir, db_name, metadata_port)?;
+    match recovery::probe_with_deadline(port).await {
+        recovery::DoltHealth::Ok => Ok(url),
+        other => Err(format!(
+            "Dolt server not ready after `bd dolt start` (port {port}): {other:?}"
+        )),
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn connect_project(
     project_path: String,
     app: AppHandle,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
     watcher_registry: State<'_, Arc<WatcherRegistry>>,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
 ) -> Result<ProjectMeta, String> {
@@ -178,38 +230,34 @@ pub async fn connect_project(
         .unwrap_or(&canonical_project_path)
         .to_string();
 
-    let dolt_path_override = settings.lock().unwrap().binary_paths.dolt.clone();
+    let bd_path = settings.lock().unwrap().binary_paths.bd.clone();
     let database_url = if dolt_mode == "embedded" {
-        let embeddeddolt_dir = beads_dir.join("embeddeddolt");
-        recovery::guard(&canonical_project_path, &embeddeddolt_dir)
-            .await
-            .map_err(|e| format!("Dolt recovery failed: {e}"))?;
-        let port = server_registry
-            .spawn_or_get(
-                &canonical_project_path,
-                &embeddeddolt_dir,
-                &dolt_path_override,
-            )
-            .await?;
-        format!("mysql://root:@127.0.0.1:{port}/{db_name}")
+        // One-time migration: BeadSpec previously spawned its own dolt sql-server
+        // against the same directory bd uses in embedded mode, causing noms LOCK
+        // contention. Migrate to bd-managed server mode so both share one instance.
+        let url = ensure_bd_server(
+            &beads_dir,
+            &db_name,
+            None,
+            &canonical_project_path,
+            &bd_path,
+        )
+        .await?;
+        // Update metadata.json so future opens skip this migration path.
+        migrate_metadata_to_server_mode(&beads_dir).unwrap_or_else(|e| {
+            eprintln!("[warn] metadata migration failed (non-fatal): {e}");
+        });
+        url
     } else {
         let metadata_port = meta.as_ref().and_then(|m| m.dolt_port);
-        let (url, port) = server_url(&beads_dir, &db_name, metadata_port)?;
-        match recovery::probe_with_deadline(port).await {
-            recovery::DoltHealth::Ok => {}
-            recovery::DoltHealth::NotRunning => {
-                return Err(format!("server_not_running:{port}"));
-            }
-            recovery::DoltHealth::PortBoundButNotResponding { .. } => {
-                return Err(format!(
-                    "connection_failed:port {port} is bound but not responding to SQL"
-                ));
-            }
-            other => {
-                return Err(format!("connection_failed:{other:?}"));
-            }
-        }
-        url
+        ensure_bd_server(
+            &beads_dir,
+            &db_name,
+            metadata_port,
+            &canonical_project_path,
+            &bd_path,
+        )
+        .await?
     };
 
     let pool = registry

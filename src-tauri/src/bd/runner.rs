@@ -11,8 +11,8 @@ pub enum BdError {
     CommandFailed { code: i32, stderr: String },
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("bd command timed out")]
-    Timeout,
+    #[error("bd command timed out{}", if stderr.is_empty() { String::new() } else { format!(": {stderr}") })]
+    Timeout { stderr: String },
 }
 
 // Make BdError serializable for Tauri IPC
@@ -76,52 +76,58 @@ impl BdRunner {
         let timeout_ms = timeout.as_millis() as u64;
         use tokio::io::AsyncReadExt;
         let mut stdout_pipe = child.stdout.take().expect("stdout piped");
+        // stderr_pipe is kept outside the collect future so it remains accessible
+        // if the command times out — we drain it to surface the real error message.
         let mut stderr_pipe = child.stderr.take().expect("stderr piped");
 
-        let collect = async {
+        let collect_stdout = async {
             let mut out = Vec::new();
-            let mut err = Vec::new();
-            let (r1, r2) = tokio::join!(
-                stdout_pipe.read_to_end(&mut out),
-                stderr_pipe.read_to_end(&mut err),
-            );
-            r1?;
-            r2?;
-            Ok::<(Vec<u8>, Vec<u8>), std::io::Error>((out, err))
+            stdout_pipe.read_to_end(&mut out).await?;
+            Ok::<Vec<u8>, std::io::Error>(out)
         };
 
         let wait_and_collect = async {
-            let (out_res, status_res) = tokio::join!(collect, child.wait());
+            let (out_res, status_res) = tokio::join!(collect_stdout, child.wait());
             let status = status_res?;
-            let (stdout, stderr) = out_res?;
-            Ok::<(Vec<u8>, Vec<u8>, std::process::ExitStatus), std::io::Error>((
-                stdout, stderr, status,
-            ))
+            let stdout = out_res?;
+            Ok::<(Vec<u8>, std::process::ExitStatus), std::io::Error>((stdout, status))
         };
 
         match tokio::time::timeout(timeout, wait_and_collect).await {
-            Ok(Ok((stdout, stderr, status))) => {
+            Ok(Ok((stdout, status))) => {
+                let mut err = Vec::new();
+                let _ = tokio::time::timeout(
+                    Duration::from_secs(2),
+                    stderr_pipe.read_to_end(&mut err),
+                ).await;
                 if status.success() {
                     Ok(String::from_utf8_lossy(&stdout).into_owned())
                 } else {
                     Err(BdError::CommandFailed {
                         code: status.code().unwrap_or(-1),
-                        stderr: String::from_utf8_lossy(&stderr).into_owned(),
+                        stderr: String::from_utf8_lossy(&err).into_owned(),
                     })
                 }
             }
             Ok(Err(io_err)) => Err(BdError::Io(io_err)),
             Err(_elapsed) => {
                 let _ = child.kill().await;
+                // Drain whatever bd wrote to stderr before being killed — this
+                // typically contains the real error (e.g. "failed to acquire Dolt lock").
+                let mut stderr_bytes = Vec::new();
                 let _ = tokio::time::timeout(
-                    Duration::from_secs(2),
-                    child.wait(),
-                )
-                .await;
+                    Duration::from_millis(500),
+                    stderr_pipe.read_to_end(&mut stderr_bytes),
+                ).await;
+                let stderr_str = String::from_utf8_lossy(&stderr_bytes).trim().to_string();
+                let _ = tokio::time::timeout(Duration::from_secs(2), child.wait()).await;
                 eprintln!(
                     "warn: BdRunner::run timed out after {timeout_ms}ms for args: {args:?}"
                 );
-                Err(BdError::Timeout)
+                if !stderr_str.is_empty() {
+                    eprintln!("  bd stderr: {stderr_str}");
+                }
+                Err(BdError::Timeout { stderr: stderr_str })
             }
         }
     }
@@ -137,6 +143,10 @@ fn classify_bd_timeout(args: &[&str]) -> Duration {
     ];
     let first = args.first().copied().unwrap_or("");
     let second = args.get(1).copied().unwrap_or("");
+    // dolt server lifecycle commands need startup headroom (first-time init can be slow)
+    if first == "dolt" && matches!(second, "start" | "push" | "pull" | "commit") {
+        return Duration::from_secs(30);
+    }
     if write_subcommands.contains(&first) || write_subcommands.contains(&second) {
         Duration::from_secs(30)
     } else {
