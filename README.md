@@ -1,6 +1,6 @@
 # BeadSpec
 
-> A native desktop GUI for the [Beads](https://github.com/boardthatpowder/beads) issue tracker — visualize dependencies, track velocity, and browse OpenSpec changes without leaving your workflow.
+> A native desktop GUI for the [Beads](https://github.com/gastownhall/beads) issue tracker — visualize dependencies, track velocity, and browse OpenSpec changes without leaving your workflow.
 
 [![CI](https://github.com/boardthatpowder/BeadSpec/actions/workflows/ci.yml/badge.svg)](https://github.com/boardthatpowder/BeadSpec/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/boardthatpowder/BeadSpec)](https://github.com/boardthatpowder/BeadSpec/releases/latest)
@@ -58,8 +58,8 @@ Download the latest installer from the [Releases page](https://github.com/boardt
 | Platform | Command |
 |---|---|
 | macOS | `brew install bd` |
-| Linux | Download from the [Beads releases page](https://github.com/boardthatpowder/beads/releases) and add to `$PATH` |
-| Windows | Download `bd.exe` from the [Beads releases page](https://github.com/boardthatpowder/beads/releases) and add to `%PATH%` |
+| Linux | Download from the [Beads releases page](https://github.com/gastownhall/beads/releases) and add to `$PATH` |
+| Windows | Download `bd.exe` from the [Beads releases page](https://github.com/gastownhall/beads/releases) and add to `%PATH%` |
 
 > **macOS Gatekeeper note**: unsigned builds will be blocked on first open. Right-click the `.app` → **Open** → **Open** to bypass it. Or: `xattr -d com.apple.quarantine /Applications/BeadSpec.app`
 
@@ -192,5 +192,5 @@ See [LICENSE](LICENSE) for details.
 ## Acknowledgements
 
 - [Tauri](https://tauri.app/) — the app shell
-- [Beads / bd](https://github.com/boardthatpowder/beads) — the issue tracker and database engine
+- [Beads / bd](https://github.com/gastownhall/beads) — the issue tracker and database engine
 - [Dolt](https://github.com/dolthub/dolt) — the Git-for-data SQL database powering Beads

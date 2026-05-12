@@ -28,7 +28,7 @@ You need the following tools installed before anything else:
 |---|---|---|
 | [Rust stable](https://rustup.rs/) | Tauri backend | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | [Bun](https://bun.sh/) | JS package manager + scripts | `curl -fsSL https://bun.sh/install \| bash` |
-| [bd](https://github.com/boardthatpowder/beads) | Beads CLI — required at runtime | `brew install bd` (macOS) or download from releases |
+| [bd](https://github.com/gastownhall/beads) | Beads CLI — required at runtime | `brew install bd` (macOS) or download from releases |
 
 **Platform-specific toolchain:**
 

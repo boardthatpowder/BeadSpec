@@ -17,7 +17,7 @@ Thank you for your interest in contributing. Before diving in, please read [CODE
 |---|---|
 | Rust stable | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | Bun | `curl -fsSL https://bun.sh/install \| bash` |
-| bd CLI | `brew install bd` (macOS) or [download](https://github.com/boardthatpowder/beads/releases) |
+| bd CLI | `brew install bd` (macOS) or [download](https://github.com/gastownhall/beads/releases) |
 | Platform toolchain | See below |
 
 **macOS**: `xcode-select --install`

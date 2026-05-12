@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before requesting a feature, check whether it belongs in BeadSpec (the GUI) or in [bd](https://github.com/boardthatpowder/beads) (the CLI/database). BeadSpec adds visual workflows on top of `bd` — it doesn't replace `bd` functionality.
+        Before requesting a feature, check whether it belongs in BeadSpec (the GUI) or in [bd](https://github.com/gastownhall/beads) (the CLI/database). BeadSpec adds visual workflows on top of `bd` — it doesn't replace `bd` functionality.
 
   - type: textarea
     id: problem
@@ -35,7 +35,7 @@ body:
       label: Where does this belong?
       options:
         - BeadSpec GUI (this repo)
-        - bd CLI (upstream — boardthatpowder/beads)
+        - bd CLI (upstream — gastownhall/beads)
         - Both
         - Not sure
     validations:

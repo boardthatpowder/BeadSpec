@@ -7,8 +7,8 @@ BeadSpec requires the `bd` CLI to be installed first — it provides the databas
 | Platform | Command |
 |---|---|
 | macOS | `brew install bd` |
-| Linux | Download from the [Beads releases page](https://github.com/boardthatpowder/beads/releases), make executable, and place on your `$PATH` |
-| Windows | Download `bd.exe` from the [Beads releases page](https://github.com/boardthatpowder/beads/releases) and add its directory to `%PATH%` |
+| Linux | Download from the [Beads releases page](https://github.com/gastownhall/beads/releases), make executable, and place on your `$PATH` |
+| Windows | Download `bd.exe` from the [Beads releases page](https://github.com/gastownhall/beads/releases) and add its directory to `%PATH%` |
 
 Verify: `bd --version`
 

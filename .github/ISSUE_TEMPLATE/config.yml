@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/boardthatpowder/BeadSpec/discussions
     about: Use GitHub Discussions for questions, ideas, and general help.
   - name: bd CLI issues
-    url: https://github.com/boardthatpowder/beads/issues
+    url: https://github.com/gastownhall/beads/issues
     about: Report bugs in the bd CLI or Dolt integration to the upstream repo.
