@@ -75,7 +75,7 @@ export const commands = {
 	bdLint: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_lint", { projectId })),
 	/**  Run `bd stale --json` in the given project. Read op — 10s timeout. */
 	bdStale: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_stale", { projectId })),
-	/**  Run `bd orphans --json` in the given project. Read op — 10s timeout. */
+	/**  Run `bd orphans --json` in the given project. Read op — 30s timeout. */
 	bdOrphans: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_orphans", { projectId })),
 	/**  Run `bd formula list --json` in the given project. Read op — 10s timeout. */
 	bdFormulaList: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_formula_list", { projectId })),
@@ -91,17 +91,13 @@ export const commands = {
 	bdHumanList: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_list", { projectId })),
 	/**
 	 *  Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
-	 * 
+	 *
 	 *  `issue_id` must match the Beads ID pattern (alphanumeric + hyphens, e.g.
 	 *  `BEADSPEC-xmkr`).  `text` is passed as a single argument and is not validated
 	 *  beyond non-emptiness.
 	 */
 	bdHumanRespond: (projectId: string, issueId: string, text: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_respond", { projectId, issueId, text })),
-	/**
-	 *  Run `bd human dismiss <issue_id>` in the given project. Write op — 30s timeout.
-	 * 
-	 *  `issue_id` must match the Beads ID pattern (alphanumeric + hyphens).
-	 */
+	/**  Run `bd human dismiss <issue_id>` in the given project. Write op — 30s timeout. */
 	bdHumanDismiss: (projectId: string, issueId: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_dismiss", { projectId, issueId })),
 	/**
 	 *  Run `ruflo memory search -q <query> --format json`. Read op — 10s timeout.
