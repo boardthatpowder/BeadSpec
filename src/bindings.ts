@@ -89,7 +89,13 @@ export const commands = {
 	bdFormulaPour: (projectId: string, formulaName: string) => typedError<string, string>(__TAURI_INVOKE("bd_formula_pour", { projectId, formulaName })),
 	/**  Run `bd human list --json` in the given project. Read op — 10s timeout. */
 	bdHumanList: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_list", { projectId })),
-	/**  Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout. */
+	/**
+	 *  Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
+	 *
+	 *  `issue_id` must match the Beads ID pattern (alphanumeric + hyphens, e.g.
+	 *  `BEADSPEC-xmkr`).  `text` is passed as a single argument and is not validated
+	 *  beyond non-emptiness.
+	 */
 	bdHumanRespond: (projectId: string, issueId: string, text: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_respond", { projectId, issueId, text })),
 	/**  Run `bd human dismiss <issue_id>` in the given project. Write op — 30s timeout. */
 	bdHumanDismiss: (projectId: string, issueId: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_dismiss", { projectId, issueId })),
