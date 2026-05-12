@@ -207,7 +207,7 @@ async fn run_ruflo_managed(
     }
 }
 
-/// Run `bd preflight` in the given project. Read op — 30s timeout.
+/// Run `bd preflight` in the given project. Read op — 10s timeout.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_preflight(
@@ -218,10 +218,10 @@ pub async fn bd_preflight(
     let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
     let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["preflight"], &cwd, Duration::from_secs(30)).await
+    run_bd_managed(bd, &["preflight"], &cwd, Duration::from_secs(10)).await
 }
 
-/// Run `bd doctor --json` in the given project. Read op — 30s timeout.
+/// Run `bd doctor --json` in the given project. Read op — 10s timeout.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_doctor(
@@ -232,10 +232,10 @@ pub async fn bd_doctor(
     let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
     let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["doctor", "--json"], &cwd, Duration::from_secs(30)).await
+    run_bd_managed(bd, &["doctor", "--json"], &cwd, Duration::from_secs(10)).await
 }
 
-/// Run `bd lint --json` in the given project. Read op — 30s timeout.
+/// Run `bd lint --json` in the given project. Read op — 10s timeout.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_lint(
@@ -246,10 +246,10 @@ pub async fn bd_lint(
     let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
     let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["lint", "--json"], &cwd, Duration::from_secs(30)).await
+    run_bd_managed(bd, &["lint", "--json"], &cwd, Duration::from_secs(10)).await
 }
 
-/// Run `bd stale --json` in the given project. Read op — 30s timeout.
+/// Run `bd stale --json` in the given project. Read op — 10s timeout.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_stale(
@@ -260,10 +260,10 @@ pub async fn bd_stale(
     let bd_path_override = settings.lock().unwrap().binary_paths.bd.clone();
     let bd = find_bd(&bd_path_override).ok_or("bd CLI not found")?;
     let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    run_bd_managed(bd, &["stale", "--json"], &cwd, Duration::from_secs(30)).await
+    run_bd_managed(bd, &["stale", "--json"], &cwd, Duration::from_secs(10)).await
 }
 
-/// Run `bd orphans --json` in the given project. Read op — 30s timeout.
+/// Run `bd orphans --json` in the given project. Read op — 10s timeout.
 #[tauri::command]
 #[specta::specta]
 pub async fn bd_orphans(
