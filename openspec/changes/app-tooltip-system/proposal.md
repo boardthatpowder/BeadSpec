@@ -1,6 +1,6 @@
 ## Why
 
-Most action buttons in beads-ui are icon-only and carry no discoverability: ~8 sites rely on native `title=` attributes, ~70+ have neither tooltip nor `aria-label`, and there is no shared tooltip primitive in the codebase. Users must guess the purpose of icon buttons across the layout shell, FilterBar, task-detail strip, changes browser, workspace tabs, and smart views — and assistive technology users get no label at all.
+Most action buttons in BeadSpec are icon-only and carry no discoverability: ~8 sites rely on native `title=` attributes, ~70+ have neither tooltip nor `aria-label`, and there is no shared tooltip primitive in the codebase. Users must guess the purpose of icon buttons across the layout shell, FilterBar, task-detail strip, changes browser, workspace tabs, and smart views — and assistive technology users get no label at all.
 
 ## What Changes
 

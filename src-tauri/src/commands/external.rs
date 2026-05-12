@@ -337,7 +337,7 @@ pub async fn bd_human_list(
 /// Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
 ///
 /// `issue_id` must match the Beads ID pattern (alphanumeric + hyphens, e.g.
-/// `BUI-xmkr`).  `text` is passed as a single argument and is not validated
+/// `BEADSPEC-xmkr`).  `text` is passed as a single argument and is not validated
 /// beyond non-emptiness.
 #[tauri::command]
 #[specta::specta]
@@ -646,10 +646,10 @@ mod ipc_allowlist_tests {
     fn issue_id_rejects_metacharacters() {
         let dangerous = [
             "../etc/passwd",
-            "BUI; rm -rf /",
+            "BEADSPEC; rm -rf /",
             "$(whoami)",
-            "BUI`xmkr`",
-            "BUI|xmkr",
+            "BEADSPEC`xmkr`",
+            "BEADSPEC|xmkr",
             "",
         ];
         for id in &dangerous {
@@ -660,10 +660,10 @@ mod ipc_allowlist_tests {
         }
     }
 
-    /// Safe Beads IDs (e.g. `BUI-xmkr`) must pass issue ID validation.
+    /// Safe Beads IDs (e.g. `BEADSPEC-xmkr`) must pass issue ID validation.
     #[test]
     fn issue_id_accepts_beads_format() {
-        let safe = ["BUI-xmkr", "BUI-omqf", "ABC123", "a-b-c"];
+        let safe = ["BEADSPEC-xmkr", "BEADSPEC-omqf", "ABC123", "a-b-c"];
         for id in &safe {
             assert!(
                 is_valid_issue_id(id),

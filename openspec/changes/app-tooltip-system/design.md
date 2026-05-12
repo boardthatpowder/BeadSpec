@@ -1,6 +1,6 @@
 ## Context
 
-Beads-UI currently has no tooltip primitive. Icon-only buttons — ~75 of them across the app — rely on scattered native `title=` attributes (8 sites) or have no discoverability at all (~70+ sites). Accessibility coverage via `aria-label` exists in only 9 places.
+BeadSpec currently has no tooltip primitive. Icon-only buttons — ~75 of them across the app — rely on scattered native `title=` attributes (8 sites) or have no discoverability at all (~70+ sites). Accessibility coverage via `aria-label` exists in only 9 places.
 
 The app uses React + Tailwind v4, with a layered provider tree rooted at `App.tsx`: `QueryClientProvider → SettingsProvider → TauriSyncProvider → ShortcutProvider → ...`. Settings are loaded from `settings.json` via `@tauri-apps/plugin-store`, managed in `SettingsContext` (`src/contexts/SettingsContext.tsx`), and consumed via `useSettings()`. There is no existing Radix dependency.
 

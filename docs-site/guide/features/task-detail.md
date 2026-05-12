@@ -41,7 +41,7 @@ A chronological log of all changes to the issue:
 - Comments added
 - Label changes
 
-**Git history** — each commit that references this issue's ID (e.g. `BUI-042`) is shown inline, with the commit message, author, and timestamp.
+**Git history** — each commit that references this issue's ID (e.g. `BEADSPEC-042`) is shown inline, with the commit message, author, and timestamp.
 
 **Dolt revisions** — each Dolt commit that touched this issue's row is shown, letting you see the exact before/after of every field change, even ones not captured in comments.
 

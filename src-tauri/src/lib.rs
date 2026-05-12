@@ -139,7 +139,7 @@ pub fn run() {
                 });
             }
 
-            // BUI-ghp (18.5): If launched in tray-only mode (e.g. at-login),
+            // BEADSPEC-ghp (18.5): If launched in tray-only mode (e.g. at-login),
             // hide the main window immediately so only the tray icon is visible.
             if std::env::var("BEADS_TRAY_ONLY").is_ok() {
                 if let Some(window) = app.get_webview_window("main") {

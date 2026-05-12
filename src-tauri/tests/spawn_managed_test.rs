@@ -1,4 +1,4 @@
-use beads_ui_lib::bd::runner::{spawn_managed, SpawnError};
+use beadspec_lib::bd::runner::{spawn_managed, SpawnError};
 use std::time::Duration;
 
 /// A long-running command that should be killed by the timeout.

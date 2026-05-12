@@ -56,7 +56,7 @@ pub struct HistoryEntry {
 pub struct TaskFilters {
     pub status: Vec<String>,
     pub priority: Vec<i32>,
-    pub labels: Vec<String>, // e.g. ["branch:main", "repo:beads-ui"]
+    pub labels: Vec<String>, // e.g. ["branch:main", "repo:BeadSpec"]
     pub search: Option<String>,
 }
 
@@ -709,7 +709,7 @@ mod pagination_tests {
     fn page_cursor_roundtrip() {
         let priority = 2_i32;
         let created_at = "2024-01-01T00:00:00Z";
-        let id = "BUI-abc";
+        let id = "BEADSPEC-abc";
 
         let encoded = encode_cursor(priority, created_at, id);
         let decoded = decode_cursor(&encoded);

@@ -1,8 +1,8 @@
-# AI Features for beads-ui — Research & Brainstorm
+# AI Features for BeadSpec — Research & Brainstorm
 
 ## Context
 
-beads-ui is a Tauri 2 desktop client for the `bd` (beads) issue tracker. Current stack: React 19 + TypeScript + Tailwind 4, TanStack Query + Zustand, TipTap editor, dependency graph (xyflow/cytoscape), system tray. Reads SQL directly from a Dolt DB; writes shell out to the `bd` CLI. No AI integrations exist today (zero matches for `openai|anthropic|claude|llm|gpt` across the codebase).
+BeadSpec is a Tauri 2 desktop client for the `bd` (beads) issue tracker. Current stack: React 19 + TypeScript + Tailwind 4, TanStack Query + Zustand, TipTap editor, dependency graph (xyflow/cytoscape), system tray. Reads SQL directly from a Dolt DB; writes shell out to the `bd` CLI. No AI integrations exist today (zero matches for `openai|anthropic|claude|llm|gpt` across the codebase).
 
 The user wants to (a) brainstorm useful AI functions for this app and (b) understand what libraries can bridge to whatever AI assistant a user already has — i.e. a "bring your own model/key" stance, not lock-in to one provider.
 
@@ -40,7 +40,7 @@ Grouped by where the value lives in the existing UX.
 15. **Daily/weekly digest** — tray popover or notification: "5 issues moved to ready, 2 closed, 1 newly blocked."
 
 ### F. Outside-the-app integrations
-16. **Expose beads-ui as an MCP server** — high leverage: the user already drives Claude Code daily, and the workspace `CLAUDE.md` already pushes Beads workflows. An MCP server bridging the running app's project context (active project, current filters, selected task) lets Claude Code answer "what should I work on next in this repo?" without re-discovering state. Could ship from the Tauri Rust side using `rmcp` (Rust MCP SDK) or from a Node sidecar with `@modelcontextprotocol/sdk`.
+16. **Expose BeadSpec as an MCP server** — high leverage: the user already drives Claude Code daily, and the workspace `CLAUDE.md` already pushes Beads workflows. An MCP server bridging the running app's project context (active project, current filters, selected task) lets Claude Code answer "what should I work on next in this repo?" without re-discovering state. Could ship from the Tauri Rust side using `rmcp` (Rust MCP SDK) or from a Node sidecar with `@modelcontextprotocol/sdk`.
 17. **Consume external MCP servers inside the app** — e.g. a GitHub MCP server to enrich an issue with linked PR status, or a docs MCP to ground "write acceptance criteria" in product spec.
 18. **Git/commit ↔ issue linker** — scan recent commits in the project's repo for `bd-NNN` style refs and propose status transitions / closes.
 
@@ -71,7 +71,7 @@ Goal: one codepath that talks to whichever provider the user has — OpenAI, Ant
 
 ### MCP (Model Context Protocol)
 - **`@modelcontextprotocol/sdk`** (TS, MIT) — both client and server, transports: stdio + Streamable HTTP. Plugs straight into AI SDK's `tools` argument.
-- **`rmcp`** (Rust) — usable from the existing Tauri backend if exposing beads-ui as an MCP server is preferred to a Node sidecar.
+- **`rmcp`** (Rust) — usable from the existing Tauri backend if exposing BeadSpec as an MCP server is preferred to a Node sidecar.
 
 ### Local model runners (for users who want fully offline / no key)
 - **Ollama** — `ollama` npm package, or `ollama-ai-provider-v2` via AI SDK. Auto-detect `localhost:11434`.

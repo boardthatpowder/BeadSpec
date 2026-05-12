@@ -25,7 +25,7 @@ BeadSpec is a **visual frontend** for the `bd` CLI. They are additive, not mutua
 
 **Writes** always go through the `bd` CLI. This preserves:
 - `bd` hook logic (pre/post-write automation)
-- ID assignment (`BUI-001`, `BUI-002`, ...)
+- ID assignment (`BEADSPEC-001`, `BEADSPEC-002`, ...)
 - Label normalization
 - Dolt branch tracking and commit history
 

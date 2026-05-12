@@ -113,7 +113,7 @@ export default function QuickCaptureApp() {
       // Create the issue
       const result = await unwrap(commands.createTask(projectPath, trimmedTitle, null, null, null))
 
-      // Parse the issue ID from the output (bd create prints "Created issue: BUI-xxxx")
+      // Parse the issue ID from the output (bd create prints "Created issue: BEADSPEC-xxxx")
       const idMatch = result.output.match(/([A-Z]+-[a-z0-9]+)/i)
       const issueId = idMatch ? idMatch[1] : result.optimistic_id
 

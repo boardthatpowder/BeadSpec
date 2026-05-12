@@ -44,4 +44,4 @@
 
 - [ ] 7.1 Run `openspec validate bd-formulas` and resolve any reported issues
 - [ ] 7.2 Run `bun run build` (or `cargo tauri build`) to confirm no build regressions
-- [ ] 7.3 Close BUI-5vli with `bd close BUI-5vli`
+- [ ] 7.3 Close BEADSPEC-5vli with `bd close BEADSPEC-5vli`

@@ -9,7 +9,7 @@ homepage = "https://boardthatpowder.github.io/BeadSpec"
 edition = "2021"
 
 [lib]
-name = "beads_ui_lib"
+name = "beadspec_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

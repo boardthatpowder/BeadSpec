@@ -133,7 +133,7 @@ function Footer({ report, onDismiss }: { report: HealthReport; onDismiss: () => 
   async function handleOpenLog() {
     // Open the parent folder of recovery.log so the user can inspect it.
     // Path mirrors log_path() in recovery_log.rs; falls back to home on non-macOS.
-    const macLog = `${(window as unknown as Record<string, string>).__TAURI_HOME__ ?? '~'}/Library/Logs/beads-ui`
+    const macLog = `${(window as unknown as Record<string, string>).__TAURI_HOME__ ?? '~'}/Library/Logs/BeadSpec`
     await openPath(macLog).catch(() => {})
   }
 

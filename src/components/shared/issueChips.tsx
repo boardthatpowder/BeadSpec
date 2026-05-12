@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '../../stores/workspace'
 const ISSUE_ID_RE = /\b([A-Z]+-[a-z0-9]+)\b/g
 
 /**
- * Splits `text` on issue ID tokens (e.g. BUI-abc1) and returns a React node
+ * Splits `text` on issue ID tokens (e.g. BEADSPEC-abc1) and returns a React node
  * array mixing plain text spans with clickable chip buttons.
  *
  * Clicking a chip calls `openPinned` on the workspace store, which opens the
