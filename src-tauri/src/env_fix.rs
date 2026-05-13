@@ -116,8 +116,6 @@ fn fallback_dirs() -> Vec<&'static str> {
         vec!["~/.bd/bin", "/opt/homebrew/bin", "/usr/local/bin"]
     } else if cfg!(target_os = "linux") {
         vec!["~/.bd/bin", "~/.local/bin", "/usr/local/bin"]
-    } else if cfg!(windows) {
-        vec![]
     } else {
         vec![]
     }
