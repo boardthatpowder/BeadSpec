@@ -39,7 +39,7 @@ thiserror = "2"
 # Async traits
 async-trait = "0.1"
 # File-system change detection (JSONL watcher fallback)
-notify = "6"
+notify = "8"
 # Cross-platform process enumeration (orphan dolt-server detection)
 sysinfo = "0.33"
 # SHA-256 for opaque project_id derivation
