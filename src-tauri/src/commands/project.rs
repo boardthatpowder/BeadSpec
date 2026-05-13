@@ -253,7 +253,9 @@ pub async fn connect_project(
             .await
             .is_none()
         {
-            if let Err(e) = recovery::guard(&canonical_project_path, &embeddeddolt_dir, &db_name).await {
+            if let Err(e) =
+                recovery::guard(&canonical_project_path, &embeddeddolt_dir, &db_name).await
+            {
                 if matches!(&e, recovery::RecoveryError::Escalated { .. }) {
                     let configured_port =
                         recovery::read_configured_port(&embeddeddolt_dir).unwrap_or(0);

@@ -784,10 +784,7 @@ mod ipc_allowlist_tests {
         let _ = super::bd_formula_pour as fn(_, _, _, _, _) -> _;
         let _ = super::ruflo_memory_search as fn(_, _) -> _;
 
-        // Explicit runtime assertion documents the intent.
-        assert!(
-            true,
-            "binary_path cannot be renderer-supplied: enforced by typed IPC signatures"
-        );
+        // binary_path cannot be renderer-supplied: enforced by typed IPC signatures
+        // above (the `as fn(_, _, ...)` coercions would fail to compile otherwise).
     }
 }

@@ -36,7 +36,11 @@ impl std::fmt::Display for SpawnFailure {
             self.attempts, self.last_error
         )?;
         if !self.stderr_tail.is_empty() {
-            write!(f, "\n--- dolt stderr (last lines) ---\n{}", self.stderr_tail)?;
+            write!(
+                f,
+                "\n--- dolt stderr (last lines) ---\n{}",
+                self.stderr_tail
+            )?;
         }
         Ok(())
     }
@@ -57,11 +61,7 @@ fn new_stderr_tail() -> StderrTail {
 
 fn snapshot_tail(tail: &StderrTail) -> String {
     let guard = tail.lock().unwrap();
-    guard
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>()
-        .join("\n")
+    guard.iter().cloned().collect::<Vec<_>>().join("\n")
 }
 
 /// Drain `dolt sql-server`'s stdout or stderr in the background, pushing each
