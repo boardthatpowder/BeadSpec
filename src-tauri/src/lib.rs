@@ -1,6 +1,7 @@
 pub mod bd;
 pub mod commands;
 pub mod db;
+pub mod env_fix;
 pub mod notifications;
 pub mod recovery_log;
 pub mod settings;
@@ -120,6 +121,12 @@ pub fn run() {
         .manage(settings_state.clone())
         .setup(move |app| {
             builder.mount_events(app);
+
+            // Repair PATH before any child-process spawn so bd / dolt / ruflo /
+            // openspec all resolve from the user's interactive shell PATH plus
+            // a curated fallback list, even when launched from Finder / Dock /
+            // Spotlight with a sparse GUI PATH.
+            crate::env_fix::repair_path();
 
             if !crate::bd::runner::bd_available() {
                 app.emit("bd_not_found", ()).ok();
