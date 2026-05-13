@@ -145,6 +145,28 @@ fn server_url(
     Ok((format!("mysql://root:@127.0.0.1:{port}/{db_name}"), port))
 }
 
+/// Structured failure from `ensure_bd_server` so the caller can emit a
+/// `dolt-recovery-required` event carrying bd's stderr tail to the
+/// frontend recovery dialog.
+#[derive(Debug, Clone)]
+pub struct EnsureBdError {
+    pub last_error: String,
+    pub stderr_tail: String,
+}
+
+impl std::fmt::Display for EnsureBdError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.last_error)
+    }
+}
+
+fn ensure_err(last_error: impl Into<String>, stderr_tail: impl Into<String>) -> EnsureBdError {
+    EnsureBdError {
+        last_error: last_error.into(),
+        stderr_tail: stderr_tail.into(),
+    }
+}
+
 /// Ensure bd's managed Dolt server is running. Calls `bd dolt start` if the
 /// server is absent or the port file is missing, then probes for readiness.
 /// Returns the MySQL connection URL.
@@ -154,7 +176,7 @@ async fn ensure_bd_server(
     metadata_port: Option<u16>,
     project_path: &str,
     bd_path: &str,
-) -> Result<String, String> {
+) -> Result<String, EnsureBdError> {
     // Fast path: port file exists and server is already healthy.
     if let Ok((url, port)) = server_url(beads_dir, db_name, metadata_port) {
         if matches!(
@@ -165,20 +187,27 @@ async fn ensure_bd_server(
         }
     }
     // Server is absent or not responding — start it via bd.
-    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path)
-        .map_err(|e| format!("bd not found, cannot start Dolt server: {e}"))?;
-    runner
-        .run(&["dolt", "start"])
-        .await
-        .map_err(|e| format!("bd dolt start failed: {e}"))?;
+    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path).map_err(
+        |e| ensure_err(format!("bd not found, cannot start Dolt server: {e}"), ""),
+    )?;
+    if let Err(e) = runner.run(&["dolt", "start"]).await {
+        let stderr_tail = match &e {
+            crate::bd::runner::BdError::CommandFailed { stderr, .. } => stderr.clone(),
+            crate::bd::runner::BdError::Timeout { stderr } => stderr.clone(),
+            _ => String::new(),
+        };
+        return Err(ensure_err(format!("bd dolt start failed: {e}"), stderr_tail));
+    }
     // Give the server a moment to bind if bd dolt start returns before the port is open.
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     // Re-read the fresh port file written by bd dolt start.
-    let (url, port) = server_url(beads_dir, db_name, metadata_port)?;
+    let (url, port) = server_url(beads_dir, db_name, metadata_port)
+        .map_err(|e| ensure_err(e, ""))?;
     match recovery::probe_with_deadline(port).await {
         recovery::DoltHealth::Ok => Ok(url),
-        other => Err(format!(
-            "Dolt server not ready after `bd dolt start` (port {port}): {other:?}"
+        other => Err(ensure_err(
+            format!("Dolt server not ready after `bd dolt start` (port {port}): {other:?}"),
+            "",
         )),
     }
 }
@@ -302,14 +331,39 @@ pub async fn connect_project(
         format!("mysql://root:@127.0.0.1:{port}/{db_name}")
     } else {
         let metadata_port = meta.as_ref().and_then(|m| m.dolt_port);
-        ensure_bd_server(
+        match ensure_bd_server(
             &beads_dir,
             &db_name,
             metadata_port,
             &canonical_project_path,
             &bd_path,
         )
-        .await?
+        .await
+        {
+            Ok(url) => url,
+            Err(failure) => {
+                // Best-effort port resolution for the recovery dialog. 0 is
+                // acceptable — the dialog tolerates "no port known".
+                let configured_port = std::fs::read_to_string(beads_dir.join("dolt-server.port"))
+                    .ok()
+                    .and_then(|s| s.trim().parse::<u16>().ok())
+                    .or(metadata_port)
+                    .unwrap_or(0);
+                let health = recovery::DoltHealth::SpawnFailed {
+                    attempts: 1,
+                    last_error: failure.last_error.clone(),
+                    stderr_tail: failure.stderr_tail.clone(),
+                };
+                let report = crate::commands::recovery::build_health_report(
+                    canonical_project_path.clone(),
+                    configured_port,
+                    health,
+                )
+                .await;
+                let _ = app.emit("dolt-recovery-required", report);
+                return Err(failure.last_error);
+            }
+        }
     };
 
     let pool = registry
