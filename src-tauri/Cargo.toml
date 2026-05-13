@@ -41,7 +41,7 @@ async-trait = "0.1"
 # File-system change detection (JSONL watcher fallback)
 notify = "6"
 # Cross-platform process enumeration (orphan dolt-server detection)
-sysinfo = "0.33"
+sysinfo = "0.39"
 # SHA-256 for opaque project_id derivation
 sha2 = "0.10"
 
