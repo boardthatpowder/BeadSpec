@@ -187,22 +187,24 @@ async fn ensure_bd_server(
         }
     }
     // Server is absent or not responding — start it via bd.
-    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path).map_err(
-        |e| ensure_err(format!("bd not found, cannot start Dolt server: {e}"), ""),
-    )?;
+    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path)
+        .map_err(|e| ensure_err(format!("bd not found, cannot start Dolt server: {e}"), ""))?;
     if let Err(e) = runner.run(&["dolt", "start"]).await {
         let stderr_tail = match &e {
             crate::bd::runner::BdError::CommandFailed { stderr, .. } => stderr.clone(),
             crate::bd::runner::BdError::Timeout { stderr } => stderr.clone(),
             _ => String::new(),
         };
-        return Err(ensure_err(format!("bd dolt start failed: {e}"), stderr_tail));
+        return Err(ensure_err(
+            format!("bd dolt start failed: {e}"),
+            stderr_tail,
+        ));
     }
     // Give the server a moment to bind if bd dolt start returns before the port is open.
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     // Re-read the fresh port file written by bd dolt start.
-    let (url, port) = server_url(beads_dir, db_name, metadata_port)
-        .map_err(|e| ensure_err(e, ""))?;
+    let (url, port) =
+        server_url(beads_dir, db_name, metadata_port).map_err(|e| ensure_err(e, ""))?;
     match recovery::probe_with_deadline(port).await {
         recovery::DoltHealth::Ok => Ok(url),
         other => Err(ensure_err(
