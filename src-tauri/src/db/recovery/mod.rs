@@ -38,6 +38,11 @@ pub enum DoltHealth {
         pid: u32,
         exe: String,
     },
+    SpawnFailed {
+        attempts: u32,
+        last_error: String,
+        stderr_tail: String,
+    },
 }
 
 /// Full diagnostic report returned to the frontend on project open.
@@ -120,6 +125,7 @@ pub async fn probe_with_deadline(port: u16) -> DoltHealth {
 pub async fn guard(
     project_path: &str,
     embeddeddolt_dir: &std::path::Path,
+    db_name: &str,
 ) -> Result<(), RecoveryError> {
     use crate::recovery_log::{append, LogEntry, LogEvent};
     use std::time::Duration;
@@ -153,22 +159,12 @@ pub async fn guard(
         });
     }
 
-    // Step 3: Check safety predicates.
-    // Discover the database name so working_set_clean connects to the correct DB.
-    // If we cannot determine the name, we escalate rather than skipping the check.
-    let db_name = match discover_db_name(embeddeddolt_dir) {
-        Some(n) => n,
-        None => {
-            let reason =
-                "cannot_verify_working_set: could not determine Beads DB name from data dir"
-                    .to_string();
-            let _ = append(&LogEntry::new(project_path, LogEvent::ModalShown, &reason));
-            return Err(RecoveryError::Escalated { reason });
-        }
-    };
+    // Step 3: Check safety predicates against the caller-supplied db_name —
+    // metadata.json is the source of truth, not directory enumeration (which
+    // can pick the wrong DB when embeddeddolt/ holds multiple databases).
     for orphan in &orphans {
         let decision =
-            predicates::is_safe_to_auto_kill(orphan, embeddeddolt_dir, false, &db_name).await;
+            predicates::is_safe_to_auto_kill(orphan, embeddeddolt_dir, false, db_name).await;
         if let predicates::SafetyDecision::Escalate { reason } = decision {
             let _ = append(&LogEntry::new(project_path, LogEvent::ModalShown, &reason));
             return Err(RecoveryError::Escalated { reason });
@@ -222,7 +218,7 @@ pub fn discover_db_name(embeddeddolt_dir: &std::path::Path) -> Option<String> {
     None
 }
 
-fn read_configured_port(embeddeddolt_dir: &std::path::Path) -> Option<u16> {
+pub(crate) fn read_configured_port(embeddeddolt_dir: &std::path::Path) -> Option<u16> {
     let config = embeddeddolt_dir.join("config.yaml");
     let content = std::fs::read_to_string(config).ok()?;
     for line in content.lines() {

@@ -7,7 +7,7 @@ use crate::settings::AppSettings;
 use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct ProjectMeta {
@@ -81,15 +81,25 @@ mod tests {
 }
 
 #[derive(serde::Deserialize)]
-struct BeadsMetadata {
-    dolt_mode: Option<String>,
-    dolt_database: Option<String>,
-    dolt_port: Option<u16>,
+pub(crate) struct BeadsMetadata {
+    pub(crate) dolt_mode: Option<String>,
+    pub(crate) dolt_database: Option<String>,
+    pub(crate) dolt_port: Option<u16>,
 }
 
-fn read_metadata(beads_dir: &Path) -> Option<BeadsMetadata> {
+pub(crate) fn read_metadata(beads_dir: &Path) -> Option<BeadsMetadata> {
     let content = std::fs::read_to_string(beads_dir.join("metadata.json")).ok()?;
     serde_json::from_str(&content).ok()
+}
+
+/// Resolve the Beads database name for an already-canonicalised project path.
+/// Prefers `metadata.json`'s `dolt_database` field; falls back to enumerating
+/// the data directory only when the metadata file is missing.
+pub(crate) fn resolve_db_name(project_path: &str) -> Option<String> {
+    let beads_dir = Path::new(project_path).join(".beads");
+    read_metadata(&beads_dir)
+        .and_then(|m| m.dolt_database)
+        .or_else(|| discover_db_name_fallback(&beads_dir))
 }
 
 /// Fallback db-name discovery for projects without metadata.json.
@@ -243,17 +253,49 @@ pub async fn connect_project(
             .await
             .is_none()
         {
-            recovery::guard(&canonical_project_path, &embeddeddolt_dir)
-                .await
-                .map_err(|e| format!("Dolt recovery failed: {e}"))?;
+            if let Err(e) = recovery::guard(&canonical_project_path, &embeddeddolt_dir, &db_name).await {
+                if matches!(&e, recovery::RecoveryError::Escalated { .. }) {
+                    let configured_port =
+                        recovery::read_configured_port(&embeddeddolt_dir).unwrap_or(0);
+                    let probe_health = recovery::probe_with_deadline(configured_port).await;
+                    let report = crate::commands::recovery::build_health_report(
+                        canonical_project_path.clone(),
+                        configured_port,
+                        probe_health,
+                    )
+                    .await;
+                    let _ = app.emit("dolt-recovery-required", report);
+                }
+                return Err(format!("Dolt recovery failed: {e}"));
+            }
         }
-        let port = server_registry
+        let port = match server_registry
             .spawn_or_get(
                 &canonical_project_path,
                 &embeddeddolt_dir,
                 &dolt_path_override,
             )
-            .await?;
+            .await
+        {
+            Ok(p) => p,
+            Err(failure) => {
+                let configured_port =
+                    recovery::read_configured_port(&embeddeddolt_dir).unwrap_or(0);
+                let health = recovery::DoltHealth::SpawnFailed {
+                    attempts: failure.attempts,
+                    last_error: failure.last_error.clone(),
+                    stderr_tail: failure.stderr_tail.clone(),
+                };
+                let report = crate::commands::recovery::build_health_report(
+                    canonical_project_path.clone(),
+                    configured_port,
+                    health,
+                )
+                .await;
+                let _ = app.emit("dolt-recovery-required", report);
+                return Err(format!("{failure}"));
+            }
+        };
         let _ = std::fs::write(beads_dir.join("dolt-server.port"), port.to_string());
         format!("mysql://root:@127.0.0.1:{port}/{db_name}")
     } else {
@@ -297,6 +339,32 @@ pub async fn connect_project(
         compatible: true,
         schema_message: "Schema compatible".into(),
     })
+}
+
+/// Drop any half-spawned sidecar registration and re-run `connect_project`.
+/// Used by the recovery dialog's "Retry" button after a spawn failure: the
+/// previous attempt may have left a partially-initialised entry that would
+/// otherwise short-circuit `spawn_or_get`.
+#[tauri::command]
+#[specta::specta]
+pub async fn retry_connect_project(
+    project_path: String,
+    app: AppHandle,
+    registry: State<'_, Arc<ProjectRegistry>>,
+    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    watcher_registry: State<'_, Arc<WatcherRegistry>>,
+    settings: State<'_, Arc<Mutex<AppSettings>>>,
+) -> Result<ProjectMeta, String> {
+    server_registry.invalidate(&project_path).await;
+    connect_project(
+        project_path,
+        app,
+        registry,
+        server_registry,
+        watcher_registry,
+        settings,
+    )
+    .await
 }
 
 #[tauri::command]

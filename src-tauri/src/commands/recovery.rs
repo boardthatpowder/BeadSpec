@@ -1,12 +1,49 @@
 /// Tauri commands for the recovery layer.
 /// Implements tasks 6.2 and 6.3.
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::db::dolt_server::DoltServerRegistry;
 use crate::db::pool::ProjectRegistry;
 use crate::db::recovery::{self, DoltHealth, HealthReport, OrphanInfo, RecoveryResult};
 use crate::recovery_log::{append, LogEntry, LogEvent};
+
+/// Build a `HealthReport` for the recovery dialog. Caller supplies a pre-computed
+/// `DoltHealth` so this helper never re-probes — that matters for the
+/// `SpawnFailed` case where probing is meaningless.
+pub(crate) async fn build_health_report(
+    project_path: String,
+    configured_port: u16,
+    health: DoltHealth,
+) -> HealthReport {
+    let data_dir = dolt_data_dir(&project_path);
+    let candidates = recovery::enumerate_dolt_processes(&data_dir);
+    let sup = recovery::read_supervisor_pid(&project_path);
+    let orphans_raw = recovery::classify(candidates, sup.as_ref());
+
+    // Prefer metadata.json's dolt_database — directory enumeration can pick
+    // the wrong DB when embeddeddolt/ contains more than one database.
+    let db_name = crate::commands::project::resolve_db_name(&project_path)
+        .or_else(|| recovery::discover_db_name(&data_dir))
+        .unwrap_or_default();
+    let mut orphans: Vec<OrphanInfo> = Vec::new();
+    for c in &orphans_raw {
+        let safety = recovery::is_safe_to_auto_kill(c, &data_dir, false, &db_name).await;
+        orphans.push(OrphanInfo {
+            pid: c.pid.as_u32(),
+            port: c.port,
+            data_dir: c.data_dir.clone(),
+            safety,
+        });
+    }
+
+    HealthReport {
+        health,
+        project_path,
+        configured_port,
+        orphans,
+    }
+}
 
 // ── Task 6.2 ─────────────────────────────────────────────────────────────────
 
@@ -30,32 +67,11 @@ pub async fn probe_dolt_health(
         DoltHealth::PortBoundButNotResponding { .. } => "port_bound_not_responding",
         DoltHealth::ForeignProcessHoldingPort { .. } => "foreign_process",
         DoltHealth::PortUnboundButOrphanRunning { .. } => "orphan_running",
+        DoltHealth::SpawnFailed { .. } => "spawn_failed",
     };
     let _ = append(&LogEntry::new(&project_path, LogEvent::ProbeOk, outcome));
 
-    let data_dir = dolt_data_dir(&project_path);
-    let candidates = recovery::enumerate_dolt_processes(&data_dir);
-    let sup = recovery::read_supervisor_pid(&project_path);
-    let orphans_raw = recovery::classify(candidates, sup.as_ref());
-
-    let db_name = recovery::discover_db_name(&data_dir).unwrap_or_default();
-    let mut orphans: Vec<OrphanInfo> = Vec::new();
-    for c in &orphans_raw {
-        let safety = recovery::is_safe_to_auto_kill(c, &data_dir, false, &db_name).await;
-        orphans.push(OrphanInfo {
-            pid: c.pid.as_u32(),
-            port: c.port,
-            data_dir: c.data_dir.clone(),
-            safety,
-        });
-    }
-
-    Ok(HealthReport {
-        health,
-        project_path,
-        configured_port: port,
-        orphans,
-    })
+    Ok(build_health_report(project_path, port, health).await)
 }
 
 // ── Task 6.3 ─────────────────────────────────────────────────────────────────
@@ -70,7 +86,7 @@ pub async fn probe_dolt_health(
 pub async fn attempt_dolt_recovery(
     project_path: String,
     force: bool,
-    _app: AppHandle,
+    app: AppHandle,
     server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<RecoveryResult, String> {
     let data_dir = dolt_data_dir(&project_path);
@@ -86,11 +102,20 @@ pub async fn attempt_dolt_recovery(
         });
     }
 
-    let db_name = recovery::discover_db_name(&data_dir).unwrap_or_default();
+    let db_name = crate::commands::project::resolve_db_name(&project_path)
+        .or_else(|| recovery::discover_db_name(&data_dir))
+        .unwrap_or_default();
     for orphan in &orphans {
         let safety = recovery::is_safe_to_auto_kill(orphan, &data_dir, force, &db_name).await;
         match safety {
             crate::db::recovery::SafetyDecision::Escalate { reason } => {
+                // Re-emit so the dialog updates with the fresh state.
+                let port = resolve_port(&project_path, &server_registry)
+                    .await
+                    .unwrap_or(0);
+                let health = recovery::probe_with_deadline(port).await;
+                let report = build_health_report(project_path.clone(), port, health).await;
+                let _ = app.emit("dolt-recovery-required", report);
                 return Ok(RecoveryResult::StillUnsafe { reason });
             }
             crate::db::recovery::SafetyDecision::Allowed => {}

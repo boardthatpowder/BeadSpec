@@ -11,6 +11,7 @@ import { AppInit } from './components/AppInit'
 import { TrayPopover } from './components/tray/TrayPopover'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { RecoveryDialog } from './components/recovery/RecoveryDialog'
+import { ConnectingOverlay } from './components/ConnectingOverlay'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { AppTooltipProvider } from './components/ui/Tooltip'
@@ -41,6 +42,7 @@ export default function App() {
             <TrayPopover />
             <ShortcutModal />
             <CommandPalette />
+            <ConnectingOverlay />
             <RecoveryDialog />
             <SettingsDialog />
           </DensityProvider>
