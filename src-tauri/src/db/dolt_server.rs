@@ -1,17 +1,91 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tokio::time::{sleep, timeout};
 
 use crate::db::recovery::discover_db_name;
+use crate::recovery_log::{append, LogEntry, LogEvent};
+
+/// Bounded ring buffer of recent dolt stderr lines.
+/// 200 lines is enough to capture the typical startup banner + any panic backtrace.
+const STDERR_TAIL_CAPACITY: usize = 200;
+
+pub type StderrTail = Arc<Mutex<VecDeque<String>>>;
+
+/// Structured failure returned by `spawn_or_get` when retries are exhausted.
+/// Implements `Display` so existing callers using `format!("...{e}")` keep working,
+/// while `connect_project` can pattern-match to extract the stderr tail.
+#[derive(Debug, Clone)]
+pub struct SpawnFailure {
+    pub attempts: u32,
+    pub last_error: String,
+    pub stderr_tail: String,
+}
+
+impl std::fmt::Display for SpawnFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Failed to spawn dolt sidecar after {} attempts: {}",
+            self.attempts, self.last_error
+        )?;
+        if !self.stderr_tail.is_empty() {
+            write!(f, "\n--- dolt stderr (last lines) ---\n{}", self.stderr_tail)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for SpawnFailure {}
 
 struct SpawnedServer {
     port: u16,
     child: Child,
+    #[allow(dead_code)] // kept alive so the stderr-drain task keeps writing
+    stderr_tail: StderrTail,
+}
+
+fn new_stderr_tail() -> StderrTail {
+    Arc::new(Mutex::new(VecDeque::with_capacity(STDERR_TAIL_CAPACITY)))
+}
+
+fn snapshot_tail(tail: &StderrTail) -> String {
+    let guard = tail.lock().unwrap();
+    guard
+        .iter()
+        .cloned()
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Drain `dolt sql-server`'s stdout or stderr in the background, pushing each
+/// line into the shared bounded ring buffer and appending it to `recovery.log`.
+/// Dolt writes most diagnostics (`INFO[0000] Server ready…`, `Starting server…`,
+/// warnings) to STDOUT, so both streams must be captured. Stops when the child
+/// closes the stream.
+fn spawn_log_drainer<R>(project_path: String, stream: R, tail: StderrTail)
+where
+    R: tokio::io::AsyncRead + Unpin + Send + 'static,
+{
+    tokio::spawn(async move {
+        let mut reader = BufReader::new(stream).lines();
+        while let Ok(Some(line)) = reader.next_line().await {
+            {
+                let mut buf = tail.lock().unwrap();
+                if buf.len() == STDERR_TAIL_CAPACITY {
+                    buf.pop_front();
+                }
+                buf.push_back(line.clone());
+            }
+            let _ = append(&LogEntry::new(&project_path, LogEvent::DoltStderr, line));
+        }
+    });
 }
 
 #[derive(Default)]
@@ -37,7 +111,7 @@ impl DoltServerRegistry {
         project_path: &str,
         embeddeddolt_dir: &Path,
         dolt_path_override: &str,
-    ) -> Result<u16, String> {
+    ) -> Result<u16, SpawnFailure> {
         {
             let servers = self.servers.read().await;
             if let Some(s) = servers.get(project_path) {
@@ -50,18 +124,38 @@ impl DoltServerRegistry {
         } else {
             Some(dolt_path_override)
         };
-        let dolt_bin = find_dolt(override_opt).ok_or("dolt binary not found on PATH")?;
+        let dolt_bin = find_dolt(override_opt).ok_or_else(|| SpawnFailure {
+            attempts: 0,
+            last_error: "dolt binary not found on PATH".to_string(),
+            stderr_tail: String::new(),
+        })?;
 
         // Discover the Beads DB name once — needed for the post-spawn health check.
-        let db_name = discover_db_name(embeddeddolt_dir)
-            .ok_or("Cannot determine Beads DB name from embeddeddolt dir")?;
+        let db_name = discover_db_name(embeddeddolt_dir).ok_or_else(|| SpawnFailure {
+            attempts: 0,
+            last_error: "Cannot determine Beads DB name from embeddeddolt dir".to_string(),
+            stderr_tail: String::new(),
+        })?;
 
-        // Retry up to 3 times to handle port-race scenarios.
+        // Retry up to 3 times to handle port-race scenarios. Reuse one stderr tail
+        // across attempts so the final SpawnFailure carries diagnostics from every try.
         const MAX_ATTEMPTS: u32 = 3;
         let mut last_error = String::new();
+        let stderr_tail = new_stderr_tail();
+
+        // When `config.yaml` exists in the data dir, dolt reads it and binds the
+        // configured listener port — overriding any -P flag we pass. The recovery
+        // probe already treats this as the source of truth, so spawn must too.
+        let configured_port = crate::db::recovery::read_configured_port(embeddeddolt_dir);
 
         for attempt in 0..MAX_ATTEMPTS {
-            let port = free_port().ok_or("No free port available")?;
+            let port = match configured_port.or_else(free_port) {
+                Some(p) => p,
+                None => {
+                    last_error = "No free port available".to_string();
+                    continue;
+                }
+            };
 
             let child_result = Command::new(&dolt_bin)
                 .args([
@@ -73,16 +167,24 @@ impl DoltServerRegistry {
                     "--loglevel=warning",
                 ])
                 .current_dir(embeddeddolt_dir)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
                 .spawn();
 
             let mut child = match child_result {
                 Ok(c) => c,
                 Err(e) => {
-                    return Err(format!("Failed to spawn dolt sql-server: {e}"));
+                    last_error = format!("Failed to spawn dolt sql-server: {e}");
+                    continue;
                 }
             };
+
+            if let Some(stderr) = child.stderr.take() {
+                spawn_log_drainer(project_path.to_string(), stderr, stderr_tail.clone());
+            }
+            if let Some(stdout) = child.stdout.take() {
+                spawn_log_drainer(project_path.to_string(), stdout, stderr_tail.clone());
+            }
 
             // Wait for the TCP port to accept connections (up to 30 seconds — dolt
             // cold-starts on large databases can take 10-20s on first launch).
@@ -111,7 +213,14 @@ impl DoltServerRegistry {
                         let _ = std::fs::write(beads_dir.join("dolt-server.pid"), pid.to_string());
                     }
                     let mut servers = self.servers.write().await;
-                    servers.insert(project_path.to_string(), SpawnedServer { port, child });
+                    servers.insert(
+                        project_path.to_string(),
+                        SpawnedServer {
+                            port,
+                            child,
+                            stderr_tail: stderr_tail.clone(),
+                        },
+                    );
                     return Ok(port);
                 }
                 Err(VerifyError::PortRace { stolen_port }) => {
@@ -134,8 +243,14 @@ impl DoltServerRegistry {
                     match verify_beads_db_ready(p, &db_name).await {
                         Ok(()) => {
                             let mut servers = self.servers.write().await;
-                            servers
-                                .insert(project_path.to_string(), SpawnedServer { port: p, child });
+                            servers.insert(
+                                project_path.to_string(),
+                                SpawnedServer {
+                                    port: p,
+                                    child,
+                                    stderr_tail: stderr_tail.clone(),
+                                },
+                            );
                             return Ok(p);
                         }
                         Err(e) => {
@@ -150,9 +265,17 @@ impl DoltServerRegistry {
             }
         }
 
-        Err(format!(
-            "Failed to spawn dolt sidecar after {MAX_ATTEMPTS} attempts: {last_error}"
-        ))
+        let tail = snapshot_tail(&stderr_tail);
+        let _ = append(&LogEntry::new(
+            project_path,
+            LogEvent::SpawnFailed,
+            last_error.clone(),
+        ));
+        Err(SpawnFailure {
+            attempts: MAX_ATTEMPTS,
+            last_error,
+            stderr_tail: tail,
+        })
     }
 
     /// Return the port of an already-running sidecar, or None if not registered.

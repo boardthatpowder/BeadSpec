@@ -76,6 +76,8 @@ pub enum LogEvent {
     SpawnSupervisor,
     ModalShown,
     UserForce,
+    DoltStderr,
+    SpawnFailed,
 }
 
 impl LogEntry {

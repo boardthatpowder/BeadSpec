@@ -50,6 +50,7 @@ pub fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::write::link_dependency,
         commands::write::unlink_dependency,
         commands::project::connect_project,
+        commands::project::retry_connect_project,
         commands::project::disconnect_project,
         commands::project::list_projects,
         commands::read::list_tasks,

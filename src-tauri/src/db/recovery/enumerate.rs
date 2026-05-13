@@ -39,6 +39,7 @@ pub fn enumerate_dolt_processes(data_dir: &std::path::Path) -> Vec<DoltCandidate
         false,
         ProcessRefreshKind::nothing()
             .with_cmd(UpdateKind::Always)
+            .with_cwd(UpdateKind::Always)
             .with_user(UpdateKind::OnlyIfNotSet),
     );
 
@@ -66,8 +67,17 @@ pub fn enumerate_dolt_processes(data_dir: &std::path::Path) -> Vec<DoltCandidate
             if !is_dolt || !is_server {
                 return false;
             }
-            // Must reference this project's data dir.
-            args.iter().any(|a| a.contains(&canonical_str))
+            // Match this project's data dir either by argv (some setups pass
+            // `--data-dir`) or by cwd (our spawn uses `.current_dir(...)` only,
+            // which leaves no trace in argv — that's why orphan detection
+            // missed self-spawned sidecars and let stale locks block startup).
+            if args.iter().any(|a| a.contains(&canonical_str)) {
+                return true;
+            }
+            p.cwd()
+                .and_then(|c| c.canonicalize().ok())
+                .map(|cwd| cwd.to_string_lossy() == canonical_str)
+                .unwrap_or(false)
         })
         .map(|p| {
             let args: Vec<String> = p

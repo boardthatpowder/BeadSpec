@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { openPath } from '@tauri-apps/plugin-opener'
+import { revealItemInDir } from '@tauri-apps/plugin-opener'
+import { homeDir } from '@tauri-apps/api/path'
 import { commands, unwrap } from '../../ipc'
 import type { HealthReport, OrphanInfo } from '../../bindings'
 import { useRecoveryStore } from './recoveryStore'
@@ -19,6 +20,16 @@ export function RecoveryDialog() {
     return () => { unlisten.then(fn => fn()) }
   }, [setReport])
 
+  // Escape key dismisses — emergency exit if buttons stop working.
+  useEffect(() => {
+    if (!report) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') clearReport()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [report, clearReport])
+
   if (!report) return null
 
   return (
@@ -26,12 +37,12 @@ export function RecoveryDialog() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="recovery-title"
-      // Task 8.2 — no Escape, no outside-click dismissal.
       style={{ zIndex: 9999 }}
       className="fixed inset-0 bg-black/60 flex items-center justify-center"
+      onClick={(e) => { if (e.target === e.currentTarget) clearReport() }}
     >
       <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl w-[560px] max-h-[80vh] flex flex-col">
-        <Header />
+        <Header onDismiss={clearReport} />
         <Body report={report} />
         <Footer report={report} onDismiss={clearReport} />
       </div>
@@ -41,22 +52,33 @@ export function RecoveryDialog() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function Header() {
+function Header({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <div className="px-6 py-4 border-b border-neutral-800">
-      <h2 id="recovery-title" className="text-base font-semibold text-neutral-100">
-        Dolt Server Recovery Required
-      </h2>
-      <p className="mt-1 text-sm text-neutral-400">
-        A stale Dolt SQL server was detected for this project and could not be
-        recovered automatically. Choose an action below.
-      </p>
+    <div className="px-6 py-4 border-b border-neutral-800 flex items-start justify-between">
+      <div>
+        <h2 id="recovery-title" className="text-base font-semibold text-neutral-100">
+          Dolt Server Recovery Required
+        </h2>
+        <p className="mt-1 text-sm text-neutral-400">
+          A stale Dolt SQL server was detected for this project and could not be
+          recovered automatically. Choose an action below.
+        </p>
+      </div>
+      <button
+        aria-label="Close"
+        onClick={onDismiss}
+        className="ml-4 px-2 py-1 text-neutral-400 hover:text-neutral-100 transition-colors"
+      >
+        ×
+      </button>
     </div>
   )
 }
 
 function Body({ report }: { report: HealthReport }) {
   const healthLabel = healthSummary(report.health)
+  const stderrTail =
+    report.health.kind === 'spawn_failed' ? report.health.stderr_tail : ''
 
   return (
     <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
@@ -64,6 +86,17 @@ function Body({ report }: { report: HealthReport }) {
         <span className="font-medium text-neutral-100">Status: </span>
         {healthLabel}
       </div>
+
+      {stderrTail && (
+        <div>
+          <div className="text-xs font-medium text-neutral-300 mb-1">
+            dolt stderr (last lines)
+          </div>
+          <pre className="text-xs text-neutral-400 bg-neutral-950 border border-neutral-800 rounded p-2 max-h-[200px] overflow-auto whitespace-pre-wrap font-mono">
+            {stderrTail}
+          </pre>
+        </div>
+      )}
 
       {report.orphans.length > 0 && (
         <table className="w-full text-xs text-neutral-400 border border-neutral-800 rounded">
@@ -106,40 +139,70 @@ function OrphanRow({ orphan }: { orphan: OrphanInfo }) {
 
 function Footer({ report, onDismiss }: { report: HealthReport; onDismiss: () => void }) {
   const projectPath = report.project_path
-  const forcing = useRef(false)
+  const isSpawnFailure = report.health.kind === 'spawn_failed'
+  const [busy, setBusy] = useState<null | 'retry' | 'force'>(null)
+  const inFlight = useRef(false)
 
-  async function handleTryAgain() {
+  async function handleRetry() {
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy('retry')
     try {
-      await unwrap(commands.probeDoltHealth(projectPath))
+      await unwrap(commands.retryConnectProject(projectPath))
       onDismiss()
     } catch {
-      // Still failing — dialog stays open with updated report coming via event.
+      // Rust re-emits dolt-recovery-required with fresh state; listener replaces report.
+    } finally {
+      inFlight.current = false
+      setBusy(null)
     }
   }
 
   async function handleForce() {
-    if (forcing.current) return
-    forcing.current = true
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy('force')
     try {
-      await unwrap(commands.attemptDoltRecovery(projectPath, true))
-      onDismiss()
+      const result = await unwrap(commands.attemptDoltRecovery(projectPath, true))
+      if (result.outcome === 'success') {
+        // Orphans killed — kick the connect flow so the user doesn't have to
+        // manually re-select the project. retry_connect_project invalidates
+        // the half-spawned registry entry before calling connect_project.
+        try {
+          await unwrap(commands.retryConnectProject(projectPath))
+          onDismiss()
+        } catch {
+          // Re-connect failed despite kill — Rust re-emits with the new state.
+        }
+      }
+      // 'still_unsafe' / 'error' → Rust re-emits; listener replaces report.
     } catch {
-      // StillUnsafe — Rust will re-emit dolt-recovery-required with updated state.
+      // genuine RPC error — keep dialog open
     } finally {
-      forcing.current = false
+      inFlight.current = false
+      setBusy(null)
     }
   }
 
   async function handleOpenLog() {
-    // Open the parent folder of recovery.log so the user can inspect it.
-    // Path mirrors log_path() in recovery_log.rs; falls back to home on non-macOS.
-    const macLog = `${(window as unknown as Record<string, string>).__TAURI_HOME__ ?? '~'}/Library/Logs/BeadSpec`
-    await openPath(macLog).catch(() => {})
+    // Path mirrors log_path() in recovery_log.rs.
+    try {
+      const home = await homeDir()
+      const logPath = `${home}/Library/Logs/BeadSpec/recovery.log`
+      await revealItemInDir(logPath)
+    } catch (e) {
+      console.error('Failed to open recovery log:', e)
+    }
   }
 
   async function handleQuit() {
-    // Close the main Tauri window — Tauri exits when the last window closes.
-    await getCurrentWindow().close()
+    // `destroy()` bypasses the CloseRequested handler in lib.rs which can veto
+    // a plain `close()` call. Tauri exits when the last window is destroyed.
+    try {
+      await getCurrentWindow().destroy()
+    } catch (e) {
+      console.error('Failed to quit:', e)
+    }
   }
 
   return (
@@ -157,17 +220,21 @@ function Footer({ report, onDismiss }: { report: HealthReport; onDismiss: () => 
         Quit app
       </button>
       <button
-        onClick={handleTryAgain}
-        className="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-neutral-700 transition-colors"
+        onClick={handleRetry}
+        disabled={busy !== null}
+        className="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-neutral-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
       >
-        Try again
+        {busy === 'retry' ? 'Retrying…' : 'Retry'}
       </button>
-      <button
-        onClick={handleForce}
-        className="px-3 py-1.5 text-sm bg-red-900/80 hover:bg-red-800 text-red-200 rounded border border-red-700 transition-colors"
-      >
-        Force kill &amp; retry
-      </button>
+      {!isSpawnFailure && (
+        <button
+          onClick={handleForce}
+          disabled={busy !== null}
+          className="px-3 py-1.5 text-sm bg-red-900/80 hover:bg-red-800 text-red-200 rounded border border-red-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
+        >
+          {busy === 'force' ? 'Killing…' : 'Force kill & retry'}
+        </button>
+      )}
     </div>
   )
 }
@@ -184,5 +251,7 @@ function healthSummary(health: HealthReport['health']): string {
       return `An orphan Dolt server is running on port ${health.port} (PID ${health.pid}).`
     case 'foreign_process_holding_port':
       return `A non-Dolt process (${health.exe}, PID ${health.pid}) is holding the configured port.`
+    case 'spawn_failed':
+      return `Could not start the Dolt sidecar after ${health.attempts} attempts: ${health.last_error}`
   }
 }

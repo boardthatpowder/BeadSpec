@@ -14,8 +14,12 @@ export function AppInit() {
       if (!path) return
       try {
         await connectProjectWithContext(path)
-      } catch {
-        // Stored project no longer valid — clear it
+      } catch (err) {
+        // Surface the reason so the user isn't stranded in a silent no-project state.
+        // When a recovery dialog also fires (spawn-failed / orphan-escalated paths in
+        // Rust), its z-index renders above the toast — both messages stay honest.
+        const message = typeof err === 'string' ? err : 'Failed to connect to project'
+        toast(`Could not connect to ${path}: ${message}`, { duration: 8000 })
         setActiveProject(null)
       }
     })

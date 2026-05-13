@@ -17,6 +17,13 @@ export const commands = {
 	linkDependency: (projectPath: string, blockedId: string, blockingId: string) => typedError<WriteResult, string>(__TAURI_INVOKE("link_dependency", { projectPath, blockedId, blockingId })),
 	unlinkDependency: (projectPath: string, blockedId: string, blockingId: string) => typedError<WriteResult, string>(__TAURI_INVOKE("unlink_dependency", { projectPath, blockedId, blockingId })),
 	connectProject: (projectPath: string) => typedError<ProjectMeta, string>(__TAURI_INVOKE("connect_project", { projectPath })),
+	/**
+	 *  Drop any half-spawned sidecar registration and re-run `connect_project`.
+	 *  Used by the recovery dialog's "Retry" button after a spawn failure: the
+	 *  previous attempt may have left a partially-initialised entry that would
+	 *  otherwise short-circuit `spawn_or_get`.
+	 */
+	retryConnectProject: (projectPath: string) => typedError<ProjectMeta, string>(__TAURI_INVOKE("retry_connect_project", { projectPath })),
 	disconnectProject: (projectPath: string) => typedError<null, string>(__TAURI_INVOKE("disconnect_project", { projectPath })),
 	listProjects: () => typedError<ProjectMeta[], string>(__TAURI_INVOKE("list_projects")),
 	listTasks: (projectPath: string, filters: {
@@ -89,13 +96,7 @@ export const commands = {
 	bdFormulaPour: (projectId: string, formulaName: string) => typedError<string, string>(__TAURI_INVOKE("bd_formula_pour", { projectId, formulaName })),
 	/**  Run `bd human list --json` in the given project. Read op — 10s timeout. */
 	bdHumanList: (projectId: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_list", { projectId })),
-	/**
-	 *  Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
-	 *
-	 *  `issue_id` must match the Beads ID pattern (alphanumeric + hyphens, e.g.
-	 *  `BEADSPEC-xmkr`).  `text` is passed as a single argument and is not validated
-	 *  beyond non-emptiness.
-	 */
+	/**  Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout. */
 	bdHumanRespond: (projectId: string, issueId: string, text: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_respond", { projectId, issueId, text })),
 	/**  Run `bd human dismiss <issue_id>` in the given project. Write op — 30s timeout. */
 	bdHumanDismiss: (projectId: string, issueId: string) => typedError<string, string>(__TAURI_INVOKE("bd_human_dismiss", { projectId, issueId })),
@@ -195,7 +196,7 @@ export type CommitRef = {
 };
 
 /**  Classification of a dolt SQL server's health at startup probe time. */
-export type DoltHealth = { kind: "ok" } | { kind: "port_bound_but_not_responding"; pid: number | null } | { kind: "port_unbound_but_orphan_running"; pid: number; port: number; data_dir: string } | { kind: "not_running" } | { kind: "foreign_process_holding_port"; pid: number; exe: string };
+export type DoltHealth = { kind: "ok" } | { kind: "port_bound_but_not_responding"; pid: number | null } | { kind: "port_unbound_but_orphan_running"; pid: number; port: number; data_dir: string } | { kind: "not_running" } | { kind: "foreign_process_holding_port"; pid: number; exe: string } | { kind: "spawn_failed"; attempts: number; last_error: string; stderr_tail: string };
 
 /**  A single row from `dolt_diff` for the issues table. */
 export type DoltRevision = {

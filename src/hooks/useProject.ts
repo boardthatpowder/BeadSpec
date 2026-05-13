@@ -21,24 +21,34 @@ async function saveActiveProject(path: string | null) {
   } catch { /* ignore if store not available */ }
 }
 
+export interface ConnectingState {
+  path: string
+  startedAt: number
+  status: string
+}
+
 interface ProjectState {
   activeProject: string | null
   activeProjectId: string | null
   workspaceContext: WorkspaceContext | null
+  connecting: ConnectingState | null
   setActiveProject: (path: string | null, projectId?: string | null) => void
   setWorkspaceContext: (ctx: WorkspaceContext | null) => void
+  setConnecting: (state: ConnectingState | null) => void
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
   activeProject: null,
   activeProjectId: null,
   workspaceContext: null,
+  connecting: null,
   setActiveProject: (path, projectId = null) => {
     set({ activeProject: path, activeProjectId: projectId })
     saveActiveProject(path)
     emitTo('quick-capture', ACTIVE_PROJECT_EVENT, { path, projectId } satisfies ActiveProjectChangedPayload).catch(() => {})
   },
   setWorkspaceContext: (ctx) => set({ workspaceContext: ctx }),
+  setConnecting: (state) => set({ connecting: state }),
 }))
 
 export function useActiveProject() {
@@ -69,11 +79,21 @@ export async function restoreLastProject(): Promise<string | null> {
  * and populate the store synchronously before any render sees "connected".
  */
 export async function connectProjectWithContext(path: string): Promise<void> {
-  // Fetch workspace context in parallel with connect_project
-  const [meta, ctx] = await Promise.all([
-    unwrap(commands.connectProject(path)),
-    unwrap(commands.getWorkspaceContext(path)).catch(() => null),
-  ])
-  useProjectStore.getState().setWorkspaceContext(ctx)
-  useProjectStore.getState().setActiveProject(meta.project_path, meta.project_id)
+  const store = useProjectStore.getState()
+  store.setConnecting({
+    path,
+    startedAt: Date.now(),
+    status: 'Starting Dolt database server…',
+  })
+  try {
+    // Fetch workspace context in parallel with connect_project
+    const [meta, ctx] = await Promise.all([
+      unwrap(commands.connectProject(path)),
+      unwrap(commands.getWorkspaceContext(path)).catch(() => null),
+    ])
+    useProjectStore.getState().setWorkspaceContext(ctx)
+    useProjectStore.getState().setActiveProject(meta.project_path, meta.project_id)
+  } finally {
+    useProjectStore.getState().setConnecting(null)
+  }
 }
