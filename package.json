@@ -1,6 +1,6 @@
 {
   "name": "beadspec",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A native desktop GUI for the Beads issue tracker — visualize dependencies, track velocity, and browse OpenSpec changes without leaving your workflow.",
   "author": "Dean Hart",
   "license": "MIT OR Apache-2.0",
