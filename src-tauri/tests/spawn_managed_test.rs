@@ -18,7 +18,7 @@ fn long_running_args() -> (&'static str, Vec<&'static str>) {
 #[tokio::test]
 async fn spawn_managed_times_out_and_kills_child() {
     let (cmd, args_vec) = long_running_args();
-    let args: Vec<&str> = args_vec.iter().copied().collect();
+    let args: Vec<&str> = args_vec.to_vec();
     let start = std::time::Instant::now();
 
     let tmp = std::env::temp_dir();

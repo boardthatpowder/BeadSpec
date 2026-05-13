@@ -769,6 +769,7 @@ mod pagination_tests {
     /// The implementation uses `limit.unwrap_or(200).min(500)` so the
     /// effective default is 200.
     #[test]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn default_limit_is_200() {
         // Mirror the expression from list_tasks to verify the default is unchanged.
         let page_limit: u32 = None::<u32>.unwrap_or(200).min(500);
