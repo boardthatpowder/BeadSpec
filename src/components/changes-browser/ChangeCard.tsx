@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
-import { getChangeProgress, getChangeBeadsProgress } from '../../ipc'
+import { useEffect, useMemo, useState } from 'react'
+import { getChangeProgress, getChangeBeadsProgress, getChangeDependencies } from '../../ipc'
 import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { Tooltip } from '../ui/Tooltip'
 import { ImportModal } from './ImportModal'
-import type { ChangeBeadsProgress, ChangeInfo, ChangeProgress, Task } from '../../bindings'
+import type { ChangeBeadsProgress, ChangeDependencies, ChangeDepLink, ChangeInfo, ChangeProgress, Task } from '../../bindings'
 
 type ChangeStatus = 'draft' | 'not_started' | 'in_progress' | 'complete' | 'archived'
 
@@ -21,6 +21,7 @@ interface ChangeCardProps {
   change: ChangeInfo
   isReadOnly?: boolean
   allTasks: Task[]
+  allChanges: ChangeInfo[]
 }
 
 function relativeTime(lastModified: string | null): string {
@@ -96,13 +97,20 @@ function ArtifactLink({ label, present, change, artifact }: ArtifactLinkProps) {
   )
 }
 
-export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardProps) {
+export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }: ChangeCardProps) {
   const project = useActiveProject()
   const { setState } = useAppState()
   const openDocTab = useWorkspaceStore((s) => s.openDocTab)
   const [progress, setProgress] = useState<ChangeProgress | null>(null)
   const [beadsProgress, setBeadsProgress] = useState<ChangeBeadsProgress | null>(null)
+  const [deps, setDeps] = useState<ChangeDependencies | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
+
+  const changesBySlug = useMemo(() => {
+    const map = new Map<string, ChangeInfo>()
+    for (const c of allChanges) map.set(c.slug, c)
+    return map
+  }, [allChanges])
 
   useEffect(() => {
     if (!project) return
@@ -124,6 +132,23 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
       .catch(() => { if (!cancelled) setBeadsProgress({ done: 0, total: 0, epic_id: null }) })
     return () => { cancelled = true }
   }, [project, change.slug, allTasks])
+
+  // Inter-change dependency chips. Only fetch once we know the change has
+  // an imported epic — cards without an epic make no extra IPC call.
+  // Keying on allTasks lets `bd dep add/remove` (which mutates the
+  // dependencies table) trigger a refresh through the existing task-cache
+  // invalidation event.
+  useEffect(() => {
+    if (!project || !beadsProgress?.epic_id) {
+      setDeps(null)
+      return
+    }
+    let cancelled = false
+    getChangeDependencies(project, change.slug)
+      .then(d => { if (!cancelled) setDeps(d) })
+      .catch(() => { if (!cancelled) setDeps({ upstream: [], downstream: [] }) })
+    return () => { cancelled = true }
+  }, [project, change.slug, beadsProgress?.epic_id, allTasks])
 
   const changeStatus: ChangeStatus = change.is_archived
     ? 'archived'
@@ -233,6 +258,29 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
         )}
       </div>
 
+      {deps && (deps.upstream.length > 0 || deps.downstream.length > 0) && (
+        <div className="flex flex-col gap-1 pt-1 border-t border-neutral-800/60">
+          {deps.upstream.length > 0 && (
+            <DependencyChipRow
+              label="Blocked by"
+              links={deps.upstream}
+              direction="upstream"
+              changesBySlug={changesBySlug}
+              onOpenEpic={(epicId) => setState({ view: 'all', taskId: epicId })}
+            />
+          )}
+          {deps.downstream.length > 0 && (
+            <DependencyChipRow
+              label="Blocking"
+              links={deps.downstream}
+              direction="downstream"
+              changesBySlug={changesBySlug}
+              onOpenEpic={(epicId) => setState({ view: 'all', taskId: epicId })}
+            />
+          )}
+        </div>
+      )}
+
       {showImportModal && (
         <ImportModal
           changeName={change.name}
@@ -241,6 +289,46 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
           onClose={() => setShowImportModal(false)}
         />
       )}
+    </div>
+  )
+}
+
+interface DependencyChipRowProps {
+  label: string
+  links: ChangeDepLink[]
+  direction: 'upstream' | 'downstream'
+  changesBySlug: Map<string, ChangeInfo>
+  onOpenEpic: (epicId: string) => void
+}
+
+function DependencyChipRow({ label, links, direction, changesBySlug, onOpenEpic }: DependencyChipRowProps) {
+  const chipPalette =
+    direction === 'upstream'
+      ? 'bg-rose-950/30 text-rose-300 border border-rose-900/40 hover:bg-rose-950/60'
+      : 'bg-emerald-950/30 text-emerald-300 border border-emerald-900/40 hover:bg-emerald-950/60'
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[10px] text-neutral-600 font-medium w-14 flex-shrink-0">{label}</span>
+      <div className="flex items-center gap-1 flex-wrap">
+        {links.map(link => {
+          const target = changesBySlug.get(link.slug)
+          const archived = target?.is_archived ?? false
+          return (
+            <button
+              key={link.epic_id}
+              onClick={() => onOpenEpic(link.epic_id)}
+              aria-label={`${label} ${link.slug} — open epic ${link.epic_id}`}
+              className={[
+                'text-[10px] px-1.5 py-0.5 rounded font-mono transition-colors',
+                chipPalette,
+                archived ? 'opacity-60' : '',
+              ].join(' ')}
+            >
+              {link.slug}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

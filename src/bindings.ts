@@ -140,6 +140,13 @@ export const commands = {
 	 *  feature/epic-typed issue, if present).
 	 */
 	getChangeBeadsProgress: (projectPath: string, changeSlug: string) => typedError<ChangeBeadsProgress, string>(__TAURI_INVOKE("get_change_beads_progress", { projectPath, changeSlug })),
+	/**
+	 *  Inter-change dependency lookup for a change. Resolves the change's imported
+	 *  epic, then queries the Beads `dependencies` table for direct upstream
+	 *  (blockers) and downstream (dependents) epics carrying any `openspec:*`
+	 *  label. Non-OpenSpec dependencies and self-loops are filtered out.
+	 */
+	getChangeDependencies: (projectPath: string, changeSlug: string) => typedError<ChangeDependencies, string>(__TAURI_INVOKE("get_change_dependencies", { projectPath, changeSlug })),
 	/**  Run `openspec validate <change>` via the `ruflo` CLI and parse the output. */
 	runOpenspecValidate: (projectPath: string, change: string) => typedError<ValidationResult, string>(__TAURI_INVOKE("run_openspec_validate", { projectPath, change })),
 	/**  Shell out to `openspec-beads-import <change>` to import a change into Beads. */
@@ -177,6 +184,25 @@ export type ChangeBeadsProgress = {
 	total: number,
 	/**  ID of the imported epic/feature for this change, if one exists. */
 	epic_id: string | null,
+};
+
+/**
+ *  One end of an inter-change dependency edge, identified by the related
+ *  change's slug and the Beads epic ID that backs it.
+ */
+export type ChangeDepLink = {
+	slug: string,
+	epic_id: string,
+};
+
+/**
+ *  Upstream and downstream inter-change dependency lists for a single change.
+ *  `upstream` = changes this one is blocked by; `downstream` = changes that
+ *  depend on this one.
+ */
+export type ChangeDependencies = {
+	upstream: ChangeDepLink[],
+	downstream: ChangeDepLink[],
 };
 
 /**  Metadata for a single OpenSpec change directory. */
