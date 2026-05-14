@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { getChangeProgress } from '../../ipc'
+import { getChangeProgress, getChangeBeadsProgress } from '../../ipc'
 import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { Tooltip } from '../ui/Tooltip'
 import { ImportModal } from './ImportModal'
-import type { ChangeInfo, ChangeProgress, Task } from '../../bindings'
+import type { ChangeBeadsProgress, ChangeInfo, ChangeProgress, Task } from '../../bindings'
 
 type ChangeStatus = 'draft' | 'not_started' | 'in_progress' | 'complete' | 'archived'
 
@@ -101,6 +101,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
   const { setState } = useAppState()
   const openDocTab = useWorkspaceStore((s) => s.openDocTab)
   const [progress, setProgress] = useState<ChangeProgress | null>(null)
+  const [beadsProgress, setBeadsProgress] = useState<ChangeBeadsProgress | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
 
   useEffect(() => {
@@ -109,6 +110,20 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
       .then(setProgress)
       .catch(() => setProgress({ done: 0, total: 0 }))
   }, [project, change.name, change.last_modified])
+
+  // Beads progress is computed server-side from the project's Dolt DB so it
+  // stays correct regardless of the UI's global status filter (which would
+  // otherwise hide deferred/blocked/closed issues from `allTasks`).
+  // Cross-reference: tasks fetched via useTasks() are status-filtered by
+  // src/hooks/useHashState.ts DEFAULT_STATE → ['open', 'in_progress'].
+  useEffect(() => {
+    if (!project) return
+    let cancelled = false
+    getChangeBeadsProgress(project, change.slug)
+      .then(p => { if (!cancelled) setBeadsProgress(p) })
+      .catch(() => { if (!cancelled) setBeadsProgress({ done: 0, total: 0, epic_id: null }) })
+    return () => { cancelled = true }
+  }, [project, change.slug, allTasks])
 
   const changeStatus: ChangeStatus = change.is_archived
     ? 'archived'
@@ -120,24 +135,13 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
     ? 'in_progress'
     : 'not_started'
 
-  // Detect "already imported": find the feature/epic tracker for this change.
-  // Use change.slug so archived changes (whose dir gains a YYYY-MM-DD- prefix)
-  // still match the label written at import time: openspec:<original-slug>.
-  const importedEpic = allTasks.find(
-    t =>
-      (t.task_type === 'feature' || t.task_type === 'epic') &&
-      t.labels.some(l => l === `openspec:${change.slug}`)
-  )
+  // Use the server-computed epic_id so the "imported" pill is immune to the
+  // UI's global status filter. The pill only needs the ID — TaskDetailPanel
+  // fetches its own data when navigated to.
+  const importedEpicId = beadsProgress?.epic_id ?? null
 
-  // Beads task progress: non-feature/epic tasks tagged openspec:<slug>
-  const beadsTasks = allTasks.filter(
-    t =>
-      t.task_type !== 'feature' &&
-      t.task_type !== 'epic' &&
-      t.labels.some(l => l === `openspec:${change.slug}`)
-  )
-  const beadsDone = beadsTasks.filter(t => t.status === 'closed').length
-  const beadsTotal = beadsTasks.length
+  const beadsDone = beadsProgress?.done ?? 0
+  const beadsTotal = beadsProgress?.total ?? 0
 
   return (
     <div
@@ -157,12 +161,12 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
           <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${STATUS_CONFIG[changeStatus].className}`}>
             {STATUS_CONFIG[changeStatus].label}
           </span>
-          {importedEpic ? (
+          {importedEpicId ? (
             <button
-              onClick={() => setState({ view: 'all', taskId: importedEpic.id })}
+              onClick={() => setState({ view: 'all', taskId: importedEpicId })}
               className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-400 border border-blue-900/50 flex-shrink-0 hover:bg-blue-950/70 transition-colors"
             >
-              imported → {importedEpic.id}
+              imported → {importedEpicId}
             </button>
           ) : (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800/60 text-neutral-600 flex-shrink-0">
@@ -219,7 +223,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks }: ChangeCardP
           ))}
         </div>
 
-        {!isReadOnly && !importedEpic && (
+        {!isReadOnly && !importedEpicId && (
           <button
             onClick={() => setShowImportModal(true)}
             className="px-2.5 py-1 text-xs font-medium text-neutral-300 border border-neutral-700 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors whitespace-nowrap"

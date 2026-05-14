@@ -133,6 +133,13 @@ export const commands = {
 	readChangeArtifact: (projectPath: string, change: string, artifact: string) => typedError<string, string>(__TAURI_INVOKE("read_change_artifact", { projectPath, change, artifact })),
 	/**  Count done/total checkboxes in a change's `tasks.md`. */
 	getChangeProgress: (projectPath: string, change: string) => typedError<ChangeProgress, string>(__TAURI_INVOKE("get_change_progress", { projectPath, change })),
+	/**
+	 *  Count Beads issues tagged `openspec:<slug>` for this change, regardless of
+	 *  any UI-level status filter. Returns `done` (closed non-feature/non-epic
+	 *  tasks), `total` (all non-feature/non-epic tasks), and `epic_id` (the single
+	 *  feature/epic-typed issue, if present).
+	 */
+	getChangeBeadsProgress: (projectPath: string, changeSlug: string) => typedError<ChangeBeadsProgress, string>(__TAURI_INVOKE("get_change_beads_progress", { projectPath, changeSlug })),
 	/**  Run `openspec validate <change>` via the `ruflo` CLI and parse the output. */
 	runOpenspecValidate: (projectPath: string, change: string) => typedError<ValidationResult, string>(__TAURI_INVOKE("run_openspec_validate", { projectPath, change })),
 	/**  Shell out to `openspec-beads-import <change>` to import a change into Beads. */
@@ -159,6 +166,19 @@ export const commands = {
 };
 
 /* Types */
+/**
+ *  Beads-import progress for a change. Counts non-feature/non-epic Beads
+ *  issues carrying the `openspec:<slug>` label across **all** statuses
+ *  (except `deleted`), so the OpenSpec card stays accurate even when the UI's
+ *  status filter would hide some of them.
+ */
+export type ChangeBeadsProgress = {
+	done: number,
+	total: number,
+	/**  ID of the imported epic/feature for this change, if one exists. */
+	epic_id: string | null,
+};
+
 /**  Metadata for a single OpenSpec change directory. */
 export type ChangeInfo = {
 	name: string,

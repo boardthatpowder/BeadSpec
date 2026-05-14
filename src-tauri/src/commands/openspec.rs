@@ -7,7 +7,9 @@ use std::sync::{Arc, Mutex};
 use crate::bd::runner::{find_bd, invoke_bd_in_project};
 use crate::commands::external::CommandOutput;
 use crate::db::dolt_server::DoltServerRegistry;
+use crate::db::pool::ProjectRegistry;
 use crate::settings::AppSettings;
+use sqlx::Row;
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,18 @@ pub struct ChangeInfo {
 pub struct ChangeProgress {
     pub done: u32,
     pub total: u32,
+}
+
+/// Beads-import progress for a change. Counts non-feature/non-epic Beads
+/// issues carrying the `openspec:<slug>` label across **all** statuses
+/// (except `deleted`), so the OpenSpec card stays accurate even when the UI's
+/// status filter would hide some of them.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct ChangeBeadsProgress {
+    pub done: u32,
+    pub total: u32,
+    /// ID of the imported epic/feature for this change, if one exists.
+    pub epic_id: Option<String>,
 }
 
 /// Result from running `openspec validate` against a change.
@@ -301,6 +315,62 @@ pub async fn get_change_progress(
 ) -> Result<ChangeProgress, String> {
     let content = read_change_artifact(project_path, change, "tasks.md".into()).await?;
     Ok(parse_progress(&content))
+}
+
+/// Count Beads issues tagged `openspec:<slug>` for this change, regardless of
+/// any UI-level status filter. Returns `done` (closed non-feature/non-epic
+/// tasks), `total` (all non-feature/non-epic tasks), and `epic_id` (the single
+/// feature/epic-typed issue, if present).
+#[tauri::command]
+#[specta::specta]
+pub async fn get_change_beads_progress(
+    project_path: String,
+    change_slug: String,
+    registry: tauri::State<'_, Arc<ProjectRegistry>>,
+) -> Result<ChangeBeadsProgress, String> {
+    let pool = registry.get(&project_path).await.map_err(|_| {
+        format!("Project not connected — call connect_project first for '{project_path}'")
+    })?;
+
+    let label = format!("openspec:{change_slug}");
+
+    let rows = sqlx::query(
+        "SELECT i.id, i.issue_type, i.status \
+         FROM issues i \
+         JOIN labels l ON l.issue_id = i.id \
+         WHERE l.label = ? AND i.status != 'deleted'",
+    )
+    .bind(&label)
+    .fetch_all(pool.pool())
+    .await
+    .map_err(|e| format!("Query failed: {e}"))?;
+
+    let mut total: u32 = 0;
+    let mut done: u32 = 0;
+    let mut epic_id: Option<String> = None;
+
+    for row in rows {
+        let id: String = row.try_get("id").unwrap_or_default();
+        let issue_type: String = row.try_get("issue_type").unwrap_or_default();
+        let status: String = row.try_get("status").unwrap_or_default();
+
+        if issue_type == "feature" || issue_type == "epic" {
+            if epic_id.is_none() {
+                epic_id = Some(id);
+            }
+        } else {
+            total = total.saturating_add(1);
+            if status == "closed" {
+                done = done.saturating_add(1);
+            }
+        }
+    }
+
+    Ok(ChangeBeadsProgress {
+        done,
+        total,
+        epic_id,
+    })
 }
 
 /// Run `openspec validate <change>` via the `ruflo` CLI and parse the output.
