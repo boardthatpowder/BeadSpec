@@ -2,7 +2,7 @@
 // Import 'commands' from here instead of using raw invoke().
 export { commands } from './bindings'
 import { commands } from './bindings'
-import type { ChangeInfo, ChangeProgress, CommandOutput, ValidationResult } from './bindings'
+import type { ChangeBeadsProgress, ChangeInfo, ChangeProgress, CommandOutput, ValidationResult } from './bindings'
 
 export async function unwrap<T>(
   result: Promise<{ status: 'ok'; data: T } | { status: 'error'; error: string }>
@@ -23,6 +23,10 @@ export function readChangeArtifact(projectPath: string, change: string, artifact
 
 export function getChangeProgress(projectPath: string, change: string): Promise<ChangeProgress> {
   return unwrap(commands.getChangeProgress(projectPath, change))
+}
+
+export function getChangeBeadsProgress(projectPath: string, changeSlug: string): Promise<ChangeBeadsProgress> {
+  return unwrap(commands.getChangeBeadsProgress(projectPath, changeSlug))
 }
 
 export function runOpenspecValidate(projectPath: string, change: string): Promise<ValidationResult> {
