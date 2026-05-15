@@ -11,7 +11,7 @@ Decide the right parallelism strategy and dispatch multi-agent work.
 
 ## Default: built-in Agent tool (use 90% of the time)
 
-Most agent runtimes provide built-in parallel agent or tool calls for independent subtasks. This handles:
+The Claude Code system prompt mandates parallel `Agent` tool calls in a single message for independent subtasks. This handles:
 - Research and exploration across multiple areas
 - Reading multiple files or codebases simultaneously
 - Running independent tests or checks

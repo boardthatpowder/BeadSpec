@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "1.1"
   generatedBy: "1.1.1"
 ---
 
@@ -15,16 +15,29 @@ Import an approved OpenSpec change into Beads as an executable task graph.
 
 **Input**: A change name (kebab-case). If omitted, infer from conversation context or run `openspec list` and ask.
 
+**Setup** — source the helper library:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
+. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
+. "${REPO_ROOT}/scripts/openspec-beads/graph.sh"
+obws_resolve_prefix
+```
+
 **Steps**
 
 1. **Confirm the change exists and is validated**
 
    ```bash
-   openspec status --change "<change-id>"
-   openspec validate <change-id>
+   obws_gate_validate <change-id>
    ```
 
-   If validation fails, stop and ask the user to fix the spec before importing.
+   This runs `openspec validate <change-id> --json` and parses the result. Hard-stop on failure.
+   Also confirm artifact completeness:
+   ```bash
+   obws_gate_status <change-id>
+   ```
 
 2. **Read the tasks file**
 
@@ -37,102 +50,86 @@ Import an approved OpenSpec change into Beads as an executable task graph.
    - All task items (`- [ ] N.M description`) with their section membership
    - Any inline file/module references, named artifacts, or cross-task mentions in task descriptions
 
-3. **Create one Beads epic for the change**
+3. **Build the dependency graph (cognitive step)**
 
-   ```bash
-   bd create \
-     --title="OpenSpec: <change-id>" \
-     --description="Execution tracker for openspec/changes/<change-id>. Scope, requirements, and acceptance criteria live in OpenSpec. Beads tracks implementation status, dependencies, blockers, and ownership. Do not start implementation until bd ready shows work." \
-     --type=feature \
-     --priority=2
-   ```
-
-   Record the epic ID as `<epic-id>`.
-
-   Immediately tag the epic with the OpenSpec label **and** the standard branch/worktree/repo context labels (mandatory — see step 5b for the exact set):
-   ```bash
-   bd tag <epic-id> "openspec:<change-id>"
-   # Plus the three context labels — see step 5b
-   ```
-
-4. **Infer task-level dependency graph by reading each task description**
-
-   Read every task description and infer dependencies between specific tasks. For each task, look for:
+   Read every task description and infer dependencies. For each task, look for:
 
    - **Explicit task references**: mentions of "task N.M", "the Lambda from 2.1", "N.M's repository method" — create an edge from the referencing task to the referenced task
    - **Named artifact references**: if task B names a specific function, table, or file that task A is defined to create, infer B depends on A
-   - **Logical chains within a section**: if tasks in a section form a clear implementation chain (e.g., 2.1 creates a module, 2.2 adds the first method, 2.3 calls 2.2's output), infer linear deps within that chain
+   - **Logical chains within a section**: if tasks form a clear implementation chain, infer linear deps within that chain
 
-   Build the full dep graph from this analysis. Report the inferred edges and reasoning to the user. Apply the graph automatically after child issues are created — do not block for confirmation.
+   Report the inferred edges and reasoning to the user.
 
-5. **Create child issues in parallel batches of 10**
+4. **Write the graph JSON file**
 
-   Create all Beads child issues using parallel subagent dispatch.
+   Write `openspec/changes/<change-id>/.bd-graph.json` using the schema documented in
+   `scripts/openspec-beads/graph.sh`. Key rules:
 
-   **CRITICAL: dispatch 10 `bd create` calls per subagent message — never serialize one-by-one.**
+   - Every issue MUST include `"labels": ["openspec:<change-id>"]`
+   - Every issue MUST include `"metadata": {"openspec_change": "<change-id>", "task_ref": "N.M"}`
+   - The epic uses `"type": "feature"` and `"labels": ["openspec:<change-id>", "epic"]`
+   - Use `"ref"` aliases for dep wiring within the file (Beads resolves refs to real IDs atomically)
+   - Parent-child links from each task to the epic use `"type": "parent-child"`
+   - Task-to-task blocking edges use `"type": "blocks"`
 
-   Example: in a single subagent message, issue all of these simultaneously:
-   ```bash
-   bd create --title="<task-1-title>" --description="<task-1-desc>" --type=task --priority=2
-   bd create --title="<task-2-title>" --description="<task-2-desc>" --type=task --priority=2
-   # ... up to 10 per message
+   Example structure:
+   ```json
+   {
+     "issues": [
+       {
+         "ref": "epic",
+         "title": "OpenSpec: <change-id>",
+         "type": "feature",
+         "priority": 2,
+         "labels": ["openspec:<change-id>", "epic"],
+         "description": "Execution tracker for openspec/changes/<change-id>.",
+         "metadata": {"openspec_change": "<change-id>"}
+       },
+       {
+         "ref": "task-1-1",
+         "title": "1.1: <task title>",
+         "type": "task",
+         "priority": 2,
+         "labels": ["openspec:<change-id>"],
+         "description": "openspec/changes/<change-id>/tasks.md §1.1. <verbatim task>",
+         "metadata": {"openspec_change": "<change-id>", "task_ref": "1.1"},
+         "dependencies": [{"ref": "epic", "type": "parent-child"}]
+       }
+     ]
+   }
    ```
 
-   Each Beads issue description **MUST** include:
-   - The OpenSpec change path: `openspec/changes/<change-id>/`
-   - The original task wording from tasks.md verbatim
-   - Relevant acceptance criteria (from the task description or nearby spec artifacts)
-   - Likely file or module boundary when mentioned in the task
-   - Expected validation command: `openspec validate <change-id>` plus a narrowed test command when clear
+   If a task description is ambiguous, embed the ambiguity in the issue `"notes"` field rather than guessing.
 
-   Record the mapping: task number → Beads issue ID (needed for dep edges in step 6).
+5. **Import atomically and tag**
 
-   After all child issues are created, tag each one with the OpenSpec label and the context labels (5b):
    ```bash
-   for id in <all-child-issue-ids>; do
-     bd tag $id "openspec:<change-id>"
-   done
+   obws_import_graph <change-id>
    ```
 
-   This enables filtering all issues for a proposal with `bd list --label "openspec:<change-id>"`.
+   This helper:
+   - Detects re-imports (existing epic) and switches to `--dedup` mode automatically
+   - Runs `bd create --graph .bd-graph.json --json` for atomic creation on first import
+   - Applies `obws_tag_context` (branch/worktree/repo labels) to all created issues
+   - The `openspec:<change-id>` label is embedded in the graph JSON (step 4), so it lands atomically
 
-5b. **Tag every issue with the standard branch/worktree/repo context labels (MANDATORY)**
+   Check `.bd-graph.json` into git alongside the OpenSpec change so re-imports after `tasks.md` edits are reproducible.
 
-   Every Beads issue (epic + every child) must carry the three context labels so future sessions can filter by branch and a worktree's work doesn't leak across siblings.
+6. **Verify the dependency graph landed**
 
-   Resolve the labels once via the helper that already exists in this stack:
    ```bash
-   source ~/.claude/ruflo/lib/tags.sh
-   PREFIX=$(ruflo_key_prefix)
-   # PREFIX format: branch:<name>|worktree:<name>|repo:<name>
-   BRANCH_LABEL=$(echo "$PREFIX"   | awk -F'|' '{print $1}')
-   WORKTREE_LABEL=$(echo "$PREFIX" | awk -F'|' '{print $2}')
-   REPO_LABEL=$(echo "$PREFIX"     | awk -F'|' '{print $3}')
+   bd children <epic-id> --pretty
    ```
 
-   Then for the epic and every child issue:
-   ```bash
-   bd tag <id> "$BRANCH_LABEL"
-   bd tag <id> "$WORKTREE_LABEL"
-   bd tag <id> "$REPO_LABEL"
-   ```
-
-   Verify on at least one issue with `bd show <id>` — the LABELS line must include all three plus `openspec:<change-id>`. If any are missing, re-tag — do not proceed to dep wiring until tagging is complete.
-
-6. **Link dependency edges**
-
-   For each inferred dependency edge, issue:
-   ```bash
-   bd dep add <blocked-issue-id> <blocking-issue-id>
-   ```
-
-   These can be issued in batches in parallel if independent of each other.
+   Confirm: epic + correct child count, dep edges visible, all issues labeled.
+   Verify on one issue with `bd show <issue-id>` — the LABELS line must show:
+   `branch:<name>`, `worktree:<name>`, `repo:<name>`, `openspec:<change-id>`.
 
 7. **Show final state**
 
    ```bash
-   bd show <epic-id>
-   bd ready
+   bd children <epic-id> --pretty
+   bd ready --explain --json | head -40
    ```
 
    Report:
@@ -142,8 +139,8 @@ Import an approved OpenSpec change into Beads as an executable task graph.
 
 **Guardrails**
 - Do NOT start implementation — this skill is import only
-- Do NOT serialize `bd create` calls — batch them 10 per message using parallel dispatch
-- If a task description is ambiguous, embed the ambiguity as a note in the Beads issue description rather than guessing
-- If `openspec validate` fails at step 1, stop immediately — do not import from a broken spec
-- If a dependency inference feels uncertain, add a note in the child issue description rather than omitting the edge
-- **Tagging is non-negotiable.** Every created issue (epic + every child) must carry `branch:<name>`, `worktree:<name>`, `repo:<name>`, and `openspec:<change-id>` labels. Verify with `bd show` on at least one issue before declaring import complete.
+- Do NOT use JSONL + `bd batch dep add` (Pattern B) — use `bd create --graph` for atomic creation
+- Every imported record MUST carry the `openspec:<change-id>` label so **openspec-beads-complete** can find the change later
+- `obws_import_graph` handles dedup on re-import — do not run `bd import` manually without the helper
+- If `obws_gate_validate` fails at step 1, stop immediately — do not import from a broken spec
+- **Tagging is non-negotiable.** `obws_import_graph` applies context labels automatically. Verify with `bd show` on at least one issue before declaring import complete.

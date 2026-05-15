@@ -31,6 +31,7 @@
     "tauri": "tauri",
     "gen-bindings": "cd src-tauri && cargo test --test bindings",
     "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
     "lint": "eslint src/ --max-warnings 0"
   },
   "dependencies": {

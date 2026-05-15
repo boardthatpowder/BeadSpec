@@ -15,6 +15,10 @@
       {
         "hooks": [
           {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.sh",
+            "type": "command"
+          },
+          {
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-push.sh",
             "type": "command"
           },
@@ -30,6 +34,10 @@
       },
       {
         "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/eslint-fix.sh",
+            "type": "command"
+          },
           {
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-edit.sh",
             "type": "command"
@@ -52,6 +60,18 @@
     "PreToolUse": [
       {
         "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-mock-module.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-any.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tdd-nudge.sh",
+            "type": "command"
+          },
           {
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-edit.sh",
             "type": "command"

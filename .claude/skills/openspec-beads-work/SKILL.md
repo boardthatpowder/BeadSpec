@@ -1,11 +1,11 @@
 ---
 name: openspec-beads-work
-description: Single-issue agent execution loop for OpenSpec-backed Beads work. Claim one ready issue, re-read the referenced OpenSpec artifacts, plan, implement scoped changes, run unit tests and openspec validate, then close or update with blockers. Self-contained — no runbook needed.
+description: Single-issue agent execution loop for OpenSpec-backed Beads work. Claim one ready issue, re-read the referenced OpenSpec artifacts, run GitNexus impact analysis before editing, implement scoped changes, run unit tests and openspec validate, then close or update with blockers. Self-contained — no runbook needed.
 license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "1.1"
   generatedBy: "1.1.1"
 ---
 
@@ -14,6 +14,17 @@ Work one Beads issue from claim to completion.
 **Source-of-truth rule:** OpenSpec owns the spec. Beads owns the task graph. All scope decisions defer to OpenSpec artifacts. If scope is unclear, re-read the spec — do not invent behavior.
 
 **Input**: A Beads issue ID. If omitted, run `bd ready` and pick the top-ranked issue.
+
+**Setup** — source the helper library once:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
+. "${REPO_ROOT}/scripts/openspec-beads/memory.sh"
+. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
+. "${REPO_ROOT}/scripts/openspec-beads/branch.sh"
+obws_resolve_prefix
+```
 
 **Steps**
 
@@ -40,10 +51,10 @@ Work one Beads issue from claim to completion.
    - Expected validation command
    - Likely file/module boundary
 
-   Surface past memory for this change and issue (run only if ruflo is installed):
+   Surface past memory for this change and issue (if ruflo is installed):
    ```bash
-   ruflo memory search -q "openspec:<change-id> implementation decisions" 2>/dev/null | head -20 || true
-   ruflo memory search -q "<issue-title-keywords> patterns" 2>/dev/null | head -20 || true
+   obws_mem_search_change <change-id> | head -20
+   obws_mem_search_issue <issue-id> | head -20
    ruflo intelligence suggest --context "$(bd show <issue-id> --format title 2>/dev/null)" 2>/dev/null | head -10 || true
    ```
 
@@ -59,16 +70,36 @@ Work one Beads issue from claim to completion.
    ```
    Plan:
    1. <what you will implement>
-   2. <where it lives>
+   2. <where it lives (file paths)>
    3. <what tests you will write or update>
    4. <validation command>
+   5. <primary symbols to be modified>
    ```
 
-4. **Implement — scoped to this issue only**
+4. **GitNexus impact analysis (MANDATORY before editing)**
+
+   For each primary symbol (function, class, method) you plan to modify:
+
+   ```bash
+   obws_gate_impact "<SymbolName>"
+   ```
+
+   Then call the GitNexus MCP tool as instructed by the output:
+   ```
+   gitnexus_impact({target: "<SymbolName>", direction: "upstream", maxDepth: 3})
+   ```
+
+   **Risk rules (from CLAUDE.md — non-negotiable):**
+   - `riskLevel: HIGH` or `CRITICAL` → **halt**, present the blast radius and affected processes to the user, and require explicit confirmation before proceeding
+   - `riskLevel: LOW` or `MEDIUM` → proceed; record the affected caller count in the issue notes
+
+   Skip this step only for brand-new symbols (no existing callers to analyze).
+
+5. **Implement — scoped to this issue only**
 
    Allowed scope: the files and modules named in the issue and its OpenSpec task.
 
-   Not allowed: unrelated integration wiring, UI changes, refactors, schema changes, or public API changes not named in this issue.
+   Not allowed: route wiring, frontend changes, unrelated refactors, schema changes not named in this issue.
 
    Follow TDD: write or update failing tests first, then implement.
 
@@ -81,23 +112,31 @@ Work one Beads issue from claim to completion.
    - Use the **openspec-beads-scope-change** skill to update OpenSpec first
    - Do not implement behavior that isn't specified in OpenSpec
 
-5. **Validate**
+6. **Validate**
 
    ```bash
-   <project unit test command>
+   obws_gate_unit_tests
    openspec validate <change-id>
    ```
 
-   If no unit test command exists yet, run the narrowest available validation and state why no tests apply.
-
-   For narrow changes, run the focused test command instead of the full suite:
+   For narrow changes, run the focused test file instead of the full suite:
    ```bash
-   <focused test command>
+   bunx vitest run src/<path-to-test>.test.ts
    ```
 
    Do not run integration tests unless the user explicitly approves in this thread.
 
-6. **Tick the tasks.md checkbox**
+   Before closing, run the symbol-scope check:
+   ```bash
+   obws_gate_detect_changes
+   ```
+   Then call the GitNexus MCP tool as instructed:
+   ```
+   gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch>"})
+   ```
+   Every changed symbol must fall within the scope of this issue. Unexpected symbols → investigate before closing.
+
+7. **Tick the tasks.md checkbox**
 
    Before closing, mark this task done in the OpenSpec tasks file:
    ```
@@ -105,23 +144,19 @@ Work one Beads issue from claim to completion.
    ```
    Change `- [ ] <task text>` → `- [x] <task text>` for the task(s) this issue covers.
 
-   This keeps the tasks.md in sync with Beads so `openspec validate` and `/opsx:verify` have accurate completeness data.
-
-7. **Close or update**
+8. **Close or update**
 
    If complete:
    ```bash
    bd close <issue-id> --reason="<what was implemented, what tests were added, that validation passes>"
    ```
 
-   Write a trajectory entry so future sessions can recall this work (run only if ruflo is installed):
+   Write a trajectory entry (if ruflo is installed):
    ```bash
-   source ~/.claude/ruflo/lib/tags.sh 2>/dev/null && \
-     KEY="$(ruflo_key_prefix)|openspec:<change-id>|issue:<issue-id>|type:trajectory|outcome:closed|ts:$(date +%s)" && \
-     VALUE="$(bd show <issue-id> --format markdown 2>/dev/null)
-   files: $(git diff --name-only main..HEAD 2>/dev/null | tr '\n' ',')
-   commit: $(git rev-parse HEAD 2>/dev/null)" && \
-     ruflo memory store -k "$KEY" -v "$VALUE" 2>/dev/null || true
+   obws_mem_write "<change-id>" "<issue-id>" "trajectory" "closed" \
+     "$(bd show <issue-id> --format markdown 2>/dev/null)
+   files: $(git diff --name-only "$(obws_base_branch)"..HEAD 2>/dev/null | tr '\n' ',')
+   commit: $(git rev-parse HEAD 2>/dev/null)"
    bd ready
    ```
 
@@ -133,8 +168,9 @@ Work one Beads issue from claim to completion.
 
 **Guardrails**
 - Never start implementing without claiming the issue first (step 2)
+- Never edit a symbol without running `gitnexus_impact` first (step 4) — this is non-negotiable per CLAUDE.md
 - Never expand scope beyond the claimed issue — create new issues for discovered work
 - Always re-read OpenSpec artifacts before coding (step 3)
-- Always run unit tests and `openspec validate` before closing
-- Always update the tasks.md checkbox before closing (step 6)
+- Always run unit tests, `obws_gate_detect_changes`, and `openspec validate` before closing (step 6)
+- Always update the tasks.md checkbox before closing (step 7)
 - Never run integration tests without explicit user approval in this thread
