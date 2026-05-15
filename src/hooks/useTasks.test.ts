@@ -44,18 +44,6 @@ describe('buildTaskQueryKey', () => {
     expect(key1).not.toEqual(key2)
   })
 
-  it('uses 200 as the default limit', () => {
-    const key = buildTaskQueryKey('proj-1', {})
-    const params = key[2] as Record<string, unknown>
-    expect(params.limit).toBe(200)
-  })
-
-  it('respects an explicit limit override', () => {
-    const key = buildTaskQueryKey('proj-1', { limit: 50 })
-    const params = key[2] as Record<string, unknown>
-    expect(params.limit).toBe(50)
-  })
-
   it('key starts with "tasks" discriminator', () => {
     const key = buildTaskQueryKey('proj-1', {})
     expect(key[0]).toBe('tasks')

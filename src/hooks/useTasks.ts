@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 import { commands, unwrap } from '../ipc'
 import { useActiveProject, useWorkspaceContext } from './useProject'
 import { useAppState } from '../contexts/HashStateContext'
@@ -12,7 +11,6 @@ export interface TaskQueryParams {
   labelFilter?: string[] | null
   sortCol?: string | null
   sortDir?: string | null
-  limit?: number | null
 }
 
 /** Exported so tests can verify key construction without rendering. */
@@ -25,7 +23,6 @@ export function buildTaskQueryKey(projectId: string, params: TaskQueryParams) {
       labelFilter: params.labelFilter ?? null,
       sortCol: params.sortCol ?? null,
       sortDir: params.sortDir ?? null,
-      limit: params.limit ?? 200,
     },
   ] as const
 }
@@ -40,17 +37,11 @@ export function useTasks() {
   const statusFilter = Array.isArray(activeFilters.status) ? (activeFilters.status as string[]) : null
   const labelFilter = Array.isArray(activeFilters.label) ? (activeFilters.label as string[]) : null
 
-  // Cursor pagination state
-  const [cursor, setCursor] = useState<string | undefined>(undefined)
-  const [accumulatedTasks, setAccumulatedTasks] = useState<Task[]>([])
-  const [lastProject, setLastProject] = useState<string | null>(null)
-
   const queryParams: TaskQueryParams = {
     statusFilter,
     labelFilter,
     sortCol: null,
     sortDir: null,
-    limit: 200,
   }
 
   const queryKey = project ? buildTaskQueryKey(project, queryParams) : ['tasks', null]
@@ -62,8 +53,6 @@ export function useTasks() {
         commands.listTasks(
           project!,
           null,
-          queryParams.limit ?? 200,
-          cursor ?? null,
           queryParams.statusFilter ?? null,
           queryParams.labelFilter ?? null,
           queryParams.sortCol ?? null,
@@ -76,27 +65,8 @@ export function useTasks() {
     staleTime: 30_000,
   })
 
-  // Accumulate pages: reset when project or filters change (cursor resets), append when cursor advances
-  const currentProject = project ?? null
-  if (currentProject !== lastProject) {
-    setLastProject(currentProject)
-    setAccumulatedTasks([])
-  }
-
-  const allTasks: Task[] = data
-    ? cursor
-      ? accumulatedTasks
-      : data.tasks
-    : accumulatedTasks
-
+  const allTasks: Task[] = data?.tasks ?? []
   const totalCount: number = data?.total_count ?? allTasks.length
-  const nextCursor: string | null = data?.next_cursor ?? null
-
-  const loadMore = () => {
-    if (!nextCursor) return
-    setAccumulatedTasks(prev => [...prev, ...(data?.tasks ?? [])])
-    setCursor(nextCursor)
-  }
 
   // Build workspace filter: scope is 'on' unless explicitly set to 'off' in hash
   const workspaceScope = state.workspaceScope === 'off' ? 'off' : 'on'
@@ -109,7 +79,7 @@ export function useTasks() {
     enabled: workspaceScope === 'on' && workspaceLabels.length > 0,
   })
 
-  return { allTasks, filteredTasks, isLoading, error, activeFilters, totalCount, nextCursor, loadMore }
+  return { allTasks, filteredTasks, isLoading, error, activeFilters, totalCount }
 }
 
 /**
