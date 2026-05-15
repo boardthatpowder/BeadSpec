@@ -83,6 +83,7 @@ pub fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::openspec::read_change_artifact,
         commands::openspec::get_change_progress,
         commands::openspec::get_change_beads_progress,
+        commands::openspec::get_change_dependencies,
         commands::openspec::run_openspec_validate,
         commands::openspec::import_change_to_beads,
         commands::openspec::reconcile_openspec_checkboxes,

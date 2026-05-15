@@ -137,9 +137,11 @@ function StatusFilterPill({
 function ArchivedSection({
   changes,
   allTasks,
+  allChanges,
 }: {
   changes: ChangeInfo[]
   allTasks: import('../../bindings').Task[]
+  allChanges: ChangeInfo[]
 }) {
   const [collapsed, setCollapsed] = useState(true)
 
@@ -174,6 +176,7 @@ function ArchivedSection({
               change={c}
               isReadOnly={true}
               allTasks={allTasks}
+              allChanges={allChanges}
             />
           ))}
         </div>
@@ -365,12 +368,13 @@ export function ChangesBrowser() {
                     change={c}
                     isReadOnly={false}
                     allTasks={allTasks}
+                    allChanges={allChanges}
                   />
                 ))}
               </div>
             )}
 
-            <ArchivedSection changes={archivedChanges} allTasks={allTasks} />
+            <ArchivedSection changes={archivedChanges} allTasks={allTasks} allChanges={allChanges} />
           </>
         )}
       </div>

@@ -47,6 +47,23 @@ pub struct ChangeBeadsProgress {
     pub epic_id: Option<String>,
 }
 
+/// One end of an inter-change dependency edge, identified by the related
+/// change's slug and the Beads epic ID that backs it.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct ChangeDepLink {
+    pub slug: String,
+    pub epic_id: String,
+}
+
+/// Upstream and downstream inter-change dependency lists for a single change.
+/// `upstream` = changes this one is blocked by; `downstream` = changes that
+/// depend on this one.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct ChangeDependencies {
+    pub upstream: Vec<ChangeDepLink>,
+    pub downstream: Vec<ChangeDepLink>,
+}
+
 /// Result from running `openspec validate` against a change.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct ValidationResult {
@@ -370,6 +387,117 @@ pub async fn get_change_beads_progress(
         done,
         total,
         epic_id,
+    })
+}
+
+/// Resolve the imported epic ID for an OpenSpec change by looking up the
+/// single epic/feature-typed Beads issue carrying the `openspec:<slug>` label.
+/// Returns `None` if the change has not been imported (no matching issue) or
+/// only has task-level issues with the label.
+async fn resolve_change_epic_id(
+    pool: &sqlx::MySqlPool,
+    change_slug: &str,
+) -> Result<Option<String>, String> {
+    let label = format!("openspec:{change_slug}");
+    let row = sqlx::query(
+        "SELECT i.id \
+         FROM issues i \
+         JOIN labels l ON l.issue_id = i.id \
+         WHERE l.label = ? \
+           AND i.issue_type IN ('epic', 'feature') \
+           AND i.status != 'deleted' \
+         LIMIT 1",
+    )
+    .bind(&label)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| format!("Query failed: {e}"))?;
+
+    Ok(row.and_then(|r| r.try_get::<String, _>("id").ok()))
+}
+
+/// Inter-change dependency lookup for a change. Resolves the change's imported
+/// epic, then queries the Beads `dependencies` table for direct upstream
+/// (blockers) and downstream (dependents) epics carrying any `openspec:*`
+/// label. Non-OpenSpec dependencies and self-loops are filtered out.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_change_dependencies(
+    project_path: String,
+    change_slug: String,
+    registry: tauri::State<'_, Arc<ProjectRegistry>>,
+) -> Result<ChangeDependencies, String> {
+    let pool = registry.get(&project_path).await.map_err(|_| {
+        format!("Project not connected — call connect_project first for '{project_path}'")
+    })?;
+
+    let Some(epic_id) = resolve_change_epic_id(pool.pool(), &change_slug).await? else {
+        return Ok(ChangeDependencies {
+            upstream: vec![],
+            downstream: vec![],
+        });
+    };
+
+    // Upstream: epics this change's epic depends on (blockers).
+    // Convention from read.rs: `issue_id` = dependent, `depends_on_id` = blocker.
+    let upstream_rows = sqlx::query(
+        "SELECT DISTINCT i.id AS epic_id, l.label AS label \
+         FROM dependencies d \
+         JOIN issues i ON i.id = d.depends_on_id \
+         JOIN labels l ON l.issue_id = i.id \
+         WHERE d.issue_id = ? \
+           AND l.label LIKE 'openspec:%' \
+           AND i.issue_type IN ('epic', 'feature') \
+           AND i.status != 'deleted' \
+           AND i.id != ?",
+    )
+    .bind(&epic_id)
+    .bind(&epic_id)
+    .fetch_all(pool.pool())
+    .await
+    .map_err(|e| format!("Upstream query failed: {e}"))?;
+
+    // Downstream: epics that depend on this change's epic (dependents).
+    let downstream_rows = sqlx::query(
+        "SELECT DISTINCT i.id AS epic_id, l.label AS label \
+         FROM dependencies d \
+         JOIN issues i ON i.id = d.issue_id \
+         JOIN labels l ON l.issue_id = i.id \
+         WHERE d.depends_on_id = ? \
+           AND l.label LIKE 'openspec:%' \
+           AND i.issue_type IN ('epic', 'feature') \
+           AND i.status != 'deleted' \
+           AND i.id != ?",
+    )
+    .bind(&epic_id)
+    .bind(&epic_id)
+    .fetch_all(pool.pool())
+    .await
+    .map_err(|e| format!("Downstream query failed: {e}"))?;
+
+    fn rows_to_links(rows: Vec<sqlx::mysql::MySqlRow>) -> Vec<ChangeDepLink> {
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut out: Vec<ChangeDepLink> = Vec::new();
+        for row in rows {
+            let epic_id: String = row.try_get("epic_id").unwrap_or_default();
+            let label: String = row.try_get("label").unwrap_or_default();
+            let Some(slug) = label.strip_prefix("openspec:") else {
+                continue;
+            };
+            if slug.is_empty() || !seen.insert(epic_id.clone()) {
+                continue;
+            }
+            out.push(ChangeDepLink {
+                slug: slug.to_string(),
+                epic_id,
+            });
+        }
+        out
+    }
+
+    Ok(ChangeDependencies {
+        upstream: rows_to_links(upstream_rows),
+        downstream: rows_to_links(downstream_rows),
     })
 }
 
@@ -699,5 +827,42 @@ mod tests {
         assert_eq!(parse_task_line("## Section header"), None);
         assert_eq!(parse_task_line("Some plain text"), None);
         assert_eq!(parse_task_line(""), None);
+    }
+
+    /// Mirrors the slug extraction logic in `get_change_dependencies::rows_to_links`
+    /// so we can unit-test it without spinning up a database.
+    fn extract_slug(label: &str) -> Option<String> {
+        let s = label.strip_prefix("openspec:")?;
+        if s.is_empty() {
+            None
+        } else {
+            Some(s.to_string())
+        }
+    }
+
+    #[test]
+    fn slug_extraction_normal() {
+        assert_eq!(
+            extract_slug("openspec:bd-formulas"),
+            Some("bd-formulas".into())
+        );
+    }
+
+    #[test]
+    fn slug_extraction_inner_colon_preserved() {
+        // `strip_prefix` only strips the literal `openspec:` once, so any
+        // subsequent colons stay inside the slug.
+        assert_eq!(extract_slug("openspec:foo:bar"), Some("foo:bar".into()));
+    }
+
+    #[test]
+    fn slug_extraction_rejects_empty() {
+        assert_eq!(extract_slug("openspec:"), None);
+    }
+
+    #[test]
+    fn slug_extraction_rejects_non_openspec() {
+        assert_eq!(extract_slug("branch:main"), None);
+        assert_eq!(extract_slug("openspecX:foo"), None);
     }
 }
