@@ -197,17 +197,18 @@ fn parse_task_line(line: &str) -> Option<(bool, String)> {
     extract_task_num(&t[6..]).map(|n| (checked, n))
 }
 
-/// Parse `tasks.md` and count checkbox lines.
-/// Matches lines of the form `- [ ] ...` (open) or `- [x] ...` / `- [X] ...` (done).
+/// Parse `tasks.md` and count tasks that the OpenSpec→Beads importer would
+/// import — i.e. lines accepted by [`parse_task_line`] (`- [ ] N.M …`, with a
+/// dotted-decimal task number). Unnumbered sub-bullets, acceptance-criteria
+/// checklists, and manual verification checkboxes are intentionally excluded
+/// so the spec progress bar stays aligned with `get_change_beads_progress`.
 fn parse_progress(tasks_md: &str) -> ChangeProgress {
     let mut total: u32 = 0;
     let mut done: u32 = 0;
     for line in tasks_md.lines() {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("- [") && trimmed.len() >= 6 {
-            let marker = &trimmed[3..4]; // the character between the brackets
+        if let Some((checked, _num)) = parse_task_line(line) {
             total += 1;
-            if marker == "x" || marker == "X" {
+            if checked {
                 done += 1;
             }
         }
@@ -606,23 +607,59 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_progress_counts_checkboxes() {
+    fn parse_progress_counts_only_numbered_tasks() {
         let md = "\
-# Tasks
-- [ ] First task
-- [x] Done task
-- [X] Also done
+## 1. Backend
+- [x] 1.1 First task
+- [ ] 1.2 Second task
+  - [ ] sub-bullet without number
+- [ ] Acceptance criterion without a number
+
+## 2. Frontend
+- [x] 2.1 Done task
+- [X] 2.2 Also done
 - not a checkbox
-- [ ] Another open
 ";
         let p = parse_progress(md);
         assert_eq!(p.total, 4);
-        assert_eq!(p.done, 2);
+        assert_eq!(p.done, 3);
     }
 
     #[test]
     fn parse_progress_empty() {
         let p = parse_progress("# No tasks here\n");
+        assert_eq!(p.total, 0);
+        assert_eq!(p.done, 0);
+    }
+
+    #[test]
+    fn parse_progress_ignores_verification_checklists() {
+        let md = "\
+## 1. Implementation
+- [x] 1.1 Real task
+
+## Verification
+- [ ] Manual: open the app
+- [ ] Manual: click the button
+- [x] CI: tests pass
+";
+        let p = parse_progress(md);
+        assert_eq!(p.total, 1);
+        assert_eq!(p.done, 1);
+    }
+
+    #[test]
+    fn parse_progress_ignores_unnumbered_legacy_format() {
+        // Older or hand-written tasks.md files with unnumbered checkboxes
+        // should now count as zero tasks — those lines wouldn't be imported
+        // into Beads, so the spec bar must not count them either.
+        let md = "\
+# Tasks
+- [ ] First task
+- [x] Done task
+- [X] Also done
+";
+        let p = parse_progress(md);
         assert_eq!(p.total, 0);
         assert_eq!(p.done, 0);
     }

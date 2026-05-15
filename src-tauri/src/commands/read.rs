@@ -66,63 +66,21 @@ fn not_connected(project_path: &str) -> String {
     format!("Project not connected — call connect_project first for '{project_path}'")
 }
 
-// ── Keyset pagination cursor ──────────────────────────────────────────────────
-
-/// Opaque keyset cursor: encodes (priority, created_at, id) as hex-encoded JSON.
-/// Using hex avoids the need for a base64 crate while remaining URL-safe and
-/// non-interpolatable.
-#[derive(serde::Serialize, serde::Deserialize)]
-struct PageCursor {
-    priority: i32,
-    created_at: String,
-    id: String,
-}
-
-fn encode_cursor(priority: i32, created_at: &str, id: &str) -> String {
-    let cursor = PageCursor {
-        priority,
-        created_at: created_at.to_string(),
-        id: id.to_string(),
-    };
-    let json = serde_json::to_string(&cursor).unwrap_or_default();
-    // Hex-encode the JSON bytes so the cursor is opaque and URL-safe
-    json.bytes().map(|b| format!("{b:02x}")).collect()
-}
-
-fn decode_cursor(hex: &str) -> Option<PageCursor> {
-    // Decode hex back to bytes
-    if !hex.len().is_multiple_of(2) {
-        return None;
-    }
-    let bytes: Option<Vec<u8>> = (0..hex.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
-        .collect();
-    let bytes = bytes?;
-    let json = String::from_utf8(bytes).ok()?;
-    serde_json::from_str(&json).ok()
-}
-
 // ── Response types ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct TasksResponse {
     pub tasks: Vec<Task>,
-    /// Total number of matching tasks (without pagination). Capped at u32::MAX in practice.
     pub total_count: u32,
-    pub next_cursor: Option<String>,
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
 #[specta::specta]
-#[allow(clippy::too_many_arguments)]
 pub async fn list_tasks(
     project_path: String,
     filters: Option<TaskFilters>,
-    limit: Option<u32>,
-    after_cursor: Option<String>,
     status_filter: Option<Vec<String>>,
     label_filter: Option<Vec<String>>,
     sort_col: Option<String>,
@@ -151,9 +109,6 @@ pub async fn list_tasks(
     } else {
         "DESC"
     };
-
-    // Page size: default 200, capped at 500.  Fetch limit+1 to detect next page.
-    let page_limit = limit.unwrap_or(200).min(500) as i64;
 
     // ── Merge legacy TaskFilters into the individual filter params ────────────
     // Legacy callers may pass filters.status / filters.labels; new callers use
@@ -190,20 +145,11 @@ pub async fn list_tasks(
         }
     };
 
-    // Decode keyset cursor once so we can use it in both the data query and the
-    // COUNT query.
-    let cursor: Option<PageCursor> = after_cursor.as_deref().and_then(decode_cursor);
-
-    // ── Build WHERE fragment (shared by data + count queries) ─────────────────
-    // We always exclude deleted issues.
-
     // ── Data query ────────────────────────────────────────────────────────────
     let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
         "SELECT id, title, status, priority, issue_type, assignee, created_at, updated_at \
          FROM issues WHERE status != 'deleted'",
     );
-
-    let mut has_extra_where = false; // we already have the status != deleted clause
 
     // status_filter → WHERE status IN (...)
     if let Some(ref statuses) = effective_status {
@@ -214,7 +160,6 @@ pub async fn list_tasks(
                 sep.push_bind(s);
             }
             qb.push(")");
-            has_extra_where = true;
         }
     }
 
@@ -230,21 +175,7 @@ pub async fn list_tasks(
                 ") GROUP BY issue_id HAVING COUNT(DISTINCT label) = {})",
                 labels.len()
             ));
-            has_extra_where = true;
         }
-    }
-
-    // Keyset pagination WHERE clause
-    if let Some(ref c) = cursor {
-        // Comparison direction: when ordering DESC we advance with <, when ASC with >
-        let op = if safe_dir == "DESC" { "<" } else { ">" };
-        qb.push(format!(" AND (priority, created_at, id) {} (", op));
-        qb.push_bind(c.priority);
-        qb.push(", ");
-        qb.push_bind(c.created_at.clone());
-        qb.push(", ");
-        qb.push_bind(c.id.clone());
-        qb.push(")");
     }
 
     // ORDER BY
@@ -253,27 +184,11 @@ pub async fn list_tasks(
         safe_col, safe_dir
     ));
 
-    // LIMIT (fetch one extra row to detect whether a next page exists)
-    qb.push(" LIMIT ");
-    qb.push_bind(page_limit + 1);
-
-    // Suppress "unused variable" warning — both branches are logically used.
-    let _ = has_extra_where;
-
     let rows = qb
         .build()
         .fetch_all(pool.pool())
         .await
         .map_err(|e| format!("Query failed: {e}"))?;
-
-    // ── Detect next page ──────────────────────────────────────────────────────
-    let has_next = rows.len() > page_limit as usize;
-    // Take only the requested page (drop the extra sentinel row)
-    let rows = if has_next {
-        &rows[..page_limit as usize]
-    } else {
-        &rows[..]
-    };
 
     let mut tasks: Vec<Task> = rows
         .iter()
@@ -331,61 +246,9 @@ pub async fn list_tasks(
         }
     }
 
-    // ── Build next_cursor ─────────────────────────────────────────────────────
-    let next_cursor: Option<String> = if has_next {
-        tasks
-            .last()
-            .map(|last| encode_cursor(last.priority, &last.created_at, &last.id))
-    } else {
-        None
-    };
+    let total_count = tasks.len() as u32;
 
-    // ── COUNT(*) query with same filters (Task 8.4) ───────────────────────────
-    let mut cqb = sqlx::QueryBuilder::<sqlx::MySql>::new(
-        "SELECT COUNT(*) AS cnt FROM issues WHERE status != 'deleted'",
-    );
-
-    if let Some(ref statuses) = effective_status {
-        if !statuses.is_empty() {
-            cqb.push(" AND status IN (");
-            let mut sep = cqb.separated(", ");
-            for s in statuses {
-                sep.push_bind(s);
-            }
-            cqb.push(")");
-        }
-    }
-
-    if let Some(ref labels) = effective_labels {
-        if !labels.is_empty() {
-            cqb.push(" AND id IN (SELECT issue_id FROM labels WHERE label IN (");
-            let mut sep = cqb.separated(", ");
-            for l in labels {
-                sep.push_bind(l);
-            }
-            cqb.push(format!(
-                ") GROUP BY issue_id HAVING COUNT(DISTINCT label) = {})",
-                labels.len()
-            ));
-        }
-    }
-
-    // Note: COUNT(*) intentionally does NOT apply the keyset cursor so it
-    // reflects the total filtered set size, not just the remaining pages.
-
-    let total_count: u32 = cqb
-        .build()
-        .fetch_one(pool.pool())
-        .await
-        .and_then(|row| row.try_get::<i64, _>("cnt"))
-        .map(|n| n.max(0) as u32)
-        .unwrap_or(tasks.len() as u32);
-
-    Ok(TasksResponse {
-        tasks,
-        total_count,
-        next_cursor,
-    })
+    Ok(TasksResponse { tasks, total_count })
 }
 
 #[tauri::command]
@@ -621,53 +484,12 @@ pub async fn get_task_history(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    /// Task 6.2: Verify that the cursor encode/decode round-trip is correct and
-    /// that no SQL interpolation occurs in QueryBuilder-built queries.
-    ///
-    /// The QueryBuilder approach used in list_tasks never interpolates the issue
-    /// ID or label strings into the SQL text — it emits `?` placeholders and
-    /// passes values through the bound-parameter protocol.  We verify this
-    /// structurally by:
-    ///
-    ///   1. Ensuring encode_cursor / decode_cursor round-trip correctly for IDs
-    ///      containing SQL-special characters (`'`, `,`, `;`, `--`).
-    ///   2. Confirming that the query string produced by QueryBuilder (the part
-    ///      before binding) contains only `?` for the IN() list and never
-    ///      contains the literal ID text.
-    #[test]
-    fn cursor_roundtrip_with_sql_special_chars() {
-        // IDs that would break interpolation-based SQL
-        let tricky_ids = ["abc'def", "x,y", "'; DROP TABLE issues; --", r#"a"b"c"#];
-        for id in &tricky_ids {
-            let encoded = encode_cursor(42, "2024-01-01T00:00:00Z", id);
-            let decoded = decode_cursor(&encoded).expect("round-trip should succeed");
-            assert_eq!(decoded.id, *id, "ID round-trip failed for: {id}");
-            assert_eq!(decoded.priority, 42);
-        }
-    }
-
-    #[test]
-    fn cursor_hex_is_not_raw_sql() {
-        // The encoded cursor must not contain single-quote or semicolon characters
-        // (those would indicate raw string interpolation rather than hex encoding).
-        let dangerous_id = "'; DROP TABLE issues; --";
-        let encoded = encode_cursor(1, "2024-01-01T00:00:00Z", dangerous_id);
-        assert!(
-            !encoded.contains('\''),
-            "Encoded cursor must not contain single quotes"
-        );
-        assert!(
-            !encoded.contains(';'),
-            "Encoded cursor must not contain semicolons"
-        );
-    }
-
     #[test]
     fn query_builder_uses_placeholders_not_interpolation() {
-        // Build the same IN() query as list_tasks and verify the SQL text uses ?
-        // placeholders, not the literal issue IDs.
+        // The label-fetch IN() query in list_tasks builds parameterised SQL —
+        // values are bound via `?`, never spliced into the query text.  This
+        // test verifies that property at the QueryBuilder layer so a refactor
+        // can't silently introduce a string-interpolated query.
         let issue_ids = vec!["abc'def".to_string(), "x,y;z".to_string()];
         let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
             "SELECT issue_id, label FROM labels WHERE issue_id IN (",
@@ -679,7 +501,6 @@ mod tests {
         qb.push(")");
 
         let sql = qb.sql();
-        // The SQL text should contain ? placeholders, not the literal IDs
         assert!(sql.contains('?'), "Query should use ? placeholders: {sql}");
         assert!(
             !sql.contains("abc'def"),
@@ -689,90 +510,5 @@ mod tests {
             !sql.contains("x,y;z"),
             "Literal ID must not appear in query SQL: {sql}"
         );
-    }
-
-    #[test]
-    fn decode_cursor_rejects_invalid_hex() {
-        assert!(decode_cursor("not-hex!").is_none());
-        assert!(decode_cursor("zzzz").is_none());
-        assert!(decode_cursor("").is_none());
-    }
-}
-
-// ── Pagination Tests (Task 8.9) ───────────────────────────────────────────────
-
-#[cfg(test)]
-mod pagination_tests {
-    use super::*;
-
-    /// 8.9(b) — cursor encode/decode roundtrip preserves all fields.
-    #[test]
-    fn page_cursor_roundtrip() {
-        let priority = 2_i32;
-        let created_at = "2024-01-01T00:00:00Z";
-        let id = "BEADSPEC-abc";
-
-        let encoded = encode_cursor(priority, created_at, id);
-        let decoded = decode_cursor(&encoded);
-        assert!(
-            decoded.is_some(),
-            "decode_cursor should succeed for a valid encoded cursor"
-        );
-        let decoded = decoded.unwrap();
-        assert_eq!(decoded.priority, priority);
-        assert_eq!(decoded.created_at, created_at);
-        assert_eq!(decoded.id, id);
-    }
-
-    /// 8.9 — cursor with SQL metacharacters round-trips safely; encoded form
-    /// must not contain raw SQL metacharacters.
-    #[test]
-    fn page_cursor_with_special_chars_is_safe() {
-        let id = "BUI-'; DROP TABLE issues; --";
-        let encoded = encode_cursor(0, "2024-01-01", id);
-
-        // Encoded form should not contain raw SQL metacharacters
-        assert!(
-            !encoded.contains("';"),
-            "Encoded cursor must not contain raw '; sequence"
-        );
-        assert!(
-            !encoded.contains("DROP"),
-            "Encoded cursor must not contain raw DROP keyword"
-        );
-
-        let decoded = decode_cursor(&encoded);
-        assert!(decoded.is_some(), "decode_cursor should succeed");
-        assert_eq!(decoded.unwrap().id, id, "ID must survive roundtrip exactly");
-    }
-
-    /// 8.9 — decode_cursor returns None for invalid (non-hex) input.
-    #[test]
-    fn decode_cursor_returns_none_for_invalid_input() {
-        assert!(
-            decode_cursor("not-valid-hex!").is_none(),
-            "non-hex should be None"
-        );
-        assert!(
-            decode_cursor("zzzz").is_none(),
-            "bad hex chars should be None"
-        );
-        assert!(decode_cursor("").is_none(), "empty string should be None");
-        // Odd-length hex is also invalid
-        assert!(
-            decode_cursor("abc").is_none(),
-            "odd-length hex should be None"
-        );
-    }
-
-    /// 8.9 — verify the default page size baked into list_tasks.
-    /// The implementation uses `limit.unwrap_or(200).min(500)` so the
-    /// effective default is 200.
-    #[test]
-    #[allow(clippy::unnecessary_literal_unwrap)]
-    fn default_limit_is_200() {
-        // Mirror the expression from list_tasks to verify the default is unchanged.
-        let page_limit: u32 = None::<u32>.unwrap_or(200).min(500);
-        assert_eq!(page_limit, 200, "default page limit must be 200");
     }
 }

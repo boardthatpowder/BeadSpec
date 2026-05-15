@@ -1,6 +1,6 @@
 [package]
 name = "beadspec"
-version = "0.1.3"
+version = "0.1.4"
 description = "A native desktop GUI for the Beads issue tracker"
 authors = ["Dean Hart"]
 license = "MIT OR Apache-2.0"

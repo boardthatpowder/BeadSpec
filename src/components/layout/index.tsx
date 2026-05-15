@@ -148,7 +148,7 @@ function TopBar() {
 }
 
 function TaskListPanel() {
-  const { allTasks, filteredTasks, isLoading, nextCursor, loadMore } = useTasks()
+  const { allTasks, filteredTasks, isLoading } = useTasks()
   const { state } = useAppState()
   const { settings } = useSettings()
 
@@ -171,17 +171,6 @@ function TaskListPanel() {
         isLoading={isLoading}
         showLineage={state.view === 'ready'}
       />
-      {nextCursor && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-neutral-800/60">
-          <button
-            onClick={loadMore}
-            disabled={isLoading}
-            className="w-full text-xs text-neutral-500 hover:text-neutral-300 py-1.5 rounded-lg hover:bg-neutral-800/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Loading...' : 'Load more'}
-          </button>
-        </div>
-      )}
     </div>
   )
 }

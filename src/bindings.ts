@@ -31,7 +31,7 @@ export const commands = {
 	priority: number[],
 	labels: string[],
 	search: string | null,
-} | null, limit: number | null, afterCursor: string | null, statusFilter: string[] | null, labelFilter: string[] | null, sortCol: string | null, sortDir: string | null) => typedError<TasksResponse, string>(__TAURI_INVOKE("list_tasks", { projectPath, filters, limit, afterCursor, statusFilter, labelFilter, sortCol, sortDir })),
+} | null, statusFilter: string[] | null, labelFilter: string[] | null, sortCol: string | null, sortDir: string | null) => typedError<TasksResponse, string>(__TAURI_INVOKE("list_tasks", { projectPath, filters, statusFilter, labelFilter, sortCol, sortDir })),
 	getTask: (projectPath: string, issueId: string) => typedError<TaskDetail, string>(__TAURI_INVOKE("get_task", { projectPath, issueId })),
 	getTaskHistory: (projectPath: string, issueId: string) => typedError<HistoryEntry[], string>(__TAURI_INVOKE("get_task_history", { projectPath, issueId })),
 	searchTasks: (projectPath: string, query: string) => typedError<SearchResult[], string>(__TAURI_INVOKE("search_tasks", { projectPath, query })),
@@ -340,9 +340,7 @@ export type TaskFilters = {
 
 export type TasksResponse = {
 	tasks: Task[],
-	/**  Total number of matching tasks (without pagination). Capped at u32::MAX in practice. */
 	total_count: number,
-	next_cursor: string | null,
 };
 
 /**  Result from running `openspec validate` against a change. */
