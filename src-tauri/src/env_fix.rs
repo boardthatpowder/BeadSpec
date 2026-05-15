@@ -122,8 +122,13 @@ fn fallback_dirs() -> Vec<&'static str> {
 }
 
 fn expand_tilde(raw: &str) -> PathBuf {
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"));
+    expand_tilde_with_home(raw, home.as_deref())
+}
+
+fn expand_tilde_with_home(raw: &str, home: Option<&std::ffi::OsStr>) -> PathBuf {
     if let Some(suffix) = raw.strip_prefix("~/") {
-        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+        if let Some(home) = home {
             return PathBuf::from(home).join(suffix);
         }
     }
@@ -133,18 +138,29 @@ fn expand_tilde(raw: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
 
     #[test]
     fn expand_tilde_resolves_home() {
-        std::env::set_var("HOME", "/tmp/homefixture");
-        let p = expand_tilde("~/.bd/bin");
+        // Use the injected-home variant so we don't mutate the process-wide
+        // HOME — that races with `repair_path`'s shell-spawn in parallel
+        // test runs and corrupts the SHELL PATH it captures.
+        let home: OsString = "/tmp/homefixture".into();
+        let p = expand_tilde_with_home("~/.bd/bin", Some(home.as_os_str()));
         assert_eq!(p, PathBuf::from("/tmp/homefixture/.bd/bin"));
     }
 
     #[test]
     fn expand_tilde_passes_through_absolute() {
-        let p = expand_tilde("/opt/homebrew/bin");
+        let home: OsString = "/tmp/homefixture".into();
+        let p = expand_tilde_with_home("/opt/homebrew/bin", Some(home.as_os_str()));
         assert_eq!(p, PathBuf::from("/opt/homebrew/bin"));
+    }
+
+    #[test]
+    fn expand_tilde_no_home_returns_literal() {
+        let p = expand_tilde_with_home("~/.bd/bin", None);
+        assert_eq!(p, PathBuf::from("~/.bd/bin"));
     }
 
     #[test]
