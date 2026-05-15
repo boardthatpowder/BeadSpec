@@ -852,10 +852,7 @@ mod tests {
     fn slug_extraction_inner_colon_preserved() {
         // `strip_prefix` only strips the literal `openspec:` once, so any
         // subsequent colons stay inside the slug.
-        assert_eq!(
-            extract_slug("openspec:foo:bar"),
-            Some("foo:bar".into())
-        );
+        assert_eq!(extract_slug("openspec:foo:bar"), Some("foo:bar".into()));
     }
 
     #[test]
