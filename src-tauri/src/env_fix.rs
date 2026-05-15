@@ -14,7 +14,6 @@
 //! Windows is a no-op — there is no shell-rc divergence in the same way.
 
 use std::collections::HashSet;
-use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
@@ -139,6 +138,7 @@ fn expand_tilde_with_home(raw: &str, home: Option<&std::ffi::OsStr>) -> PathBuf 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
 
     #[test]
     fn expand_tilde_resolves_home() {
