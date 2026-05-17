@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # scripts/openspec-beads/context.sh
 # Single owner of the branch/worktree/repo context-tagging contract.
 # Source this file; do not execute it directly.
@@ -38,32 +38,40 @@ obws_resolve_prefix() {
     return 1
   fi
 
-  # Reject sentinel 'unknown' values that _obws_git_prefix emits on git failure.
-  # Non-empty 'unknown' segments would pass the length check above but produce
-  # useless labels (branch:unknown) that silently break multi-worktree isolation.
-  case "$OBWS_BRANCH_LABEL|$OBWS_WORKTREE_LABEL|$OBWS_REPO_LABEL" in
-    *:unknown*|*:unknown|unknown:*)
-      echo "[obws] ERROR: context labels contain 'unknown' — git context not available. Set RUFLO_HOME or ensure git is working." >&2
+  # Reject sentinel values that indicate git context could not be resolved cleanly:
+  #   "unknown"  — _obws_git_prefix fallback on git failure
+  #   "HEAD"     — detached-HEAD branch label (not actionable cross-worktree)
+  #   ""         — empty (e.g. tags.sh saw `git branch --show-current` return nothing)
+  # Each label's value-portion is checked independently so legitimate branch names
+  # containing "unknown" as a substring (e.g. "unknown-bug-repro") aren't rejected.
+  local _branch_val _worktree_val _repo_val
+  _branch_val="${OBWS_BRANCH_LABEL#*:}"
+  _worktree_val="${OBWS_WORKTREE_LABEL#*:}"
+  _repo_val="${OBWS_REPO_LABEL#*:}"
+  for _v in "$_branch_val" "$_worktree_val" "$_repo_val"; do
+    if [ -z "$_v" ] || [ "$_v" = "unknown" ] || [ "$_v" = "HEAD" ]; then
+      echo "[obws] ERROR: context labels contain empty/unknown/HEAD — git context not actionable. Check out a real branch and ensure git is working." >&2
       return 1
-      ;;
-  esac
+    fi
+  done
 
   export OBWS_BRANCH_LABEL OBWS_WORKTREE_LABEL OBWS_REPO_LABEL
 }
 
 # Derive a fallback prefix from git when ruflo tags.sh is unavailable.
-# NOTE: in detached HEAD state, git rev-parse --abbrev-ref HEAD returns "HEAD" (not a branch name).
-# obws_resolve_prefix will reject this because "HEAD" causes confusing labels — it's not "unknown"
-# but it's not useful either. The sentinel check below catches it via the empty-or-unknown gate.
+# Uses `git branch --show-current` (same as tags.sh) so detached HEAD yields the empty
+# string consistently — the sentinel check in obws_resolve_prefix then catches it.
 _obws_git_prefix() {
-  local branch_name worktree repo
-  branch_name=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
-  if [ "$branch_name" = "HEAD" ]; then
-    echo "[obws] WARN: git is in detached HEAD state — branch label will be 'HEAD', which is not useful. Check out a branch." >&2
+  local branch_name root worktree_base
+  branch_name=$(git branch --show-current 2>/dev/null)
+  [ -z "$branch_name" ] && branch_name="unknown"
+  root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -z "$root" ]; then
+    worktree_base="unknown"
+  else
+    worktree_base=$(basename "$root")
   fi
-  worktree="worktree:$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo unknown)"
-  repo="repo:$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo unknown)"
-  printf 'branch:%s|%s|%s' "$branch_name" "$worktree" "$repo"
+  printf 'branch:%s|worktree:%s|repo:%s' "$branch_name" "$worktree_base" "$worktree_base"
 }
 
 # Apply the three context labels to a Beads issue (idempotent).
@@ -107,10 +115,14 @@ obws_assert_claimable() {
     return 1
   fi
   local current_assignee git_user
-  current_assignee=$(bd show "$id" --json 2>/dev/null | jq -r '.[].assignee // empty' 2>/dev/null)
-  git_user=$(git config user.name 2>/dev/null || echo "${USER:-unknown}")
+  current_assignee=$(bd show "$id" --json 2>/dev/null | jq -r '.[0].assignee // empty' 2>/dev/null)
+  # `git config user.name` can succeed with empty output (e.g. user configured but blank).
+  # Treat empty as unset so we don't false-positive when comparing against an assignee.
+  git_user=$(git config user.name 2>/dev/null)
+  [ -z "$git_user" ] && git_user="${USER:-unknown}"
   if [ -n "$current_assignee" ] && [ "$current_assignee" != "$git_user" ]; then
     echo "[obws] Issue '${id}' is held by '${current_assignee}'. Do not claim — contact them or wait." >&2
+    echo "[obws] NOTE: prefer 'bd update ${id} --claim' (atomic) over read/check workflows to avoid TOCTOU races." >&2
     return 1
   fi
   return 0

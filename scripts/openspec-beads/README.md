@@ -67,7 +67,7 @@ Skills → helpers available after `. init.sh` (all helpers are loaded; `obws_in
 
 `obws_gate_impact` and `obws_gate_detect_changes` print MCP tool call instructions for Claude (use `{}` syntax, not `$`). GitNexus `impact` and `detect_changes` are MCP tools, not shell commands. `obws_gate_impact` also emits a CLI fallback (`gitnexus impact <symbol> --upstream --depth 3`) for non-MCP contexts.
 
-`obws_affected_processes` emits a `gitnexus_cypher` MCP instruction populated with the actual changed files from `git diff`, for use at completion time.
+`obws_affected_processes` emits a `mcp__gitnexus__cypher` MCP instruction populated with the actual changed files from `git diff`, for use at completion time.
 
 ## Deprecated `bd` commands (do not use in skills)
 

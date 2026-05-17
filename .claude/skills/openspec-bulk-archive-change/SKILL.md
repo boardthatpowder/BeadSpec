@@ -26,7 +26,7 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
 2. **Prompt for change selection**
 
    Use **AskUserQuestion tool** with multi-select to let user choose changes:
-   - Show each change with its schema
+   - Show each change (note: `openspec list --json` does not include `schema`; fetch per-change schema via `openspec status --change <name> --json` → `schemaName` if needed)
    - Include an option for "All changes"
    - Allow any number of selections (1+ works, 2+ is the typical use case)
 
@@ -125,10 +125,10 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
       - For conflicts, apply in resolved order
       - Track if sync was done
 
-   b. **Perform the archive**:
+   b. **Perform the archive** using the `openspec archive` CLI (handles validation, spec sync, and rename atomically):
       ```bash
-      mkdir -p openspec/changes/archive
-      mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
+      openspec archive "<name>" -y
+      # Add --skip-specs if sync was already done in step a, or --no-validate if already validated.
       ```
 
    c. **Track outcome** for each change:
@@ -229,7 +229,7 @@ Failed K changes:
 ```
 ## No Changes to Archive
 
-No active changes found. Use `/opsx:new` to create a new change.
+No active changes found. Use `/openspec-new-change` to create a new change.
 ```
 
 **Guardrails**

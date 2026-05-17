@@ -47,20 +47,24 @@ fi
 
 mkdir -p "$worktree_beads"
 
-database_name=$(sed -n 's/.*"dolt_database"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$main_beads/metadata.json" 2>/dev/null || true)
-newline='
-'
-database_name=${database_name%%"$newline"*}
+database_name=$(jq -r '.dolt_database // empty' "$main_beads/metadata.json" 2>/dev/null || true)
 if [ -n "$database_name" ] && [ ! -d "$main_beads/dolt/$database_name" ]; then
   fail "main Dolt data does not contain database '$database_name' under $main_beads/dolt"
 fi
 
-backup_dir=${BEADS_WORKTREE_BACKUP_DIR:-"$worktree_beads/backup/worktree-runtime-$(date +%Y%m%d-%H%M%S)"}
+backup_dir=""
 backup_created=0
 
 ensure_backup_dir() {
   if [ "$backup_created" -eq 0 ]; then
-    mkdir -p "$backup_dir"
+    if [ -n "${BEADS_WORKTREE_BACKUP_DIR:-}" ]; then
+      backup_dir="$BEADS_WORKTREE_BACKUP_DIR"
+      mkdir -p "$backup_dir"
+    else
+      # mktemp avoids collisions when two parallel invocations land in the same second.
+      mkdir -p "$worktree_beads/backup"
+      backup_dir=$(mktemp -d "$worktree_beads/backup/worktree-runtime-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+    fi
     backup_created=1
   fi
 }
@@ -99,8 +103,11 @@ if ! grep -qxF ".beads/dolt" "$exclude_file"; then
 fi
 
 if [ "${BD_WORKTREE_SKIP_VERIFY:-0}" != "1" ] && command -v bd >/dev/null 2>&1; then
-  bd dolt show >/dev/null
-  bd status >/dev/null
+  # Verification is advisory — port lock contention should not abort the whole setup.
+  set +e
+  bd dolt show >/dev/null 2>&1 || log "Beads worktree setup: bd dolt show check failed (non-fatal)"
+  bd status >/dev/null 2>&1 || log "Beads worktree setup: bd status check failed (non-fatal)"
+  set -e
 fi
 
 if [ "$backup_created" -eq 1 ]; then

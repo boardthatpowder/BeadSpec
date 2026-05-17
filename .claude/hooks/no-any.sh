@@ -30,9 +30,11 @@ case "$FILE_PATH" in
   *.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|*__tests__*) exit 0 ;;
 esac
 
-# Check for TypeScript `any` type patterns (avoids matching words like "company", "many")
+# Check for TypeScript `any` type patterns (avoids matching words like "company", "many").
+# Strip comment lines before scanning so `// type: any` or `* @param {any}` don't false-trigger.
 # Patterns: `: any`, `as any`, `<any>`, `<any,`, `any[]`, `any;`, `any)`, `any |`, `any&`
-if echo "$CONTENT" | grep -qE ':\s*any\b|as\s+any\b|\bany\s*[\[\];\),\|&>]|\bany$|<\s*any\s*[,>]'; then
+CLEAN=$(printf '%s' "$CONTENT" | sed '/^[[:space:]]*\/\//d; /^[[:space:]]*\*/d')
+if printf '%s' "$CLEAN" | grep -qE ':\s*any\b|as\s+any\b|\bany\s*[\[\];\),\|&>]|\bany$|<\s*any\s*[,>]'; then
   cat >&2 <<'EOF'
 BLOCKED: Use of `any` type is not allowed in non-test TypeScript files.
 Instead use:

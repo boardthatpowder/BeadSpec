@@ -35,14 +35,34 @@ BeadSpec is a Tauri 2.0 desktop application (Rust + React/TypeScript) for managi
 
 Use OpenSpec before implementation when a change affects Tauri command signatures, public API shape, user-visible behavior, data model, or acceptance criteria.
 
-Prefer the `openspec-*` skill family. Use `opsx:*` commands only when explicitly requested. Never mix families mid-change.
-
 ```bash
 openspec list
 openspec show <change-id>
 openspec validate <change-id>
 openspec status --change <change-id>
 ```
+
+## Skill family selection
+
+Two parallel OpenSpec skill families exist. Prefer `openspec-*` unless directed otherwise:
+
+| Family | When to use |
+|--------|-------------|
+| `openspec-*` | Production path — stable, fully integrated with Beads + Ruflo memory |
+| `opsx:*` | Experimental variants — newer UX, same underlying workflow; use when the user explicitly invokes `/opsx:*` |
+
+Never mix families mid-change. If you start with `openspec-beads-work`, finish with `openspec-beads-complete`.
+
+## Parallelism: Agent tool vs ruflo-swarm
+
+**Default:** built-in `Agent` tool with parallel calls (single message, multiple tool-use blocks). Use for ~90% of multi-task work: research, exploration, parallel test runs, independent file edits.
+
+**Escalate to `ruflo-swarm-dispatch` skill only when:**
+- Subtasks must reach **consensus** (e.g., agree on a refactor approach across 3 files)
+- Subtasks share **intermediate results** (one agent's output feeds another's implementation)
+- Subtasks edit **overlapping artifacts** that would conflict if modified independently
+
+Do NOT use `ruflo-swarm` for pure exploration, independent research, or single-agent-capable work.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
@@ -71,7 +91,18 @@ bd close <id>         # Complete work
 
 ### MANDATORY: Tag every Beads issue with branch / worktree / repo
 
-Every `bd create` **must** be followed by tagging with context labels:
+Every `bd create` **must** be followed by tagging with context labels.
+
+**Recommended — use the helper (idempotent, handles fallbacks):**
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
+obws_tag_context <id>              # applies branch/worktree/repo labels
+obws_tag_change  <id> <change-id>  # applies openspec:<change-id> label (in-scope issues only)
+```
+
+**Manual fallback (for hooks/scripts outside the skill context):**
 
 ```bash
 source ~/.claude/ruflo/lib/tags.sh
@@ -111,6 +142,37 @@ bd tag <new-issue-id> "$REPO_LABEL"
 - NEVER say "ready to push when you are" — YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+## Memory
+
+All persistent context lives in AgentDB. Do NOT use `bd memories add`, `bd recall`, `bd forget`, `bd kv`, or `MEMORY.md` files for agent context — use `ruflo memory store`.
+
+**Canonical key schema:** `<branch|worktree|repo>|openspec:<change-id>|issue:<issue-id>|type:<type>|outcome:<outcome>|ts:<unix>`
+Allowed `type` values: `trajectory`, `retrospective`, `followup-triage`, `scope-change`, `paused`.
+
+**Recommended — use the helper (enforces canonical schema):**
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+. "${REPO_ROOT}/scripts/openspec-beads/memory.sh"
+obws_mem_write "<change-id>" "<issue-id>" "<type>" "<outcome>" "<body>"
+obws_mem_search_change "<change-id>"   # recall all entries for a change
+obws_mem_search_issue  "<issue-id>"    # recall all entries for an issue
+```
+
+**Direct CLI (for scripts outside the skill context):**
+
+```bash
+source ~/.claude/ruflo/lib/tags.sh
+ruflo memory store -k "$(ruflo_key_prefix)|openspec:<change>|issue:<id>|type:<type>|outcome:<outcome>|ts:$(date +%s)" -v "<content>"
+ruflo memory search -q "<query>"
+```
+
+The `openspec-beads-work` skill automatically recalls relevant memory on claim and writes trajectory on close. The `openspec-beads-resume` skill uses `obws_mem_search_issue` to recover pause context across session boundaries.
+
+## Quality Gate Hooks
+
+Stack-specific hooks (`no-any.sh`, `no-mock-module.sh`, `tdd-nudge.sh`, `typecheck.sh`, `eslint-fix.sh`) are **wired by default** in `.claude/settings.json`. If your project doesn't use TypeScript/ESLint, comment out the corresponding matchers in `.claude/settings.json`.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

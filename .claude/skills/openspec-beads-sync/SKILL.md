@@ -30,14 +30,15 @@ obws_init sync || return 1
      "${REPO_ROOT}/scripts/setup-worktree-beads.sh" || echo "[sync] WARN: setup-worktree-beads.sh exited non-zero; continuing"
    fi
    chmod 700 "${REPO_ROOT}/.beads" 2>/dev/null || true
-   ruflo embeddings warmup 2>/dev/null || echo "[sync] WARN: ruflo embeddings warmup failed. Run \`ruflo embeddings init\` once to enable semantic memory search."
+   ruflo embeddings init 2>/dev/null || echo "[sync] WARN: ruflo embeddings init failed. Run \`ruflo embeddings init\` once to enable semantic memory search."
    ```
 
-   Advisory health check using agent-facing structured output:
+   Advisory health check:
    ```bash
-   bd doctor --agent --json 2>/dev/null | jq -r '.checks[]? | select(.severity == "error" or .severity == "warning") | "  [doctor:\(.severity)] \(.name): \(.message)"' 2>/dev/null || \
-     bd doctor 2>/dev/null | grep -i "error\|warning" | head -10 || true
+   bd doctor 2>/dev/null | grep -E "(ERROR|WARN|FAIL|✗)" \
+     || echo "[sync] bd doctor: no issues detected"
    ```
+   Note: In embedded Dolt mode (the default for this project), `bd doctor` reports "not yet supported in embedded mode" and exits 0. The grep finds no matches and the `|| echo` line fires — this is expected behavior, not an error.
 
 2. **Pull latest Beads state**
 
@@ -55,17 +56,19 @@ obws_init sync || return 1
    _gitnexus_repo=$(basename "$(git rev-parse --show-toplevel)")
    echo "[sync] GitNexus URI: gitnexus://repo/${_gitnexus_repo}/context"
    ```
-   Read MCP resource at the URI printed above (use the literal value of `_gitnexus_repo`, not the shell expression).
+   Read MCP resource at the URI printed above using the `ReadMcpResource` tool with `server="gitnexus"` and the resolved URI (use the literal string value of `$_gitnexus_repo`, not the shell expression).
 
    Check the indexed-at timestamp against HEAD. If the index is older than the last few commits, emit:
    ```
-   [sync] WARN: GitNexus index may be stale. Run `npx gitnexus analyze` before relying on gitnexus_impact, gitnexus_context, or gitnexus_query results.
+   [sync] WARN: GitNexus index may be stale. Run `gitnexus analyze` before relying on mcp__gitnexus__impact, mcp__gitnexus__context, or mcp__gitnexus__query results.
    ```
 
    Validate all active OpenSpec changes in one pass:
    ```bash
+   # openspec validate --json returns an OBJECT: {items:[{valid,id,...}], summary, version}
+   # Use .items[] (not .[]) to iterate the results.
    openspec validate --all --strict --json --no-interactive --concurrency 6 2>/dev/null | \
-     jq -r '.[] | select(.valid == false) | "  FAIL: \(.changeId) — \(.errors[0].message)"' || true
+     jq -r '.items[] | select(.valid == false) | "  FAIL: \(.id // .changeId) — \(.errors[0].message // "unknown")"' || true
    ```
 
    Show active changes:
@@ -81,8 +84,13 @@ obws_init sync || return 1
 
    Surface any open issues filed by background workers (security-audit, test-gap-detector):
    ```bash
+   # Match by ruflo:* label (preferred) OR by "Auto-filed by ruflo-" notes text (current on-finding.sh
+   # does not apply labels, so the notes fallback is needed until that is fixed upstream).
    _worker_count=$(bd list --status open --json 2>/dev/null | \
-     jq '[.[] | select(.labels[]? | startswith("ruflo:"))] | length' 2>/dev/null || echo 0)
+     jq '[.[] | select(
+       (.labels[]? | startswith("ruflo:")) or
+       (.notes // "" | test("Auto-filed by ruflo-"))
+     )] | length' 2>/dev/null || echo 0)
    [ "$_worker_count" -gt 0 ] && \
      echo "[sync] ${_worker_count} open worker-filed issue(s) — triage with openspec-beads-followup"
    ```
@@ -108,3 +116,4 @@ obws_init sync || return 1
 - This skill is read-only for Beads issue state — the setup step may repair ignored local runtime symlinks
 - `bd doctor --agent --json` is preferred over parsing raw `bd doctor` output — it emits observed/expected/commands per check
 - If `bd ready` returns nothing, surface that explicitly so the user knows no work is available
+- `bd doctor --agent --json` — `--agent` is not a documented flag in this version of bd; use plain `bd doctor --json` if structured output is needed

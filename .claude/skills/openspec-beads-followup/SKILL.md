@@ -48,12 +48,14 @@ If in doubt between Q2 and Q3, file as bug at priority=1 and let the user adjust
 | `--type` | `bug` | `task` |
 | `--priority` | `1` | `2` |
 | Description template | "Bug found while implementing ... Existing scope already requires ... Add regression test coverage." | "Discovered while implementing ... Required for this change to satisfy acceptance criteria. ..." |
-| Dep linkage | `bd dep add <new-id> <current-issue-id> --type=discovered-from`; if current cannot close without this fix: `bd dep add <current-issue-id> <new-id>` | `bd dep add <new-id> <current-issue-id> --type=discovered-from`; downstream work: `bd dep add <downstream-id> <new-id>` |
+| Dep linkage | `bd link <new-id> <current-issue-id> --type=discovered-from`; if current cannot close without this fix: `bd link <current-issue-id> <new-id>` (default type=blocks, meaning: new-id blocks current-issue-id) | `bd link <new-id> <current-issue-id> --type=discovered-from`; downstream work: `bd link <downstream-id> <new-id>` |
+
+> **Argument-order note:** `bd link <A> <B>` means "A depends on B" (B blocks A). `--type=discovered-from` means "A was discovered from B". Argument order determines direction — always think `<dependent> <dependency>` for blocking edges and `<new-issue> <source-issue>` for discovered-from edges.|
 
 Check for near-duplicates first:
 ```bash
 obws_find_dups "<proposed title>"
-# Set OBWS_DUP_METHOD=ai for semantic comparison (requires ANTHROPIC_API_KEY; costs tokens)
+# Returns open issues with similar titles. Review before creating.
 ```
 
 ```bash
@@ -95,10 +97,16 @@ bd create \
 
 Preserve lineage:
 ```bash
-bd dep add <new-followup-id> <current-issue-id> --type=discovered-from
+# bd link is the type-safe wrapper for dep edges (allowed types: blocks|tracks|related|parent-child|discovered-from)
+bd link <new-followup-id> <current-issue-id> --type=discovered-from
+# Also link to the epic so the follow-up remains discoverable after <current-issue-id> closes.
+# Extract change-id from the current issue's openspec:<id> label first:
+_change_id=$(bd show <current-issue-id> --json | jq -r '.[0].labels[] | select(startswith("openspec:")) | sub("openspec:"; "")' | head -1)
+_epic_id=$(bd query "label=openspec:${_change_id} AND type=epic" --json 2>/dev/null | jq -r '.[0].id // empty')
+[ -n "$_epic_id" ] && bd link <new-followup-id> "$_epic_id" --type=related
 ```
 
-Confirm context labels (# safety net: explicit tag in case --labels was empty). Do NOT call `obws_tag_change` here:
+Apply context labels (safety net: explicit tag in case --labels was empty). Do NOT call `obws_tag_change` here:
 ```bash
 obws_tag_context <new-followup-id>
 ```
@@ -110,8 +118,12 @@ obws_tag_context <new-followup-id>
 Background workers (`security-audit`, `test-gap-detector`) auto-file `bd` issues tagged `ruflo:<worker-tag>`. These arrive without a parent issue and must be triaged to the right epic.
 
 ```bash
-# Find open worker findings
-bd list --status open --json | jq '.[] | select(.labels[]? | startswith("ruflo:")) | {id, title, labels}'
+# Find open worker findings — match by ruflo:* label (preferred) OR by "Auto-filed by ruflo-" notes text.
+# The current on-finding.sh does not apply ruflo:* labels, so the notes fallback is needed until fixed upstream.
+bd list --status open --json | jq '.[] | select(
+  (.labels[]? | startswith("ruflo:")) or
+  (.notes // "" | test("Auto-filed by ruflo-"))
+) | {id, title, labels, notes}'
 ```
 
 Apply the Q1→Q3 decision tree as normal. After creating or identifying the right issue, link the worker finding:
@@ -129,7 +141,8 @@ bd close <worker-issue-id> --reason="Triaged to <new-id>"
 
 Verify labels on the new issue:
 ```bash
-bd show <new-issue-id> --json | jq '.[].labels'
+# bd show --json returns an array root — use .[0].labels
+bd show <new-issue-id> --json | jq '.[0].labels'
 ```
 Array must contain all three context labels. Bugs and in-scope tasks also carry `openspec:<change-id>`. Follow-ups do not.
 

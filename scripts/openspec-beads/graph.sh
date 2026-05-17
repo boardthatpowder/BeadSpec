@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # scripts/openspec-beads/graph.sh
 # Atomic graph import for openspec-beads-import.
 # Source this file; do not execute it directly.
@@ -180,6 +180,8 @@ _obws_wire_graph_deps() {
     echo "[obws] WARN: mktemp failed; skipping dep wiring" >&2
     return 0
   }
+  # Ensure cleanup even if this function returns early (RETURN trap is function-scoped in bash).
+  trap 'rm -rf "$tmpdir"' RETURN
 
   jq -c '.nodes[] | select((.dependencies // []) | length > 0)' \
     "$graph_file" 2>/dev/null > "${tmpdir}/nodes.jsonl"
@@ -264,6 +266,15 @@ _obws_wire_graph_deps() {
           fi
           ;;
         blocks|*)
+          # Idempotency: check if this edge already exists before queueing.
+          # bd dep list <from> --json returns array of {id,type,...} dep targets.
+          local already_linked
+          already_linked=$(bd dep list "$from_id" --json 2>/dev/null | \
+            jq -e --arg t "$to_id" '.[] | select(.id == $t)' >/dev/null 2>&1 && echo yes || true)
+          if [ "$already_linked" = "yes" ]; then
+            skipped=$((skipped + 1))
+            continue
+          fi
           # Queue for bd batch commit (faster: one Dolt transaction for all edges).
           # wired is incremented after batch succeeds, not here.
           printf 'dep add %s %s %s\n' "$from_id" "$to_id" "$dep_type" >> "${tmpdir}/batch.lines"
@@ -283,24 +294,20 @@ _obws_wire_graph_deps() {
     else
       echo "[obws] WARN: bd batch failed; falling back to per-call dep add" >&2
       local _fb_wired=0
-      while IFS= read -r line; do
+      while read -r _cmd _sub _from _to _type_val; do
         # line format: dep add <from> <to> [type]
-        # Extract fields individually to avoid passing an empty --type= arg
-        _from=$(printf '%s' "$line" | awk '{print $3}')
-        _to=$(printf '%s' "$line" | awk '{print $4}')
-        _type=$(printf '%s' "$line" | awk 'NF>=5 {print "--type=" $5}')
-        # shellcheck disable=SC2086
-        if bd dep add "$_from" "$_to" $_type 2>/dev/null; then
-          _fb_wired=$((_fb_wired + 1))
+        if [ -n "$_type_val" ]; then
+          bd dep add "$_from" "$_to" --type="$_type_val" 2>/dev/null && _fb_wired=$((_fb_wired + 1)) \
+            || echo "[obws] WARN: fallback dep add failed: ${_from} → ${_to}" >&2
         else
-          echo "[obws] WARN: fallback dep add failed: ${line}" >&2
+          bd dep add "$_from" "$_to" 2>/dev/null && _fb_wired=$((_fb_wired + 1)) \
+            || echo "[obws] WARN: fallback dep add failed: ${_from} → ${_to}" >&2
         fi
       done < "${tmpdir}/batch.lines"
       wired=$((wired + _fb_wired))
     fi
   fi
 
-  rm -rf "$tmpdir"
   echo "[obws] Dep wiring complete: ${wired} edges applied, ${skipped} skipped." >&2
 
   # Detect circular dependencies introduced by this wiring pass.
@@ -316,7 +323,8 @@ _obws_check_dep_cycles() {
       return 0
     fi
     echo "[obws] ERROR: circular dependencies detected in the Beads graph!" >&2
-    printf '%s\n' "$cycles" | jq -r '.[]? | "  Cycle: \(. | join(" → "))"' 2>/dev/null || echo "$cycles" >&2
+    printf '%s\n' "$cycles" | jq -r '.[]? | "  Cycle: \(. | join(" → "))"' 2>/dev/null \
+      || echo "$cycles" >&2
     echo "[obws] Fix the dependency edges in .bd-graph.json and re-run obws_import_graph." >&2
     return 1
   fi

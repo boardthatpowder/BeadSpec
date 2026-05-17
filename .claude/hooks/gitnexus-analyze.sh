@@ -1,6 +1,6 @@
 #!/bin/bash
 # PostToolUse: Re-index the GitNexus knowledge graph after git push.
-# Runs async (non-blocking). Skips if the index is already current.
+# Fires asynchronously (backgrounded below) so it never blocks the tool call.
 
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name')
@@ -22,8 +22,31 @@ if [ -f "$GITNEXUS_META" ]; then
   fi
 fi
 
-cd "$GIT_ROOT" && npx gitnexus analyze 2>&1
-echo "[gitnexus] index updated after push"
+LOCK_DIR="$GIT_ROOT/.gitnexus/analyze.lock.d"
 
-# Keep db world-writable so the MCP server (macOS sandbox) can create FTS indexes
-[ -f "$GIT_ROOT/.gitnexus/lbug" ] && chmod 666 "$GIT_ROOT/.gitnexus/lbug"
+# Portable timeout shim: macOS has neither `timeout` nor `gtimeout` out of the box.
+# Falls through with no timeout wrapper if neither is installed; gtimeout is provided by
+# `brew install coreutils`. Documented in CLAUDE.md prerequisites.
+TIMEOUT_BIN=$(command -v gtimeout 2>/dev/null || command -v timeout 2>/dev/null || echo "")
+run_with_timeout() {
+  local secs="$1"; shift
+  if [ -n "$TIMEOUT_BIN" ]; then
+    "$TIMEOUT_BIN" "$secs" "$@"
+  else
+    "$@"
+  fi
+}
+
+(
+  # Portable atomic lock via mkdir — prevents concurrent indexing on back-to-back pushes.
+  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    exit 0
+  fi
+  trap 'rm -rf "$LOCK_DIR"; wait' EXIT INT TERM
+  cd "$GIT_ROOT" && { command -v gitnexus > /dev/null 2>&1 && run_with_timeout 300 gitnexus analyze || run_with_timeout 300 npx gitnexus analyze; } >"${TMPDIR:-/tmp}/gitnexus-$$.log" 2>&1
+  echo "[gitnexus] index updated after push" >> "${TMPDIR:-/tmp}/gitnexus-$$.log"
+  # Keep db readable+writable for the MCP server (macOS sandbox needs to create FTS indexes).
+  # 664 (group-writable) is safer than 666 (world-writable) on multi-user hosts.
+  find "$GIT_ROOT/.gitnexus" -name "*.db" -exec chmod 664 {} \; 2>/dev/null || true
+) &
+disown $! 2>/dev/null

@@ -22,7 +22,7 @@ Implement tasks from an OpenSpec change.
    - Auto-select if only one active change exists
    - If ambiguous, run `openspec list --json` to get available changes and use the **AskUserQuestion tool** to let the user select
 
-   Always announce: "Using change: <name>" and how to override (e.g., `/opsx:apply <other>`).
+   Always announce: "Using change: <name>" and how to override (e.g., `/openspec-apply-change <other>`).
 
 2. **Check status to understand the schema**
    ```bash
@@ -68,6 +68,7 @@ Implement tasks from an OpenSpec change.
 
    For each pending task:
    - Show which task is being worked on
+   - Before modifying any symbol, run `mcp__gitnexus__impact({target: "symbolName", direction: "upstream"})` and report blast radius. Do not proceed if risk is HIGH or CRITICAL without user confirmation.
    - Make the code changes required
    - Keep changes minimal and focused
    - Mark task complete in the tasks file: `- [ ]` → `- [x]`

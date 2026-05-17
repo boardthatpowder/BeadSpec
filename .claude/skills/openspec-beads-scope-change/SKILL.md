@@ -33,7 +33,7 @@ obws_init scope-change || return 1
    Do not close it. Update with notes and write a memory entry so the pause reason survives session boundaries:
    ```bash
    bd update <current-issue-id> --append-notes="Paused: discovered spec gap — <brief description>. Updating OpenSpec before continuing."
-   bd set-state <current-issue-id> openspec=paused --reason "spec gap: <brief description>"
+   bd tag <current-issue-id> "openspec:paused"
    obws_mem_write "<change-id>" "<current-issue-id>" "paused" "spec-gap" \
      "Paused: <description of spec gap>. Will resume after OpenSpec update and re-validation."
    ```
@@ -87,6 +87,7 @@ obws_init scope-change || return 1
 
    Confirm labels (# safety net: explicit tag in case --labels was empty):
    ```bash
+   [ -z "$_new_issue_id" ] && { echo "[scope-change] ERROR: bd create failed"; exit 1; }
    obws_tag_context "$_new_issue_id"
    obws_tag_change  "$_new_issue_id" <change-id>
    ```
@@ -94,10 +95,11 @@ obws_init scope-change || return 1
 5. **Link dependencies**
 
    ```bash
+   # bd link is the type-safe wrapper (allowed types: blocks|tracks|related|parent-child|discovered-from)
    # in-flight issues blocked by the scope change:
-   bd dep add <blocked-issue-id> <new-issue-id> --type=caused-by
-   # paused issue now depends on the scope issue:
-   bd dep add <current-issue-id> <new-issue-id>
+   bd link <blocked-issue-id> <new-issue-id> --type=discovered-from
+   # paused issue now depends on the scope issue (default type=blocks):
+   bd link <current-issue-id> <new-issue-id>
    # if a previously open issue was made obsolete:
    bd supersede <obsoleted-issue-id> --with <new-issue-id>
    ```
@@ -113,4 +115,5 @@ obws_init scope-change || return 1
 **Non-obvious traps**
 - OpenSpec update MUST land and validate before any Beads issue is created — never update only Beads for a behavior change
 - `bd gate create --type=human` vs human bead: use gate for binary proceed/stop decisions (`bd gate resolve <id>` to unblock). When a comment response is needed instead: `bd q "HUMAN: spec gap in <change-id> — <decision needed>" --type=task --priority=1 --labels "human,openspec:<change-id>,..."`, then `bd update <id> --description="..."`, user responds via `bd human respond <id>` or `bd human dismiss <id>`
-- Use `--type=caused-by` on dep edges that link the scope issue to the gap that caused it
+- Use `bd link --type=discovered-from` on dep edges that link the scope issue to the gap that caused it (`caused-by` is not a valid bd dep type)
+- When `bd q "HUMAN: ..."` creates a human-gate issue, apply context labels immediately: `obws_tag_context <human-issue-id>` and `obws_tag_change <human-issue-id> <change-id>` — otherwise the issue is not discoverable by worktree filters

@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # scripts/openspec-beads/tasks.sh
 # tasks.md checkbox management for the openspec-beads skill suite.
 # Source this file; do not execute it directly.
@@ -28,21 +28,22 @@ obws_tick_task() {
     return 1
   fi
 
-  # Escape dots in task-ref so sed treats them as literals (e.g. "1.3" → "1\.3").
+  # Escape regex metachars + the substitution delimiter `/` in task-ref so sed treats them
+  # as literals (e.g. "1.3" → "1\.3"). Order matters: backslash first, then `/`, then the rest.
   local safe_ref
-  safe_ref=$(printf '%s' "$task_ref" | sed 's/\./\\./g')
+  safe_ref=$(printf '%s' "$task_ref" | sed -e 's/[][\\/.^$*+?(){}|]/\\&/g')
 
   # Detect sed flavour: BSD sed requires -i '' (macOS); GNU sed accepts -i '' or -i.
   if sed --version > /dev/null 2>&1; then
     # GNU sed
-    sed -i "s/^- \[ \] ${safe_ref} /- [x] ${safe_ref} /" "$tasks_file"
+    sed -i "s/^- \[ \][[:space:]]*${safe_ref}\([[:space:]]\|$\)/- [x] ${safe_ref} /" "$tasks_file"
   else
     # BSD sed (macOS)
-    sed -i '' "s/^- \[ \] ${safe_ref} /- [x] ${safe_ref} /" "$tasks_file"
+    sed -i '' "s/^- \[ \][[:space:]]*${safe_ref}\([[:space:]]\|$\)/- [x] ${safe_ref} /" "$tasks_file"
   fi
 
   # Verify the tick landed.
-  if grep -q "^- \[x\] ${task_ref} " "$tasks_file" 2>/dev/null; then
+  if grep -qE "^- \[x\][[:space:]]*${task_ref}([[:space:]]|$)" "$tasks_file" 2>/dev/null; then
     echo "[obws] Ticked checkbox for task ${task_ref} in ${tasks_file}" >&2
   else
     echo "[obws] WARN: checkbox for task_ref '${task_ref}' not found in ${tasks_file} — verify manually" >&2

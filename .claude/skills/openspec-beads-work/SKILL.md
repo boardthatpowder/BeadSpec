@@ -25,7 +25,7 @@ After closing this issue, always check how many tasks are now ready and spawn co
 bd ready --mol <epic-id> --json --limit 20 | jq '[.[] | select(.issue_type != "epic")] | length'
 ```
 
-**If ≥ 2 ready tasks exist after closing:** spawn one `Agent` per task in a single message (all tool calls in one response), each running `openspec-beads-work <issue-id>`.
+**If ≥ 2 ready tasks exist after closing:** the `ruflo-agent-route.sh` PreToolUse hook writes a model-tier advisory (haiku/sonnet/opus) to stderr on each Agent spawn. Use those advisories to set the `model` parameter. Then spawn one `Agent` per task in a single message (all tool calls in one response), each running `openspec-beads-work <issue-id>` with `model: "<haiku|sonnet|opus>"` set accordingly.
 
 **Parallelism decision rule** (from `ruflo-swarm-dispatch`):
 - **Independent tasks** (different file paths, no shared state) → built-in `Agent` tool, parallel calls. This is the default.
@@ -71,9 +71,16 @@ obws_init work || return 1
 
 3. **Re-read the OpenSpec source + surface task-relevant CLAUDE.md guidance**
 
-   Read OpenSpec artifacts before touching any code. Focused acceptance-criteria view:
+   Extract the OpenSpec change ID from the issue's `openspec:<id>` label first:
    ```bash
-   openspec show <change-id> --type=change --requirements --no-scenarios --json 2>/dev/null || {
+   _change_id=$(bd show <issue-id> --json | jq -r '.[0].labels[] | select(startswith("openspec:")) | sub("openspec:"; "")' | head -1)
+   [ -z "$_change_id" ] && echo "[work] WARN: no openspec:<id> label on this issue — skip artifact re-read and treat as a free-standing task"
+   ```
+
+   If `_change_id` is set, read OpenSpec artifacts before touching any code.
+   Use `--deltas-only` to get the focused acceptance-criteria view (replaces the deprecated `--requirements --no-scenarios` which is silently ignored for `--type=change`):
+   ```bash
+   openspec show <change-id> --type=change --deltas-only --json 2>/dev/null || {
      openspec show <change-id> --type=change --json 2>/dev/null || {
        cat openspec/changes/<change-id>/proposal.md
        cat openspec/changes/<change-id>/design.md
@@ -84,7 +91,8 @@ obws_init work || return 1
 
    Fetch task-relevant policy shards (requires prior `ruflo guidance compile`):
    ```bash
-   _issue_title=$(bd show <issue-id> --json | jq -r '.[].title' 2>/dev/null)
+   # bd show --json returns an array root; use .[0] to access the first element safely.
+   _issue_title=$(bd show <issue-id> --json | jq -r '.[0].title // empty' 2>/dev/null)
    if ruflo guidance status 2>/dev/null | grep -q 'compiled\|policy'; then
      ruflo guidance retrieve --task "$_issue_title" 2>/dev/null || true
    else
@@ -104,11 +112,11 @@ obws_init work || return 1
 
    Call both MCP tools (context before impact):
    ```
-   gitnexus_context({name: "<SymbolName>"})
-   gitnexus_impact({target: "<SymbolName>", direction: "upstream", maxDepth: 3})
+   mcp__gitnexus__context({name: "<SymbolName>"})
+   mcp__gitnexus__impact({target: "<SymbolName>", direction: "upstream", maxDepth: 3})
    ```
 
-   `gitnexus_context` surfaces process membership — tells you if the change is single-touch or cuts across a flow.
+   `mcp__gitnexus__context` surfaces process membership — tells you if the change is single-touch or cuts across a flow.
 
    - `riskLevel: HIGH` or `CRITICAL` → halt, present blast radius and affected processes to the user, require explicit confirmation
    - `riskLevel: LOW` or `MEDIUM` → proceed; record affected caller count in issue notes
@@ -129,7 +137,8 @@ obws_init work || return 1
 
    ```bash
    obws_gate_unit_tests
-   obws_gate_validate <change-id>   # non-strict: spec may still be in draft mid-flow
+   # Use $_change_id resolved in step 3; only runs validate when openspec label was present.
+   [ -n "${_change_id:-}" ] && obws_gate_validate "${_change_id}"   # non-strict: spec may still be in draft mid-flow
    ```
 
    Narrow changes — run the focused test file:
@@ -147,7 +156,7 @@ obws_init work || return 1
    ```bash
    obws_gate_detect_changes
    ```
-   Claude: call `gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch>"})`. Every changed symbol must fall within this issue's scope.
+   Claude: call `mcp__gitnexus__detect_changes({scope: "compare", base_ref: "<base-branch>"})`. Every changed symbol must fall within this issue's scope.
 
    Do not run integration tests without explicit user approval.
 
@@ -156,8 +165,12 @@ obws_init work || return 1
    Tick `- [x]` in tasks.md before calling `bd close` — `openspec-beads-complete`'s clean-state check reads this file.
 
    ```bash
-   TASK_REF=$(bd show <issue-id> --json | jq -r '.[].metadata.task_ref // empty')
-   obws_tick_task <change-id> "$TASK_REF"
+   # .[0] guards against empty-array or multi-row results.
+   TASK_REF=$(bd show <issue-id> --json | jq -r '.[0].metadata.task_ref // empty')
+   obws_tick_task "${_change_id}" "$TASK_REF" || {
+     echo "[obws] ERROR: tasks.md tick failed for $TASK_REF — fix tasks.md manually before closing" >&2
+     exit 1
+   }
    ```
 
    Stage the tasks.md change alongside the implementation files.
@@ -187,6 +200,6 @@ obws_init work || return 1
    ```
 
 **Non-obvious traps**
-- Never edit a symbol without running `gitnexus_context` + `gitnexus_impact` first (step 4)
+- Never edit a symbol without running `mcp__gitnexus__context` + `mcp__gitnexus__impact` first (step 4)
 - Checkbox tick is required for `openspec-beads-complete`'s clean-state check — skipping leaves tasks.md permanently stale
 - Use `OBWS_UNIT_TEST_CMD` env var for subdirectory tests, not `cd backend` inline

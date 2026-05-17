@@ -37,6 +37,7 @@ ruvector.db
 # Agent tooling (machine-local state, hardcoded paths, runtime sessions)
 .agents/
 .claude-flow/
+.swarm/
 
 # SQLite sidecars (*.db covers the main file, but not these)
 *.db-shm

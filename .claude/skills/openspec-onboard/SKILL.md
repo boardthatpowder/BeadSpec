@@ -5,11 +5,13 @@ license: MIT
 compatibility: Requires openspec CLI.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "1.1"
   generatedBy: "1.1.1"
 ---
 
 Guide the user through their first complete OpenSpec workflow cycle. This is a teaching experience—you'll do real work in their codebase while explaining each step.
+
+> **Note:** This onboarding covers the core OpenSpec artifact cycle. The full project workflow also includes Beads issue tracking, GitNexus impact analysis, and Ruflo memory. After completing this onboarding, read `docs/developers/openspec-beads-runbook.md` to learn how these systems integrate. In daily work, use the `openspec-*` skill family (`/openspec-new-change`, `/openspec-beads-import`, `/openspec-beads-work`, etc.) — do NOT mix with `opsx:*` aliases within the same change.
 
 ---
 
@@ -22,7 +24,7 @@ openspec status --json 2>&1 || echo "NOT_INITIALIZED"
 ```
 
 **If not initialized:**
-> OpenSpec isn't set up in this project yet. Run `openspec init` first, then come back to `/opsx:onboard`.
+> OpenSpec isn't set up in this project yet. Run `openspec init` first, then come back to `/openspec-onboard`.
 
 Stop here if not initialized.
 
@@ -56,7 +58,9 @@ Let's start by finding something to work on.
 
 ### Codebase Analysis
 
-Scan the codebase for small improvement opportunities. Look for:
+**Empty-repo fast-path:** If the repo has no `src/`, `backend/`, or `frontend/` directory (e.g., a fresh template clone), skip the scan below and jump directly to the "Fallback" section — ask the user what they'd like to build.
+
+For repos with source code, scan for small improvement opportunities:
 
 1. **TODO/FIXME comments** - Search for `TODO`, `FIXME`, `HACK`, `XXX` in code files
 2. **Missing error handling** - `catch` blocks that swallow errors, risky operations without try-catch
@@ -146,7 +150,7 @@ Spend 1-2 minutes investigating the relevant code:
 │   [Optional: ASCII diagram if helpful]  │
 └─────────────────────────────────────────┘
 
-Explore mode (`/opsx:explore`) is for this kind of thinking—investigating before implementing. You can use it anytime you need to think through a problem.
+Explore mode (`/openspec-explore`) is for this kind of thinking—investigating before implementing. You can use it anytime you need to think through a problem.
 
 Now let's create a change to hold our work.
 ```
@@ -235,11 +239,11 @@ Does this capture the intent? I can adjust before we save it.
 
 **PAUSE** - Wait for user approval/feedback.
 
-After approval, save the proposal:
+After approval, fetch the template using `openspec instructions`, then write the file yourself:
 ```bash
 openspec instructions proposal --change "<name>" --json
 ```
-Then write the content to `openspec/changes/<name>/proposal.md`.
+This command **prints the template instructions** — it does NOT save the file. Use the Write tool to create `openspec/changes/<name>/proposal.md` with the user-approved content (following the structure shown by the instructions output).
 
 ```
 Proposal saved. This is your "why" document—you can always come back and refine it as understanding evolves.
@@ -423,7 +427,7 @@ Archived changes become your project's decision history—you can always find th
 
 **DO:**
 ```bash
-openspec archive "<name>"
+openspec archive "<name>" -y
 ```
 
 **SHOW:**
@@ -459,19 +463,24 @@ This same rhythm works for any size change—a small fix or a major feature.
 
 | Command | What it does |
 |---------|--------------|
-| `/opsx:explore` | Think through problems before/during work |
-| `/opsx:new` | Start a new change, step through artifacts |
-| `/opsx:ff` | Fast-forward: create all artifacts at once |
-| `/opsx:continue` | Continue working on an existing change |
-| `/opsx:apply` | Implement tasks from a change |
-| `/opsx:verify` | Verify implementation matches artifacts |
-| `/opsx:archive` | Archive a completed change |
+| `/openspec-explore` | Think through problems before/during work |
+| `/openspec-new-change` | Start a new change, step through artifacts |
+| `/openspec-ff-change` | Fast-forward: create all artifacts at once |
+| `/openspec-continue-change` | Continue working on an existing change |
+| `/openspec-apply-change` | Implement tasks from a change |
+| `/openspec-verify-change` | Verify implementation matches artifacts |
+| `/openspec-archive-change` | Archive a completed change |
+| `/openspec-beads-import` | Import approved change into Beads issues |
+| `/openspec-beads-work` | Claim and implement one Beads issue |
+| `/openspec-beads-complete` | Complete a change: validate, close epic, archive |
 
 ---
 
 ## What's Next?
 
-Try `/opsx:new` or `/opsx:ff` on something you actually want to build. You've got the rhythm now!
+Try `/openspec-new-change` or `/openspec-ff-change` on something you actually want to build. You've got the rhythm now!
+
+For the full workflow with Beads tracking and GitNexus impact analysis, see `docs/developers/openspec-beads-runbook.md`.
 ```
 
 ---
@@ -486,8 +495,8 @@ If the user says they need to stop, want to pause, or seem disengaged:
 No problem! Your change is saved at `openspec/changes/<name>/`.
 
 To pick up where we left off later:
-- `/opsx:continue <name>` - Resume artifact creation
-- `/opsx:apply <name>` - Jump to implementation (if tasks exist)
+- `/openspec-continue-change <name>` - Resume artifact creation
+- `/openspec-apply-change <name>` - Jump to implementation (if tasks exist)
 
 The work won't be lost. Come back whenever you're ready.
 ```
@@ -503,15 +512,15 @@ If the user says they just want to see the commands or skip the tutorial:
 
 | Command | What it does |
 |---------|--------------|
-| `/opsx:explore` | Think through problems (no code changes) |
-| `/opsx:new <name>` | Start a new change, step by step |
-| `/opsx:ff <name>` | Fast-forward: all artifacts at once |
-| `/opsx:continue <name>` | Continue an existing change |
-| `/opsx:apply <name>` | Implement tasks |
-| `/opsx:verify <name>` | Verify implementation |
-| `/opsx:archive <name>` | Archive when done |
+| `/openspec-explore` | Think through problems (no code changes) |
+| `/openspec-new-change <name>` | Start a new change, step by step |
+| `/openspec-ff-change <name>` | Fast-forward: all artifacts at once |
+| `/openspec-continue-change <name>` | Continue an existing change |
+| `/openspec-apply-change <name>` | Implement tasks |
+| `/openspec-verify-change <name>` | Verify implementation |
+| `/openspec-archive-change <name>` | Archive when done |
 
-Try `/opsx:new` to start your first change, or `/opsx:ff` if you want to move fast.
+Try `/openspec-new-change` to start your first change, or `/openspec-ff-change` if you want to move fast.
 ```
 
 Exit gracefully.

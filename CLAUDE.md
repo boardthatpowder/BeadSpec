@@ -2,6 +2,15 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
+## Rules (NON-NEGOTIABLE)
+
+1. **TDD** — Write tests first. Integration tests with real dependencies preferred over mocks.
+2. **Preexisting issues** — If you encounter preexisting test failures, lint errors, type errors, or other issues unrelated to your current task, STOP and ask the user whether to fix them or ignore them. Do NOT silently skip over them.
+3. **Root cause, not symptom** — When fixing a bug, fix the root cause.
+4. **Correct over minimal** — Prefer correct, complete implementations over minimal ones.
+5. **No brute force** — Use appropriate data structures and algorithms; don't brute-force what has a known better solution.
+6. **Include implied requirements** — If something requested requires error handling or validation to work reliably, include it without asking.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 
 ## Beads Issue Tracker

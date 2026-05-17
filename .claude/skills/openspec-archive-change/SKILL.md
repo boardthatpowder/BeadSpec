@@ -20,7 +20,7 @@ Archive a completed change in the experimental workflow.
    Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
 
    Show only active changes (not already archived).
-   Include the schema used for each change if available.
+   Note: `openspec list --json` does not include a `schema` field per change. To get the schema, call `openspec status --change <name> --json` which returns `schemaName`.
 
    **IMPORTANT**: Do NOT guess or auto-select a change. Always let the user choose.
 
@@ -63,7 +63,7 @@ Archive a completed change in the experimental workflow.
    - If changes needed: "Sync now (recommended)", "Archive without syncing"
    - If already synced: "Archive now", "Sync anyway", "Cancel"
 
-   If user chooses sync, execute /opsx:sync logic (use the openspec-sync-specs skill). Proceed to archive regardless of choice.
+   If user chooses sync, invoke the `/openspec-sync-specs` skill. Proceed to archive regardless of choice.
 
 5. **Perform the archive**
 
@@ -78,8 +78,10 @@ Archive a completed change in the experimental workflow.
    - If yes: Fail with error, suggest renaming existing archive or using different date
    - If no: Move the change directory to archive
 
+   Use the `openspec archive` CLI instead of manual `mv` — it performs validation, spec sync, and the rename atomically:
    ```bash
-   mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
+   openspec archive "<name>" -y
+   # Add --skip-specs if sync was already handled, or --no-validate if validation was already run above.
    ```
 
 6. **Display summary**

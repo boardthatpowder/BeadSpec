@@ -28,13 +28,22 @@ obws_init complete || return 1
 
    Every required issue carries `openspec:<change-id>`. Pure follow-ups (priority=4) deliberately omit it.
 
+   First, extract the change ID from the current conversation context or `openspec list`.
+   Then derive the epic ID:
    ```bash
-   # Required, non-epic work that is not yet closed — must return zero rows
-   _open_count=$(bd query "label=openspec:<change-id> AND status!=closed AND (type=task OR type=bug)" \
-     --json | jq -r 'length // 0')
+   _change_id="<your-change-id>"
+   _epic_id=$(bd query "label=openspec:${_change_id} AND type=epic" --json | jq -r '.[0].id // empty')
+   [ -z "$_epic_id" ] && { echo "[complete] ERROR: no epic found for change ${_change_id}"; exit 1; }
+   ```
+
+   ```bash
+   # Required, non-epic work that is not yet closed — must return zero rows.
+   # --limit 0 avoids the default 50-row truncation for large changes.
+   _open_count=$(bd query "label=openspec:${_change_id} AND status!=closed AND (type=task OR type=bug)" \
+     --json --limit 0 | jq -r 'length // 0')
 
    # Human-readable tree of the whole change
-   bd children <epic-id> --pretty
+   bd children "$_epic_id" --pretty
    ```
 
    `_open_count` must be `0`. If rows remain: defer (`bd defer <id> --until=<date>`) or supersede (`bd supersede <id> --with=<new-id>`) before proceeding. Never close the epic over open required work.
@@ -60,7 +69,7 @@ obws_init complete || return 1
 
    ```bash
    obws_gate_unit_tests
-   obws_gate_guidance_gates "$(git diff main...HEAD)"
+   obws_gate_guidance_gates "$(git diff "$(obws_base_branch)"...HEAD)"
    obws_gate_lint --change <change-id>
    ```
 
@@ -68,13 +77,13 @@ obws_init complete || return 1
    ```bash
    obws_gate_detect_changes
    ```
-   Claude: call `gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch from obws_base_branch>"})` as instructed by the output. Unexpected symbols → investigate before archiving.
+   Claude: call `mcp__gitnexus__detect_changes({scope: "compare", base_ref: "<base-branch from obws_base_branch>"})` as instructed by the output. Unexpected symbols → investigate before archiving.
 
    For a machine-readable list of which execution processes were touched:
    ```bash
    obws_affected_processes <change-id>
    ```
-   Claude: call `gitnexus_cypher(...)` as printed by the output. Use the returned process names in the retrospective entry (step 6).
+   Claude: call `mcp__gitnexus__cypher(...)` as printed by the output. Use the returned process names in the retrospective entry (step 6).
 
    ```bash
    obws_gate_orphans <change-id>
@@ -87,11 +96,14 @@ obws_init complete || return 1
 5. **Close the epic**
 
    ```bash
-   _epic_id=$(bd query "label=openspec:<change-id> AND type=epic" --json | jq -r '.[0].id // empty')
-   bd epic close-eligible --dry-run --json
+   # _epic_id was already resolved in step 1; re-verify it is eligible:
+   bd epic close-eligible --dry-run --json | \
+     jq -e --arg id "$_epic_id" '.[] | select(.id == $id)' >/dev/null || {
+       echo "[complete] Epic ${_epic_id} not eligible — children still open:"
+       bd children "$_epic_id" --pretty
+       exit 1
+     }
    ```
-
-   The epic must appear in the output. If not, some children are still open — surface with `bd children <epic-id> --pretty`.
 
    ```bash
    bd close "$_epic_id" --reason="All required Beads issues closed; openspec validates (strict); unit tests pass; gitnexus detect_changes confirms scope."
@@ -99,12 +111,12 @@ obws_init complete || return 1
 
 6. **Write change retrospective to memory**
 
-   Use the process list from `obws_affected_processes` / `gitnexus_cypher` (step 4) as the "affected flows" section:
+   Use the process list from `obws_affected_processes` / `mcp__gitnexus__cypher` (step 4) as the "affected flows" section:
    ```bash
-   obws_mem_write "<change-id>" "" "retrospective" "archived" \
-     "Change <change-id> archived. Summary: <what shipped>. Affected flows: <process list from gitnexus_cypher>. What worked: <observations>. Surprises: <unexpected complexity or gaps>."
-   obws_mem_consolidate <change-id>
-   ruflo neural train --source memory --filter "openspec:<change-id>" 2>/dev/null || true
+   obws_mem_write "${_change_id}" "" "retrospective" "archived" \
+     "Change ${_change_id} archived. Summary: <what shipped>. Affected flows: <process list from mcp__gitnexus__cypher in step 4>. What worked: <observations>. Surprises: <unexpected complexity or gaps>."
+   obws_mem_consolidate "${_change_id}"
+   ruflo neural patterns 2>/dev/null || true
    ```
 
 7. **Archive the OpenSpec change**
@@ -127,12 +139,17 @@ obws_init complete || return 1
    ```bash
    git add <changed files>
    git commit -m "<summary of what shipped>"
-   obws_session_close "<change-id>" "$_epic_id"
-   # obws_session_close: bd dolt commit/push → git pull --rebase → git push (with retry)
-   # → git status → merge-slot release → optional gh:run CI gate
+   obws_session_close "${_change_id}" "$_epic_id"
+   # obws_session_close behaviour:
+   #   - bd dolt commit/push (skipped when no Dolt remote is configured)
+   #   - git push (skipped when no upstream is configured for the current branch)
+   #   - git status
+   #   - merge-slot release
+   #   - optional gh:run CI gate (only when GITHUB_RUN_ID is set)
    ```
 
-   `git status` output must show "up to date with origin". Work is NOT done until pushed.
+   If a git remote exists: `git status` output must show "up to date with origin". Work is NOT done until pushed.
+   If no remote yet: set up `origin` with `git remote add origin <url> && git push -u origin HEAD` first.
 
 **Non-obvious traps**
 - Merge-slot acquire/release must pair — if the session crashes between them, the slot hangs; run `bd merge-slot release` manually on next session

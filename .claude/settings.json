@@ -11,84 +11,6 @@
     "ruflo-swarm@ruflo": true
   },
   "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.sh",
-            "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-push.sh",
-            "type": "command"
-          },
-          {
-            "async": true,
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-analyze.sh",
-            "statusMessage": "Updating GitNexus index...",
-            "timeout": 300,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/eslint-fix.sh",
-            "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-edit.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "Edit|Write"
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "bd prime",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-mock-module.sh",
-            "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-any.sh",
-            "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tdd-nudge.sh",
-            "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-edit.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit"
-      },
-      {
-        "hooks": [
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-commit.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
@@ -128,6 +50,124 @@
           }
         ],
         "matcher": ""
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-agent-route.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Agent"
+      },
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-mock-module.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-any.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tdd-nudge.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-edit.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-impact-reminder.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-commit.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-commit-reminder.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.sh",
+            "timeout": 600,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-push.sh",
+            "type": "command"
+          },
+          {
+            "async": true,
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-analyze.sh",
+            "statusMessage": "Updating GitNexus index...",
+            "timeout": 300,
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/bd-tag-apply.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/eslint-fix.sh",
+            "type": "command"
+          },
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-edit.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write"
+      },
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-agent-outcome.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Agent"
+      },
+      {
+        "hooks": [
+          {
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-impact-ack.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "mcp__gitnexus__impact|mcp__gitnexus__detect_changes"
       }
     ],
     "Stop": [

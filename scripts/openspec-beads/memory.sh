@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # scripts/openspec-beads/memory.sh
 # Single owner of the canonical ruflo memory key schema for openspec-beads.
 # Source this file; do not execute it directly.
@@ -66,8 +66,9 @@ obws_mem_write() {
   fi
 }
 
-# Probe whether ruflo memory search supports --mode hybrid without making a real query.
-# Uses `--help` output inspection to avoid polluting the memory store with probe queries.
+# Probe whether ruflo memory search supports --mode hybrid + --rerank mmr.
+# `ruflo memory search --help` does not print real flag help in current ruflo builds —
+# instead we issue a real no-op search with the flags and check the exit code.
 # Result is cached in _OBWS_MEM_ENHANCED for the shell session lifetime.
 _obws_probe_mem_flags() {
   if [ "${_OBWS_MEM_ENHANCED+set}" = set ]; then
@@ -75,11 +76,7 @@ _obws_probe_mem_flags() {
   fi
   _OBWS_MEM_ENHANCED=0
   if command -v ruflo > /dev/null 2>&1; then
-    # Check for --mode flag by running a deliberately wrong query and inspecting error message.
-    # This avoids inserting a real memory entry just to probe capability.
-    local probe_err
-    probe_err=$(ruflo memory search 2>&1 || true)
-    if printf '%s' "$probe_err" | grep -q "mode\|hybrid"; then
+    if ruflo memory search -q "__obws_probe__" --mode hybrid --rerank mmr >/dev/null 2>&1; then
       _OBWS_MEM_ENHANCED=1
     fi
   fi
@@ -162,10 +159,16 @@ obws_mem_write_trajectory() {
     return 1
   fi
 
-  local title desc files commit body
-  title=$(bd show "$issue_id" --json 2>/dev/null | jq -r '.[].title // empty' 2>/dev/null)
-  desc=$(bd show "$issue_id" --json 2>/dev/null | jq -r '.[].description // empty' 2>/dev/null | head -5)
-  files=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+  local title desc files commit body _issue_json
+  _issue_json=$(bd show "$issue_id" --json 2>/dev/null)
+  title=$(printf '%s' "$_issue_json" | jq -r '.[0].title // empty' 2>/dev/null)
+  desc=$(printf '%s' "$_issue_json" | jq -r '.[0].description // empty' 2>/dev/null | head -5)
+  # HEAD~1 does not exist on the initial commit; fall back to listing files in the first commit.
+  if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+    files=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+  else
+    files=$(git show --name-only --pretty=format: HEAD 2>/dev/null | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
+  fi
   commit=$(git rev-parse HEAD 2>/dev/null)
 
   body="# ${title}

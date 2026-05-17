@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # scripts/openspec-beads/gates.sh
 # Quality-gate wrappers for the openspec-beads skill suite.
 # Source this file; do not execute it directly.
@@ -11,8 +11,8 @@
 #   obws_gate_lint [--change <id>]           bd lint scoped to a change label or parent epic
 #   obws_gate_orphans [<change-id>]          bd orphans --details; advisory
 #   obws_gate_guidance_gates [<diff>]        ruflo guidance gates; aborts on policy violation
-#   obws_affected_processes <change-id>      prints gitnexus_cypher MCP instruction with changed files
-#   obws_validate_main_specs                 validates all main capability specs via openspec spec list
+#   obws_affected_processes <change-id>      prints mcp__gitnexus__cypher MCP instruction with changed files
+#   obws_validate_main_specs                 validates all main capability specs via openspec list --specs
 #
 # GitNexus gates (MCP tool calls — {} syntax; see NOTE below):
 #   obws_gate_impact <symbol>           prints MCP instruction + CLI fallback
@@ -59,8 +59,10 @@ obws_gate_validate() {
     return 1
   fi
 
-  # Also check for 'valid: false' in JSON output even when exit code is 0.
-  if printf '%s' "$output" | grep -qE '"valid"[[:space:]]*:[[:space:]]*false'; then
+  # Also check for valid:false in items[] even when exit code is 0.
+  # openspec validate --json shape: {items:[{valid:bool,...}], summary, version}
+  # Root has no .valid field; iterate items[].valid.
+  if printf '%s' "$output" | jq -e '[.items[]?.valid] | all | not' > /dev/null 2>&1; then
     echo "[obws] ERROR: openspec validate returned valid:false for '${change_id}'." >&2
     return 1
   fi
@@ -106,9 +108,10 @@ obws_gate_preflight() {
     local skip_nongo="${OBWS_SKIP_NONGO_PREFLIGHT:-1}"
     local filter
     if [ "$skip_nongo" = "1" ]; then
-      # Skip checks whose command references go-toolchain binaries
+      # Skip checks whose command OR name references go-toolchain binaries.
+      # Coerce missing fields to "" so the test() never receives null (which would skip the suppression).
       filter='.checks[] | select(.passed==false and (.skipped//false)==false)
-        | select(.command? | test("golangci-lint|gofmt|go test|version\\.go|go\\.sum"; "i") | not)
+        | select(((.command // .name // "")) | test("golangci-lint|gofmt|go test|version\\.go|go\\.sum"; "i") | not)
         | "  [FAIL] \(.name): \(.output // .command // "no detail")"'
     else
       filter='.checks[] | select(.passed==false and (.skipped//false)==false)
@@ -211,13 +214,12 @@ obws_gate_orphans() {
   return 0  # advisory; callers decide whether to hard-stop
 }
 
-# B6 FIX: original code piped content AND passed it via -c, causing double-feed and
-# ARG_MAX issues with large diffs (>256 KB on macOS).
-# Fix: write to a tempfile and pass via -c; never pipe.
-#
 # Ruflo guidance gates: check that staged changes comply with CLAUDE.md policy rules.
 # Usage: obws_gate_guidance_gates [<content-to-check>]
 # Falls back gracefully if ruflo guidance compile has not been run.
+#
+# NOTE: ruflo guidance gates only accepts -c <content> (no stdin, no file flag).
+# macOS ARG_MAX is ~256 KB; skip rather than overflow when content exceeds 200 KB.
 obws_gate_guidance_gates() {
   local content="${1:-$(git diff --cached 2>/dev/null)}"
   if ! command -v ruflo > /dev/null 2>&1; then
@@ -225,27 +227,27 @@ obws_gate_guidance_gates() {
     return 0
   fi
   # Verify guidance compile has been run (produce a helpful error if not).
-  if ! ruflo guidance status 2>/dev/null | grep -qE '"compiled"[[:space:]]*:[[:space:]]*true|status.*compiled|policy.*loaded'; then
+  if ! ruflo guidance status 2>/dev/null | grep -qE 'Constitution rules:[[:space:]]+[0-9]|Hash:[[:space:]]+[a-f0-9]{8,}'; then
     echo "[obws] WARN: ruflo guidance not compiled — run \`ruflo guidance compile\` once to enable pre-commit policy gates. Skipping." >&2
     return 0
   fi
+
+  # Guard: skip when content exceeds the safe ARG_MAX threshold.
+  local content_size
+  content_size=$(printf '%s' "$content" | wc -c | tr -d '[:space:]')
+  if [ "${content_size:-0}" -gt 200000 ]; then
+    echo "[obws] WARN: diff too large (${content_size} bytes > 200 KB); skipping guidance gates to avoid ARG_MAX overflow." >&2
+    return 0
+  fi
+
   echo "[obws] Running ruflo guidance gates (CLAUDE.md policy check)..." >&2
 
-  # Write content to a tempfile to avoid ARG_MAX limit (~256 KB on macOS).
-  local tmpfile
-  tmpfile=$(mktemp 2>/dev/null) || {
-    echo "[obws] WARN: mktemp failed; skipping guidance gates" >&2
-    return 0
-  }
-  printf '%s' "$content" > "$tmpfile"
-
   local gate_out exit_code
-  if gate_out=$(ruflo guidance gates -c "$(cat "$tmpfile")" 2>&1); then
+  if gate_out=$(ruflo guidance gates -c "$content" 2>&1); then
     exit_code=0
   else
     exit_code=$?
   fi
-  rm -f "$tmpfile"
 
   printf '%s\n' "$gate_out"
   if [ "$exit_code" -ne 0 ]; then
@@ -269,16 +271,16 @@ obws_gate_impact() {
   fi
   cat <<INSTRUCTION
 [obws:impact-gate] Claude: before editing '${symbol}', call the GitNexus impact MCP tool:
-  gitnexus_impact({target: "${symbol}", direction: "upstream", maxDepth: 3})
+  mcp__gitnexus__impact({target: "${symbol}", direction: "upstream", maxDepth: 3})
 Rules (from CLAUDE.md):
   - If riskLevel == HIGH or CRITICAL → halt and present blast radius to user; require explicit confirmation
   - If riskLevel == LOW or MEDIUM    → proceed; note the affected callers in the issue notes
-For HIGH/CRITICAL: also call gitnexus_context({name: "${symbol}"}) to surface callers, callees, and process membership.
+For HIGH/CRITICAL: also call mcp__gitnexus__context({name: "${symbol}"}) to surface callers, callees, and process membership.
 CLI fallback (when MCP unavailable): gitnexus impact ${symbol} --upstream --depth 3
 INSTRUCTION
 }
 
-# Print the gitnexus_cypher MCP instruction to identify execution processes touched by this change.
+# Print the mcp__gitnexus__cypher MCP instruction to identify execution processes touched by this change.
 # Used at completion time to populate the retrospective entry with deterministic process names.
 # Usage: obws_affected_processes <change-id>
 obws_affected_processes() {
@@ -298,7 +300,7 @@ obws_affected_processes() {
   changed_files=$(git diff --name-only "${base_ref}...HEAD" 2>/dev/null | jq -Rsc 'split("\n") | map(select(length>0))' 2>/dev/null || echo '[]')
   cat <<INSTRUCTION
 [obws:affected-processes] Claude: call the GitNexus cypher MCP tool to list execution processes touched by this change:
-  gitnexus_cypher({
+  mcp__gitnexus__cypher({
     query: "MATCH (f:Function)-[:STEP_IN_PROCESS]->(p:Process) WHERE f.filePath IN \$changedFiles RETURN DISTINCT p.name",
     params: {changedFiles: ${changed_files}}
   })
@@ -312,17 +314,24 @@ INSTRUCTION
 obws_validate_main_specs() {
   echo "[obws] Validating main capability specs..." >&2
   local spec_ids any_fail=0
-  spec_ids=$(openspec spec list --json 2>/dev/null | jq -r '.[].id // .[].name' 2>/dev/null)
+  # Use non-deprecated `openspec list --specs --json` (schema: {specs: [{id,...}]})
+  # instead of the deprecated `openspec spec list`.
+  # When no specs exist the CLI prints "No specs found." (non-JSON); jq ignores that gracefully.
+  # Use per-element .id // .name (not root-level //) so each item uses its own fallback.
+  spec_ids=$(openspec list --specs --json 2>/dev/null | jq -r '.specs[]? | (.id // .name)' 2>/dev/null)
   if [ -z "$spec_ids" ]; then
-    echo "[obws] WARN: openspec spec list returned no specs; skipping main spec validation" >&2
+    echo "[obws] WARN: openspec list --specs returned no specs; skipping main spec validation" >&2
     return 0
   fi
   local sid result
   for sid in $spec_ids; do
-    result=$(openspec spec validate "$sid" --json --no-interactive 2>/dev/null)
-    if printf '%s' "$result" | jq -e '.valid == false' > /dev/null 2>&1; then
+    # Use non-deprecated `openspec validate --type spec --strict` (mirrors change-side policy).
+    # openspec validate --json returns {items:[{valid:bool,issues:[{message}]}], summary, version}
+    # Root has no .valid field — check .items[].valid instead.
+    result=$(openspec validate "$sid" --type spec --json --no-interactive --strict 2>/dev/null)
+    if printf '%s' "$result" | jq -e '[.items[]?.valid] | all | not' > /dev/null 2>&1; then
       local msg
-      msg=$(printf '%s' "$result" | jq -r '.errors[0].message // "unknown error"' 2>/dev/null)
+      msg=$(printf '%s' "$result" | jq -r '.items[0].issues[0].message // "unknown error"' 2>/dev/null)
       echo "[obws] SPEC FAIL: ${sid}: ${msg}" >&2
       any_fail=1
     fi
@@ -345,19 +354,45 @@ obws_session_close() {
     echo "[obws] ERROR: obws_session_close requires a change-id" >&2
     return 1
   fi
-  bd dolt commit -m "archive: ${change_id}" 2>/dev/null || true
-  bd dolt push || echo "[obws] WARN: bd dolt push failed"
-  git pull --rebase
-  git push || { git pull --rebase && git push; }
+  bd dolt commit -m "archive: ${change_id}" || echo "[obws] WARN: bd dolt commit failed; Beads change history may be incomplete"
+
+  # Push Beads only if a Dolt remote is configured. `bd dolt remote list` is non-empty when one exists.
+  if bd dolt remote list 2>/dev/null | grep -qE '[a-zA-Z0-9]'; then
+    if ! bd dolt push 2>&1; then
+      echo "[obws] ERROR: bd dolt push failed — Beads state is not synced to remote. Resolve before proceeding." >&2
+      return 1
+    fi
+  else
+    echo "[obws] No Dolt remote configured — skipping bd dolt push (local-only mode)." >&2
+  fi
+
+  # Push git only if an upstream is configured for the current branch.
+  if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    git pull --rebase
+    git push || { git pull --rebase && git push; } || {
+      echo "[obws] ERROR: git push failed twice — resolve conflicts and push manually before continuing." >&2
+      return 1
+    }
+  else
+    echo "[obws] No git upstream configured for $(git rev-parse --abbrev-ref HEAD) — skipping git push (set upstream with 'git push -u origin HEAD' once a remote exists)." >&2
+  fi
+
   git status
   bd merge-slot release --holder "openspec:${change_id}" 2>/dev/null || true
-  if [ -n "$epic_id" ]; then
-    bd gate create --type=gh:run --issue="$epic_id" 2>/dev/null || true
+  if [ -n "$epic_id" ] && [ -n "${GITHUB_RUN_ID:-}" ]; then
+    # Registers a gh:run gate on the epic so CI status is visible in bd show.
+    # Skipped unless GITHUB_RUN_ID is set, since an unresolvable gate stays open forever.
+    bd gate create --type=gh:run --blocks="$epic_id" --await-id "$GITHUB_RUN_ID" 2>/dev/null || true
   fi
 }
 
+# NOTE: bd ready --json returns an ARRAY []; bd ready --explain --json returns an OBJECT
+# {ready, blocked, summary, schema_version}. These two shapes must not be mixed in jq pipelines:
+# - skills that parse the list for parallelism use plain `bd ready --json` (array)
+# - skills that display the output use `bd ready --explain --json` (object, just display it)
+
 # GitNexus detect-changes gate.
-# The agent MUST call gitnexus_detect_changes() to verify symbol scope before closing.
+# The agent MUST call mcp__gitnexus__detect_changes() to verify symbol scope before closing.
 obws_gate_detect_changes() {
   # Resolve base branch via branch.sh (handles origin/HEAD missing + fallback chain).
   local base_ref repo_root
@@ -372,7 +407,7 @@ obws_gate_detect_changes() {
   fi
   cat <<INSTRUCTION
 [obws:detect-gate] Claude: call the GitNexus detect_changes MCP tool to verify scope:
-  gitnexus_detect_changes({scope: "compare", base_ref: "${base_ref}"})
+  mcp__gitnexus__detect_changes({scope: "compare", base_ref: "${base_ref}"})
 Rules:
   - Every changed symbol must be within the OpenSpec change's stated scope
   - Unexpected symbols → investigate root cause before closing/archiving

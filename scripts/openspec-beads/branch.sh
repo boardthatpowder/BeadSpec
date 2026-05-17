@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # scripts/openspec-beads/branch.sh
 # Resolves the integration base branch for this repository.
 # Source this file; do not execute it directly.

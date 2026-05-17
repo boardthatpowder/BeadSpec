@@ -13,7 +13,7 @@ Resume a paused issue or repair a partial import, then continue with `openspec-b
 
 Use when an issue has `Paused:` notes (set by `openspec-beads-scope-change`), or when a previous `openspec-beads-import` was interrupted. For blocked (not paused) issues, use `bd show` to understand the blocker and resolve it, then claim normally.
 
-**Input**: A Beads issue ID (paused issues) or an OpenSpec change ID (partial import recovery). If omitted, run `bd list --status=in_progress` and look for `Paused:` notes.
+**Input**: A Beads issue ID (paused issues) or an OpenSpec change ID (partial import recovery). If omitted, query by the structured `openspec:paused` label (more reliable than scanning notes).
 
 **Setup**
 
@@ -30,10 +30,15 @@ obws_init resume || return 1
    bd dolt pull || echo "[resume] WARN: bd dolt pull failed; continuing with local state"
    ```
 
-   If no issue ID was provided, use the structured state label (faster and queryable):
+   If no issue ID was provided, query by the `openspec:paused` label. If that returns nothing (empty or no output), fall back to in-progress status:
    ```bash
-   bd list --label "openspec:paused" --json 2>/dev/null | jq -r '.[] | "\(.id) \(.title)"' || \
+   _paused_out=$(bd list --label "openspec:paused" --json 2>/dev/null | jq -r '.[] | "\(.id) \(.title)"' 2>/dev/null)
+   if [ -z "$_paused_out" ]; then
+     echo "[resume] No paused issues found by label; showing in-progress:"
      bd list --status=in_progress
+   else
+     printf '%s\n' "$_paused_out"
+   fi
    bd show <issue-id>
    ```
 
@@ -66,11 +71,27 @@ obws_init resume || return 1
    ```
    `obws_import_graph` is idempotent — safe to re-run on an already-complete import.
 
-5. **Re-claim the issue**
+5. **Verify worktree match, then re-claim the issue**
 
+   Confirm the issue's `worktree:*` label matches the current context before claiming.
+   `bd show --json` returns an array root — use `.[0]` to access the first element:
    ```bash
+   _issue_worktree=$(bd show <issue-id> --json 2>/dev/null | jq -r '.[0].labels[]? | select(startswith("worktree:"))' 2>/dev/null | head -1)
+   # Re-use $OBWS_WORKTREE_LABEL set by obws_init above (avoids duplicate prefix resolution)
+   _current_worktree="${OBWS_WORKTREE_LABEL}"
+   if [ -n "$_issue_worktree" ] && [ "$_issue_worktree" != "$_current_worktree" ]; then
+     echo "[resume] ERROR: issue is tagged '${_issue_worktree}' but current worktree is '${_current_worktree}'." >&2
+     echo "[resume] Switch to the correct worktree or use 'bd update <issue-id> --label' to retag if the worktree was renamed." >&2
+     exit 1
+   fi
+   # Resolve any open human gates that may have been created by openspec-beads-scope-change:
+   _open_gates=$(bd gate list --json 2>/dev/null | jq -r --arg id "<issue-id>" '.[] | select(.blocks == $id and .status == "open") | .id' 2>/dev/null)
+   for _gate_id in $_open_gates; do
+     bd gate resolve "$_gate_id" 2>/dev/null || echo "[resume] WARN: could not resolve gate ${_gate_id} — check manually"
+   done
    obws_assert_claimable <issue-id> || exit 1   # aborts if held by another user
    bd update <issue-id> --claim
+   bd update <issue-id> --remove-label "openspec:paused"
    bd update <issue-id> --append-notes="Resumed: <brief reason resume is safe — spec validated, blockers resolved>."
    ```
 
@@ -82,4 +103,5 @@ obws_init resume || return 1
 - Never skip step 3 (`obws_gate_validate`) — the spec may have changed during the pause
 - Do NOT call `openspec-beads-sync` before this skill — that's a different session-start ritual
 - `obws_import_graph` on a partial import fills gaps; calling it on a complete import is a no-op
-- If the issue's `branch:*` label doesn't match the current worktree (check via `ruflo_key_prefix`), run `bd worktree list` to confirm you're in the right context before claiming
+- If the issue's `worktree:*` label doesn't match the current context, the worktree-guard above halts with a clear error — switch worktrees rather than bypassing the guard
+- If `openspec-beads-scope-change` was previously invoked, open human gates must be resolved before the issue re-enters `bd ready`; the gate-resolution step above handles this automatically

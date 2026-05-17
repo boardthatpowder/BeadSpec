@@ -41,13 +41,16 @@ obws_init import || return 1
 
    Extract all section headers and task items (`- [ ] N.M description`). **MANDATORY 1:1 rule:** every `- [ ] N.M` checkbox becomes exactly one Beads node — never group multiple checkboxes into one issue. The per-task `metadata.task_ref` (e.g. `"1.3"`) must match the exact N.M from the checkbox — this is how `openspec-beads-work` ticks it on close.
 
+   **Task-ref format:** `obws_tick_task` handles any task_ref string via regex escaping. Two-level (`1.3`) and three-level (`1.3.1`) refs both work provided tasks.md uses them consistently. Ensure each `- [ ] N.M` or `- [ ] N.M.P` prefix is unique within the file.
+
 3. **Build the dependency graph (cognitive step)**
 
    For each task, look for: explicit task references ("the repo from 2.1"), named artifact references (task B names a function task A creates), and logical chains within a section.
 
-   Enrich with GitNexus execution-flow data for any capability name or service mentioned in a task (MCP tool call — `{}` syntax):
+   Enrich with GitNexus execution-flow data for any capability name or service mentioned in a task (MCP tool call — `{}` syntax).
+   Note: The `mcp__gitnexus__query` tool accepts a `query` string param for natural-language or concept lookups:
    ```
-   gitnexus_query({query: "<capability or service name from task>"})
+   mcp__gitnexus__query({query: "<capability or service name from task>"})
    ```
    If tasks A and B both appear in the same process, infer a dependency edge. Report the inferred edges and reasoning to the user.
 
@@ -119,6 +122,8 @@ obws_init import || return 1
 
    ```bash
    bd children <epic-id> --pretty
+   # NOTE: bd ready --explain --json returns an OBJECT {ready,blocked,summary,schema_version}
+   # NOT an array — display only, do not pipe to jq '.[]'
    bd ready --explain --json
    bd graph --html <epic-id> > /tmp/<change-id>.html 2>/dev/null && \
      echo "[import] Dep graph written to /tmp/<change-id>.html (open in browser to verify)" || true
@@ -126,14 +131,14 @@ obws_init import || return 1
 
    Report: epic ID and child count, dependency graph summary, current `bd ready` output.
 
-8. **Register as swarm molecule** (optional)
+8. **Register as swarm molecule** (optional — verification step)
 
+   `obws_import_graph` already calls `bd swarm create <epic-id>` internally. This step is a verification-only check:
    ```bash
-   bd swarm create <epic-id>
    bd swarm list | head -5
    ```
 
-   Passive label/structure primitive — enables `bd ready --mol <epic-id>` for scope-filtered ready work. **Not** `ruflo swarm init`. Does not spawn agents or coordinate work.
+   If the epic does not appear, run `bd swarm create <epic-id>` manually. Passive label/structure primitive — enables `bd ready --mol <epic-id>` for scope-filtered ready work. **Not** `ruflo swarm init`. Does not spawn agents or coordinate work.
 
 **Non-obvious traps**
 - `obws_gate_validate <change-id> strict` is required at import — strict failures caught here avoid a harder stop at archive
@@ -146,12 +151,12 @@ obws_init import || return 1
 After import completes, immediately spawn concurrent agents for ALL ready tasks — never start one at a time.
 
 ```bash
-READY=$(bd ready --mol <epic-id> --json --limit 20 | jq '[.[] | select(.issue_type != "epic")] | [{id: .id, title: .title}]')
+READY=$(bd ready --mol <epic-id> --json --limit 20 | jq '[.[] | select(.issue_type != "epic") | {id, title}]')
 echo "$READY"
 ```
 
 **Spawn rule:**
-- ≥ 2 ready tasks → send ONE message with multiple `Agent({subagent_type: "claude", prompt: "Run openspec-beads-work <id>..."})` tool calls. All in one message = true concurrency.
+- ≥ 2 ready tasks → the `ruflo-agent-route.sh` PreToolUse hook writes a model-tier advisory to stderr on each Agent spawn. Use those advisories (haiku/sonnet/opus) to set the `model` parameter. Then send ONE message with multiple `Agent({subagent_type: "claude", model: "<haiku|sonnet|opus>", prompt: "Run openspec-beads-work <id>..."})` tool calls. All in one message = true concurrency.
 - Each agent is self-contained: it reads OpenSpec, claims, implements, validates, closes.
 - Tasks that share a file (e.g., two tasks both modifying `tasks.md` tick) serialize naturally via Beads claim — the second agent will find the first task still in_progress and skip it.
 
