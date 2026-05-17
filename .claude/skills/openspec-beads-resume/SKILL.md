@@ -5,32 +5,21 @@ license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "1.2"
   generatedBy: "1.1.1"
 ---
 
 Resume a paused issue or repair a partial import, then continue with `openspec-beads-work`.
 
-**When to use this skill:**
-- An issue has notes containing `Paused:` (set by `openspec-beads-scope-change`)
-- A previous `openspec-beads-import` was interrupted (partial graph, some issues missing)
-- You are starting a new session and want to pick up paused work cleanly
+Use when an issue has `Paused:` notes (set by `openspec-beads-scope-change`), or when a previous `openspec-beads-import` was interrupted. For blocked (not paused) issues, use `bd show` to understand the blocker and resolve it, then claim normally.
 
-**When NOT to use this skill:**
-- The issue is blocked (not paused) — use `bd show` to understand the blocker, resolve it, then claim normally
-- You are starting fresh work — use `openspec-beads-work` directly
+**Input**: A Beads issue ID (paused issues) or an OpenSpec change ID (partial import recovery). If omitted, run `bd list --status=in_progress` and look for `Paused:` notes.
 
-**Input**: A Beads issue ID (for paused issues) or an OpenSpec change ID (for partial import recovery). If omitted, run `bd list --status=in_progress` and look for `Paused:` notes.
-
-**Setup** — source the helper library:
+**Setup**
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/memory.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/graph.sh"
-obws_resolve_prefix
+. "$(git rev-parse --show-toplevel)/scripts/openspec-beads/init.sh"
+obws_init resume || return 1
 ```
 
 **Steps**
@@ -41,78 +30,56 @@ obws_resolve_prefix
    bd dolt pull || echo "[resume] WARN: bd dolt pull failed; continuing with local state"
    ```
 
-   If no issue ID was provided:
+   If no issue ID was provided, use the structured state label (faster and queryable):
    ```bash
-   bd list --status=in_progress
-   # Look for issues with notes containing "Paused:"
-   ```
-
-   ```bash
+   bd list --label "openspec:paused" --json 2>/dev/null | jq -r '.[] | "\(.id) \(.title)"' || \
+     bd list --status=in_progress
    bd show <issue-id>
    ```
 
-   Extract from the issue:
-   - The OpenSpec change ID (from the `openspec:<change-id>` label or description)
-   - The pause reason (from the `notes` field)
-   - Whether this is a scope-change pause or an interrupted import
+   Extract: the OpenSpec change ID (from `openspec:<change-id>` label), the pause reason (from `notes`), and whether this is a scope-change pause or interrupted import.
 
 2. **Recover pause context from memory**
 
    ```bash
    obws_mem_search_issue <issue-id>
    obws_mem_search_change <change-id>
+   bd history <issue-id> --limit 10
    ```
 
-   Surface the pause reason and any prior trajectory entries. Report to the user what context
-   was found before continuing.
+   Report to the user what context was found before continuing. If no memory entries AND no history, ask the user for the pause reason rather than assuming it from Beads notes alone.
 
-3. **Re-validate the change**
+3. **Re-validate the change** (non-strict — spec may still be in-flight)
 
    ```bash
-   obws_gate_validate <change-id>
+   obws_gate_validate <change-id>   # non-strict: spec may still be in draft state mid-flow
    ```
 
-   If validation fails, the spec was left in a broken state from the prior scope-change. Stop
-   and invoke **openspec-continue-change** or **openspec-sync-specs** to repair the spec before
-   resuming implementation.
+   If validation fails, the spec was left broken by the prior scope-change. Stop and invoke **openspec-continue-change** or **openspec-sync-specs** to repair the spec before resuming.
 
 4. **Repair partial imports (if applicable)**
 
-   If the pause was caused by an interrupted import (not a scope-change pause), re-run the
-   graph import in dedup mode — it is a no-op for already-created issues:
-
+   If the pause was caused by an interrupted import:
    ```bash
    obws_import_graph <change-id>
-   ```
-
-   Verify the resulting graph is complete:
-   ```bash
    bd children <epic-id> --pretty
    ```
-
-   Confirm that all expected tasks are present and labeled.
+   `obws_import_graph` is idempotent — safe to re-run on an already-complete import.
 
 5. **Re-claim the issue**
 
-   If the issue is still claimed by you, proceed. If the claim expired or was released:
    ```bash
+   obws_assert_claimable <issue-id> || exit 1   # aborts if held by another user
    bd update <issue-id> --claim
-   ```
-
-   Clear the `Paused:` notes now that you are resuming (replace with a resume note):
-   ```bash
-   bd update <issue-id> --notes="Resumed: <brief reason resume is safe — spec validated, blockers resolved>."
+   bd update <issue-id> --append-notes="Resumed: <brief reason resume is safe — spec validated, blockers resolved>."
    ```
 
 6. **Hand off to openspec-beads-work**
 
-   You are now ready to continue implementation. All context has been recovered.
+   > Invoke: **openspec-beads-work** with `<issue-id>`. Skip step 1 (`bd ready`) and step 2 (claim — already done above). Start at step 3 (re-read OpenSpec source).
 
-   > Invoke: **openspec-beads-work** with `<issue-id>`, starting at step 3 (re-read OpenSpec)
-     since steps 1–2 (refresh + claim) have already been completed here.
-
-**Guardrails**
-- Never skip step 3 (`obws_gate_validate`) — the spec may have changed between pause and resume
-- Never re-claim an issue that is still actively claimed by another session — check `bd show` for the assignee
-- If memory returns no context for the pause reason, ask the user before resuming (the pause may have been caused by an unresolved decision)
-- For partial imports, `obws_import_graph` is idempotent — calling it on an already-complete import is a no-op; calling it on a partial import fills in the gaps
+**Non-obvious traps**
+- Never skip step 3 (`obws_gate_validate`) — the spec may have changed during the pause
+- Do NOT call `openspec-beads-sync` before this skill — that's a different session-start ritual
+- `obws_import_graph` on a partial import fills gaps; calling it on a complete import is a no-op
+- If the issue's `branch:*` label doesn't match the current worktree (check via `ruflo_key_prefix`), run `bd worktree list` to confirm you're in the right context before claiming

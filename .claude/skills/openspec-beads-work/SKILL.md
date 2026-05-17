@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "1.2"
   generatedBy: "1.1.1"
 ---
 
@@ -13,17 +13,33 @@ Work one Beads issue from claim to completion.
 
 **Source-of-truth rule:** OpenSpec owns the spec. Beads owns the task graph. All scope decisions defer to OpenSpec artifacts. If scope is unclear, re-read the spec — do not invent behavior.
 
+**(MCP-tool blocks use `{}` syntax; shell blocks use `$`.)**
+
 **Input**: A Beads issue ID. If omitted, run `bd ready` and pick the top-ranked issue.
 
-**Setup** — source the helper library once:
+## Parallelism rule (MANDATORY)
+
+After closing this issue, always check how many tasks are now ready and spawn concurrent agents:
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/memory.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/branch.sh"
-obws_resolve_prefix
+bd ready --mol <epic-id> --json --limit 20 | jq '[.[] | select(.issue_type != "epic")] | length'
+```
+
+**If ≥ 2 ready tasks exist after closing:** spawn one `Agent` per task in a single message (all tool calls in one response), each running `openspec-beads-work <issue-id>`.
+
+**Parallelism decision rule** (from `ruflo-swarm-dispatch`):
+- **Independent tasks** (different file paths, no shared state) → built-in `Agent` tool, parallel calls. This is the default.
+- **Tasks editing overlapping files or requiring consensus** → `ruflo swarm` escalation.
+- **Single remaining task** → continue sequentially in the current conversation.
+
+Never grind tasks one-at-a-time when `bd ready` shows a group with multiple entries. Parallelism = the group size shown by `bd ready --mol <epic-id>`.
+
+**Setup**
+
+```bash
+. "$(git rev-parse --show-toplevel)/scripts/openspec-beads/init.sh"
+obws_init work || return 1
+. "$(git rev-parse --show-toplevel)/scripts/openspec-beads/tasks.sh"
 ```
 
 **Steps**
@@ -41,136 +57,136 @@ obws_resolve_prefix
 
    ```bash
    bd show <issue-id>
+   obws_assert_claimable <issue-id> || exit 1   # aborts if held by another user
    bd update <issue-id> --claim
    ```
 
-   From the issue description, extract:
-   - The OpenSpec change path (e.g., `openspec/changes/add-account-health-summary/`)
-   - The original task wording
-   - Acceptance criteria
-   - Expected validation command
-   - Likely file/module boundary
+   From the issue, extract: the OpenSpec change path, the original task wording, acceptance criteria, the validation command, and the likely file/module boundary.
 
-   Surface past memory for this change and issue (if ruflo is installed):
+   Surface past memory for this change and issue:
    ```bash
    obws_mem_search_change <change-id> | head -20
    obws_mem_search_issue <issue-id> | head -20
-   ruflo intelligence suggest --context "$(bd show <issue-id> --format title 2>/dev/null)" 2>/dev/null | head -10 || true
    ```
 
-3. **Re-read the OpenSpec source**
+3. **Re-read the OpenSpec source + surface task-relevant CLAUDE.md guidance**
 
-   Read the referenced OpenSpec artifacts before touching any code:
-   - `openspec/changes/<change-id>/proposal.md` — scope and requirements
-   - `openspec/changes/<change-id>/design.md` — architecture decisions
-   - `openspec/changes/<change-id>/tasks.md` — task context and neighboring tasks
-   - Any capability spec file referenced in the issue description
+   Read OpenSpec artifacts before touching any code. Focused acceptance-criteria view:
+   ```bash
+   openspec show <change-id> --type=change --requirements --no-scenarios --json 2>/dev/null || {
+     openspec show <change-id> --type=change --json 2>/dev/null || {
+       cat openspec/changes/<change-id>/proposal.md
+       cat openspec/changes/<change-id>/design.md
+       cat openspec/changes/<change-id>/tasks.md
+     }
+   }
+   ```
 
-   State a short plan before editing:
+   Fetch task-relevant policy shards (requires prior `ruflo guidance compile`):
+   ```bash
+   _issue_title=$(bd show <issue-id> --json | jq -r '.[].title' 2>/dev/null)
+   if ruflo guidance status 2>/dev/null | grep -q 'compiled\|policy'; then
+     ruflo guidance retrieve --task "$_issue_title" 2>/dev/null || true
+   else
+     cat CLAUDE.md 2>/dev/null || true
+   fi
    ```
-   Plan:
-   1. <what you will implement>
-   2. <where it lives (file paths)>
-   3. <what tests you will write or update>
-   4. <validation command>
-   5. <primary symbols to be modified>
-   ```
+
+   State a short implementation plan (files, tests, validation command, primary symbols) before editing.
 
 4. **GitNexus impact analysis (MANDATORY before editing)**
 
-   For each primary symbol (function, class, method) you plan to modify:
+   Verify GitNexus index freshness first. For each primary symbol you plan to modify:
 
    ```bash
    obws_gate_impact "<SymbolName>"
    ```
 
-   Then call the GitNexus MCP tool as instructed by the output:
+   Call both MCP tools (context before impact):
    ```
+   gitnexus_context({name: "<SymbolName>"})
    gitnexus_impact({target: "<SymbolName>", direction: "upstream", maxDepth: 3})
    ```
 
-   **Risk rules (from CLAUDE.md — non-negotiable):**
-   - `riskLevel: HIGH` or `CRITICAL` → **halt**, present the blast radius and affected processes to the user, and require explicit confirmation before proceeding
-   - `riskLevel: LOW` or `MEDIUM` → proceed; record the affected caller count in the issue notes
+   `gitnexus_context` surfaces process membership — tells you if the change is single-touch or cuts across a flow.
 
-   Skip this step only for brand-new symbols (no existing callers to analyze).
+   - `riskLevel: HIGH` or `CRITICAL` → halt, present blast radius and affected processes to the user, require explicit confirmation
+   - `riskLevel: LOW` or `MEDIUM` → proceed; record affected caller count in issue notes
+
+   Skip only for brand-new symbols with no existing callers.
 
 5. **Implement — scoped to this issue only**
 
-   Allowed scope: the files and modules named in the issue and its OpenSpec task.
-
+   Allowed: files and modules named in the issue and its OpenSpec task.
    Not allowed: route wiring, frontend changes, unrelated refactors, schema changes not named in this issue.
 
    Follow TDD: write or update failing tests first, then implement.
 
-   If you discover extra work during implementation:
-   - Do NOT silently expand scope
-   - Use the **openspec-beads-followup** skill to triage it (in-scope bug vs. out-of-scope follow-up)
-   - If it blocks this issue, link the new issue as a dep before continuing
-
-   If you discover a spec gap (behavior is missing or contradictory in OpenSpec):
-   - Use the **openspec-beads-scope-change** skill to update OpenSpec first
-   - Do not implement behavior that isn't specified in OpenSpec
+   Discovered extra work → **openspec-beads-followup** (bug or out-of-scope follow-up).
+   Discovered spec gap → **openspec-beads-scope-change** (OpenSpec update first, then Beads).
 
 6. **Validate**
 
    ```bash
    obws_gate_unit_tests
-   openspec validate <change-id>
+   obws_gate_validate <change-id>   # non-strict: spec may still be in draft mid-flow
    ```
 
-   For narrow changes, run the focused test file instead of the full suite:
+   Narrow changes — run the focused test file:
    ```bash
-   bunx vitest run src/<path-to-test>.test.ts
+   OBWS_UNIT_TEST_CMD="bun test <path-to-test>.test.ts" obws_gate_unit_tests
    ```
 
-   Do not run integration tests unless the user explicitly approves in this thread.
+   Before committing — run guidance gates on the staged diff:
+   ```bash
+   git add <changed-files>
+   obws_gate_guidance_gates "$(git diff --cached)"
+   ```
 
-   Before closing, run the symbol-scope check:
+   Before closing — run symbol-scope check:
    ```bash
    obws_gate_detect_changes
    ```
-   Then call the GitNexus MCP tool as instructed:
-   ```
-   gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch>"})
-   ```
-   Every changed symbol must fall within the scope of this issue. Unexpected symbols → investigate before closing.
+   Claude: call `gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch>"})`. Every changed symbol must fall within this issue's scope.
 
-7. **Tick the tasks.md checkbox**
+   Do not run integration tests without explicit user approval.
 
-   Before closing, mark this task done in the OpenSpec tasks file:
+7. **Tick the tasks.md checkbox (MANDATORY)**
+
+   Tick `- [x]` in tasks.md before calling `bd close` — `openspec-beads-complete`'s clean-state check reads this file.
+
+   ```bash
+   TASK_REF=$(bd show <issue-id> --json | jq -r '.[].metadata.task_ref // empty')
+   obws_tick_task <change-id> "$TASK_REF"
    ```
-   openspec/changes/<change-id>/tasks.md
-   ```
-   Change `- [ ] <task text>` → `- [x] <task text>` for the task(s) this issue covers.
+
+   Stage the tasks.md change alongside the implementation files.
 
 8. **Close or update**
 
    If complete:
    ```bash
-   bd close <issue-id> --reason="<what was implemented, what tests were added, that validation passes>"
+   bd close <issue-id> \
+     --reason="<what was implemented, what tests were added, validation passes>" \
+     --suggest-next
    ```
+   `--suggest-next` surfaces newly unblocked issues immediately after close.
 
-   Write a trajectory entry (if ruflo is installed):
+   Commit and write a trajectory entry:
    ```bash
-   obws_mem_write "<change-id>" "<issue-id>" "trajectory" "closed" \
-     "$(bd show <issue-id> --format markdown 2>/dev/null)
-   files: $(git diff --name-only "$(obws_base_branch)"..HEAD 2>/dev/null | tr '\n' ',')
-   commit: $(git rev-parse HEAD 2>/dev/null)"
-   bd ready
+   git add <changed-files>
+   git commit -m "<short summary of what was implemented>"
+   obws_mem_write_trajectory "<change-id>" "<issue-id>" "closed"
    ```
 
    If blocked:
    ```bash
-   bd update <issue-id> --notes="Blocked: <reason>. Created <blocker-id> to resolve."
+   bd update <issue-id> --append-notes="Blocked: <reason>. Created <blocker-id> to resolve."
+   obws_mem_write_trajectory "<change-id>" "<issue-id>" "blocked"
    bd ready
    ```
 
-**Guardrails**
-- Never start implementing without claiming the issue first (step 2)
-- Never edit a symbol without running `gitnexus_impact` first (step 4) — this is non-negotiable per CLAUDE.md
-- Never expand scope beyond the claimed issue — create new issues for discovered work
-- Always re-read OpenSpec artifacts before coding (step 3)
-- Always run unit tests, `obws_gate_detect_changes`, and `openspec validate` before closing (step 6)
-- Always update the tasks.md checkbox before closing (step 7)
-- Never run integration tests without explicit user approval in this thread
+**Non-obvious traps**
+- Never edit a symbol without running `gitnexus_context` + `gitnexus_impact` first (step 4)
+- Checkbox tick is required for `openspec-beads-complete`'s clean-state check — skipping leaves tasks.md permanently stale
+- Use `OBWS_UNIT_TEST_CMD` env var for subdirectory tests, not `cd backend` inline

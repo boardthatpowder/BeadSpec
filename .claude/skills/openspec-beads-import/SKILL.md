@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "1.2"
   generatedBy: "1.1.1"
 ---
 
@@ -15,29 +15,23 @@ Import an approved OpenSpec change into Beads as an executable task graph.
 
 **Input**: A change name (kebab-case). If omitted, infer from conversation context or run `openspec list` and ask.
 
-**Setup** — source the helper library:
+**Setup**
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/graph.sh"
-obws_resolve_prefix
+. "$(git rev-parse --show-toplevel)/scripts/openspec-beads/init.sh"
+obws_init import || return 1
 ```
 
 **Steps**
 
-1. **Confirm the change exists and is validated**
+1. **Confirm the change exists and is validated** (strict — import bookend gate)
 
    ```bash
-   obws_gate_validate <change-id>
-   ```
-
-   This runs `openspec validate <change-id> --json` and parses the result. Hard-stop on failure.
-   Also confirm artifact completeness:
-   ```bash
+   obws_gate_validate <change-id> strict   # strict: catching missing scenarios here avoids a hard stop at archive
    obws_gate_status <change-id>
    ```
+
+   Hard-stop on failure — do not import from a spec that fails strict validation.
 
 2. **Read the tasks file**
 
@@ -45,61 +39,56 @@ obws_resolve_prefix
    cat openspec/changes/<change-id>/tasks.md
    ```
 
-   Extract:
-   - All section headers (e.g., `## 1. Infrastructure`, `## 2. Lambda Handler`)
-   - All task items (`- [ ] N.M description`) with their section membership
-   - Any inline file/module references, named artifacts, or cross-task mentions in task descriptions
+   Extract all section headers and task items (`- [ ] N.M description`). **MANDATORY 1:1 rule:** every `- [ ] N.M` checkbox becomes exactly one Beads node — never group multiple checkboxes into one issue. The per-task `metadata.task_ref` (e.g. `"1.3"`) must match the exact N.M from the checkbox — this is how `openspec-beads-work` ticks it on close.
 
 3. **Build the dependency graph (cognitive step)**
 
-   Read every task description and infer dependencies. For each task, look for:
+   For each task, look for: explicit task references ("the repo from 2.1"), named artifact references (task B names a function task A creates), and logical chains within a section.
 
-   - **Explicit task references**: mentions of "task N.M", "the Lambda from 2.1", "N.M's repository method" — create an edge from the referencing task to the referenced task
-   - **Named artifact references**: if task B names a specific function, table, or file that task A is defined to create, infer B depends on A
-   - **Logical chains within a section**: if tasks form a clear implementation chain, infer linear deps within that chain
-
-   Report the inferred edges and reasoning to the user.
+   Enrich with GitNexus execution-flow data for any capability name or service mentioned in a task (MCP tool call — `{}` syntax):
+   ```
+   gitnexus_query({query: "<capability or service name from task>"})
+   ```
+   If tasks A and B both appear in the same process, infer a dependency edge. Report the inferred edges and reasoning to the user.
 
 4. **Write the graph JSON file**
 
-   Write `openspec/changes/<change-id>/.bd-graph.json` using the schema documented in
-   `scripts/openspec-beads/graph.sh`. Key rules:
+   Write `openspec/changes/<change-id>/.bd-graph.json` using the schema in `scripts/openspec-beads/graph.sh`.
 
-   - Every issue MUST include `"labels": ["openspec:<change-id>"]`
-   - Every issue MUST include `"metadata": {"openspec_change": "<change-id>", "task_ref": "N.M"}`
-   - The epic uses `"type": "feature"` and `"labels": ["openspec:<change-id>", "epic"]`
-   - Use `"ref"` aliases for dep wiring within the file (Beads resolves refs to real IDs atomically)
-   - Parent-child links from each task to the epic use `"type": "parent-child"`
-   - Task-to-task blocking edges use `"type": "blocks"`
+   Key rules:
+   - Root key is `"nodes"` (NOT `"issues"` — the CLI rejects `"issues"` with "plan has no nodes")
+   - Local alias field is `"key"` (NOT `"ref"` — rejects `"ref"` with "empty key")
+   - Every node must include `"labels": ["openspec:<change-id>"]`
+   - Every node must include `"metadata": {"openspec_change": "<change-id>", "task_ref": "N.M", "local_key": "<key>"}`
+   - Epic uses `"type": "epic"` so `bd epic close-eligible` and `bd epic status` work natively
+   - Parent-child links: `"type": "parent-child"` — task-to-task blocking: `"type": "blocks"`
 
    Example structure:
    ```json
    {
-     "issues": [
+     "nodes": [
        {
-         "ref": "epic",
+         "key": "epic",
          "title": "OpenSpec: <change-id>",
-         "type": "feature",
+         "type": "epic",
          "priority": 2,
-         "labels": ["openspec:<change-id>", "epic"],
+         "labels": ["openspec:<change-id>"],
          "description": "Execution tracker for openspec/changes/<change-id>.",
-         "metadata": {"openspec_change": "<change-id>"}
+         "metadata": {"openspec_change": "<change-id>", "local_key": "epic"}
        },
        {
-         "ref": "task-1-1",
+         "key": "task-1-1",
          "title": "1.1: <task title>",
          "type": "task",
          "priority": 2,
          "labels": ["openspec:<change-id>"],
          "description": "openspec/changes/<change-id>/tasks.md §1.1. <verbatim task>",
-         "metadata": {"openspec_change": "<change-id>", "task_ref": "1.1"},
-         "dependencies": [{"ref": "epic", "type": "parent-child"}]
+         "metadata": {"openspec_change": "<change-id>", "task_ref": "1.1", "local_key": "task-1-1"},
+         "dependencies": [{"key": "epic", "type": "parent-child"}]
        }
      ]
    }
    ```
-
-   If a task description is ambiguous, embed the ambiguity in the issue `"notes"` field rather than guessing.
 
 5. **Import atomically and tag**
 
@@ -107,40 +96,67 @@ obws_resolve_prefix
    obws_import_graph <change-id>
    ```
 
-   This helper:
-   - Detects re-imports (existing epic) and switches to `--dedup` mode automatically
-   - Runs `bd create --graph .bd-graph.json --json` for atomic creation on first import
-   - Applies `obws_tag_context` (branch/worktree/repo labels) to all created issues
-   - The `openspec:<change-id>` label is embedded in the graph JSON (step 4), so it lands atomically
+   This helper: runs `bd create --graph` on first import; on re-import diffs against existing `metadata.local_key` and creates only new nodes; wires parent-child and blocking edges post-create; applies `obws_tag_context` to all issues; checks for dependency cycles.
 
-   Check `.bd-graph.json` into git alongside the OpenSpec change so re-imports after `tasks.md` edits are reproducible.
+   Check `.bd-graph.json` into git. Re-running after `tasks.md` edits is safe.
 
 6. **Verify the dependency graph landed**
 
    ```bash
    bd children <epic-id> --pretty
+   bd show <issue-id> --json | jq '.[].labels'
    ```
 
-   Confirm: epic + correct child count, dep edges visible, all issues labeled.
-   Verify on one issue with `bd show <issue-id>` — the LABELS line must show:
-   `branch:<name>`, `worktree:<name>`, `repo:<name>`, `openspec:<change-id>`.
+   All issues (including the epic) must carry `branch:<name>`, `worktree:<name>`, `repo:<name>`, `openspec:<change-id>`. The epic uses `type=epic`; the `openspec-beads-complete` query adds `AND (type=task OR type=bug)` to exclude it from the required-work count.
+
+   Run a structural lint on the imported issues:
+   ```bash
+   obws_gate_lint --change <change-id>
+   ```
+   Fix any WARN/ERROR with `bd update <id> --acceptance "..."` before proceeding.
 
 7. **Show final state**
 
    ```bash
    bd children <epic-id> --pretty
-   bd ready --explain --json | head -40
+   bd ready --explain --json
+   bd graph --html <epic-id> > /tmp/<change-id>.html 2>/dev/null && \
+     echo "[import] Dep graph written to /tmp/<change-id>.html (open in browser to verify)" || true
    ```
 
-   Report:
-   - Epic ID and child issue count
-   - Dependency graph summary (which tasks depend on which)
-   - Current `bd ready` output — this is the first safe work to pick up
+   Report: epic ID and child count, dependency graph summary, current `bd ready` output.
 
-**Guardrails**
-- Do NOT start implementation — this skill is import only
-- Do NOT use JSONL + `bd batch dep add` (Pattern B) — use `bd create --graph` for atomic creation
-- Every imported record MUST carry the `openspec:<change-id>` label so **openspec-beads-complete** can find the change later
-- `obws_import_graph` handles dedup on re-import — do not run `bd import` manually without the helper
-- If `obws_gate_validate` fails at step 1, stop immediately — do not import from a broken spec
-- **Tagging is non-negotiable.** `obws_import_graph` applies context labels automatically. Verify with `bd show` on at least one issue before declaring import complete.
+8. **Register as swarm molecule** (optional)
+
+   ```bash
+   bd swarm create <epic-id>
+   bd swarm list | head -5
+   ```
+
+   Passive label/structure primitive — enables `bd ready --mol <epic-id>` for scope-filtered ready work. **Not** `ruflo swarm init`. Does not spawn agents or coordinate work.
+
+**Non-obvious traps**
+- `obws_gate_validate <change-id> strict` is required at import — strict failures caught here avoid a harder stop at archive
+- `obws_import_graph` handles incremental re-import; calling it on an already-complete import is safe
+- The epic carries `openspec:<change-id>` for filterability; `openspec-beads-complete`'s query adds `AND (type=task OR type=bug)` to exclude it from the required-work count
+- Dep cycles detected by `obws_import_graph` must be fixed in `.bd-graph.json` before proceeding
+
+## Post-import parallelism (MANDATORY)
+
+After import completes, immediately spawn concurrent agents for ALL ready tasks — never start one at a time.
+
+```bash
+READY=$(bd ready --mol <epic-id> --json --limit 20 | jq '[.[] | select(.issue_type != "epic")] | [{id: .id, title: .title}]')
+echo "$READY"
+```
+
+**Spawn rule:**
+- ≥ 2 ready tasks → send ONE message with multiple `Agent({subagent_type: "claude", prompt: "Run openspec-beads-work <id>..."})` tool calls. All in one message = true concurrency.
+- Each agent is self-contained: it reads OpenSpec, claims, implements, validates, closes.
+- Tasks that share a file (e.g., two tasks both modifying `tasks.md` tick) serialize naturally via Beads claim — the second agent will find the first task still in_progress and skip it.
+
+**Parallelism decision rule** (from `ruflo-swarm-dispatch`):
+- Independent tasks (different file paths) → built-in `Agent` tool in parallel. **This is the default.**
+- Tasks sharing files or requiring ordered state → `ruflo swarm` escalation only.
+
+The dep graph already enforces ordering — anything `bd ready` shows is safe to run concurrently.

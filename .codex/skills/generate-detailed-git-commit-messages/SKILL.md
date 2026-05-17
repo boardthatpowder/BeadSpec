@@ -1,0 +1,1 @@
+../../../.claude/skills/generate-detailed-git-commit-messages/SKILL.md

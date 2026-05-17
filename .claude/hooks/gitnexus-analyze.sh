@@ -24,3 +24,6 @@ fi
 
 cd "$GIT_ROOT" && npx gitnexus analyze 2>&1
 echo "[gitnexus] index updated after push"
+
+# Keep db world-writable so the MCP server (macOS sandbox) can create FTS indexes
+[ -f "$GIT_ROOT/.gitnexus/lbug" ] && chmod 666 "$GIT_ROOT/.gitnexus/lbug"

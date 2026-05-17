@@ -36,7 +36,6 @@ ruvector.db
 
 # Agent tooling (machine-local state, hardcoded paths, runtime sessions)
 .agents/
-.codex/
 .claude-flow/
 
 # SQLite sidecars (*.db covers the main file, but not these)
@@ -45,8 +44,43 @@ ruvector.db
 *.db-journal
 
 # AgentDB / RuVector runtime (data file + lockfile)
-agentdb.rvf
-agentdb.rvf.lock
+agentdb.rvf*
+
+# Skills cache
+skills-lock.json
+
+# Claude local settings and plans
+.claude/settings.local.json
+.claude/plans/
+
+# Build outputs
+build/
+coverage/
+.cache/
+.tmp/
+tmp/
+
+# GitNexus index (local, regenerated)
+.gitnexus/
+
+# Beads runtime (extended)
+.beads/dolt-server.*
+.beads/.local_version
+.beads/interactions.jsonl
+.beads/backup/
+.beads/export-state/
+.beads/export-state.json
+.beads/push-state.json
+.beads/.env
+.beads/embeddeddolt/
+
+# Vim swap files
+*.swp
+*.swo
+
+# Allow .env.example, ignore all other .env variants
+.env.*
+!.env.example
 
 # VitePress docs site build outputs
 docs-site/.vitepress/dist

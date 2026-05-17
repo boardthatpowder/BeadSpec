@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "1.2"
   generatedBy: "1.1.1"
 ---
 
@@ -15,151 +15,127 @@ Complete and archive an OpenSpec change after all implementation is done.
 
 **Input**: An OpenSpec change ID. If omitted, infer from conversation context or run `openspec list` and ask.
 
-**Setup** — source the helper library:
+**Setup**
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/memory.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/branch.sh"
-obws_resolve_prefix
+. "$(git rev-parse --show-toplevel)/scripts/openspec-beads/init.sh"
+obws_init complete || return 1
 ```
 
 **Steps**
 
 1. **Confirm Beads state is clean**
 
-   Every required issue created via **openspec-beads-import** or **openspec-beads-followup** carries
-   the `openspec:<change-id>` label; pure follow-ups (priority=4) deliberately omit it. Two queries
-   cover the check:
+   Every required issue carries `openspec:<change-id>`. Pure follow-ups (priority=4) deliberately omit it.
 
    ```bash
    # Required, non-epic work that is not yet closed — must return zero rows
-   bd query "label=openspec:<change-id> AND status!=closed AND (type=task OR type=bug)"
+   _open_count=$(bd query "label=openspec:<change-id> AND status!=closed AND (type=task OR type=bug)" \
+     --json | jq -r 'length // 0')
 
    # Human-readable tree of the whole change
    bd children <epic-id> --pretty
    ```
 
-   The first query must return zero rows. If any rows remain:
-   - Out-of-scope follow-ups (priority=4, unlabeled) do **not** appear here and do **not** block completion
-   - If any required implementation issue is still open, stop and ask the user whether to complete it or explicitly defer it before proceeding
+   `_open_count` must be `0`. If rows remain: defer (`bd defer <id> --until=<date>`) or supersede (`bd supersede <id> --with=<new-id>`) before proceeding. Never close the epic over open required work.
+
+   > If the query returns more issues than `bd children` reports, parent-child wiring is incomplete — re-run `obws_import_graph <change-id>` to repair.
 
 2. **Confirm tasks.md is fully checked**
 
-   Read `openspec/changes/<change-id>/tasks.md` and verify every task has `- [x]` (not `- [ ]`).
+   Read `openspec/changes/<change-id>/tasks.md`. Every task must have `- [x]`. If any are unchecked:
+   - If done in code (verify via `openspec-verify-change`): tick the boxes now before continuing.
+   - If not done: stop and surface the gap to the user.
 
-   If any unchecked tasks remain:
-   - Check whether the work is actually done in code (via `openspec-verify-change`)
-   - If done: update the checkboxes now before continuing
-   - If not done: stop and surface the gap to the user
-
-3. **Confirm OpenSpec state**
+3. **Confirm OpenSpec state** (strict — bookend gate)
 
    ```bash
-   obws_gate_validate <change-id>
+   obws_gate_validate <change-id> strict   # strict: catches missing scenarios at the completion gate
    obws_gate_status <change-id>
    ```
 
-   Both must pass. If either fails, stop and surface the specific errors to the user.
+   Both must pass. Stop and surface specific errors if either fails.
 
 4. **Run quality gates**
 
-   For code changes:
    ```bash
    obws_gate_unit_tests
+   obws_gate_guidance_gates "$(git diff main...HEAD)"
+   obws_gate_lint --change <change-id>
    ```
 
-   Then run the GitNexus symbol-scope check. This is a **MCP tool call** (not a shell command):
+   Then run the GitNexus symbol-scope check (MCP tool call — `{}` syntax):
    ```bash
    obws_gate_detect_changes
    ```
-   Claude: call the MCP tool as printed by the above:
-   ```
-   gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch from obws_base_branch>"})
-   ```
-   Review the output: changed symbols and affected processes must match the expected scope of this
-   OpenSpec change. If unexpected symbols appear, investigate before archiving.
+   Claude: call `gitnexus_detect_changes({scope: "compare", base_ref: "<base-branch from obws_base_branch>"})` as instructed by the output. Unexpected symbols → investigate before archiving.
 
-   Run preflight to catch stale/orphan issues before epic close:
+   For a machine-readable list of which execution processes were touched:
    ```bash
+   obws_affected_processes <change-id>
+   ```
+   Claude: call `gitnexus_cypher(...)` as printed by the output. Use the returned process names in the retrospective entry (step 6).
+
+   ```bash
+   obws_gate_orphans <change-id>
    obws_gate_preflight
    ```
-   Treat preflight failures as hard stops here (unlike session-start where they are advisory).
+   Go-toolchain failures are suppressed by default (`OBWS_SKIP_NONGO_PREFLIGHT=1`). "No beads pollution" is the actionable signal.
 
-   For docs-only changes, replace the above with:
-   ```bash
-   git diff --check
-   ```
-
-   Do not run integration tests without explicit user approval in this thread.
+   Do not run integration tests without explicit user approval.
 
 5. **Close the epic**
 
-   Locate the parent epic (set at import time):
    ```bash
-   bd query "label=openspec:<change-id> AND type=feature"
+   _epic_id=$(bd query "label=openspec:<change-id> AND type=epic" --json | jq -r '.[0].id // empty')
+   bd epic close-eligible --dry-run --json
    ```
 
-   This should return exactly one row. If it returns zero or more than one, investigate before continuing.
+   The epic must appear in the output. If not, some children are still open — surface with `bd children <epic-id> --pretty`.
 
-   Verify the epic is close-eligible using a structured query (not free-text grep):
    ```bash
-   # This must return zero rows — i.e., no open children remain
-   bd query "label=openspec:<change-id> AND status!=closed AND (type=task OR type=bug)"
+   bd close "$_epic_id" --reason="All required Beads issues closed; openspec validates (strict); unit tests pass; gitnexus detect_changes confirms scope."
    ```
 
-   If that query returns any rows, `bd epic close-eligible --dry-run` will not list the epic.
-   Stop, surface the open children, and do not proceed.
+6. **Write change retrospective to memory**
 
-   When clean:
-   ```bash
-   bd close <epic-id> --reason="All required Beads implementation issues closed; openspec validates; unit tests pass; gitnexus detect_changes confirms scope."
-   ```
-
-6. **Write change retrospective to memory** (if ruflo is installed)
-
+   Use the process list from `obws_affected_processes` / `gitnexus_cypher` (step 4) as the "affected flows" section:
    ```bash
    obws_mem_write "<change-id>" "" "retrospective" "archived" \
-     "Change <change-id> archived. Summary: <what shipped>. What worked: <observations>. Surprises: <unexpected complexity or gaps>."
+     "Change <change-id> archived. Summary: <what shipped>. Affected flows: <process list from gitnexus_cypher>. What worked: <observations>. Surprises: <unexpected complexity or gaps>."
+   obws_mem_consolidate <change-id>
+   ruflo neural train --source memory --filter "openspec:<change-id>" 2>/dev/null || true
    ```
 
 7. **Archive the OpenSpec change**
 
-   Use the built-in **openspec-archive-change** skill:
-   > Invoke: `openspec-archive-change` with the change-id
+   > Invoke: `openspec-archive-change` with the change-id.
 
-   If this workspace uses a review gate before archiving:
-   > Invoke: `openspec-verify-change` first, then `openspec-archive-change`
+   If this workspace uses a review gate:
+   > Invoke: `openspec-verify-change` first, then `openspec-archive-change`.
 
-   Treat these as black boxes — invoke them, don't reproduce their steps.
+   Note: `openspec archive` is non-interactive in agent contexts only if called with `--no-validate -y`. The skills above handle this — do not reproduce their steps.
 
 8. **Session close**
 
-   Follow the `bd prime` session-close protocol:
+   Acquire the merge slot first (serialises concurrent completions):
    ```bash
-   git status
-   bd dolt pull || echo "[complete] WARN: bd dolt pull failed; Dolt state may be behind"
-   git add <changed files>
-   git commit -m "<summary of what shipped>"
-   bd dolt push
-   git push
-   git status  # must show "up to date with origin"
+   bd merge-slot acquire --holder "openspec:<change-id>" --wait 2>/dev/null || true
    ```
 
-   **Important asymmetry**: if `bd dolt push` succeeds but `git push` fails, do NOT roll back
-   Dolt. Record the asymmetry in handoff notes; `openspec-beads-sync` will re-run `bd dolt pull`
-   at the next session start.
+   Stage and commit, then delegate the rest to the helper:
+   ```bash
+   git add <changed files>
+   git commit -m "<summary of what shipped>"
+   obws_session_close "<change-id>" "$_epic_id"
+   # obws_session_close: bd dolt commit/push → git pull --rebase → git push (with retry)
+   # → git status → merge-slot release → optional gh:run CI gate
+   ```
 
-   If `git push` fails: resolve the conflict and retry. Do not stop before pushing — work is
-   NOT complete until `git push` succeeds.
+   `git status` output must show "up to date with origin". Work is NOT done until pushed.
 
-**Guardrails**
-- Do NOT archive until `obws_gate_validate` passes (step 3)
-- Do NOT close the epic until the clean-state `bd query` in step 5 returns zero rows
-- Do NOT use free-text grep of `bd epic close-eligible --dry-run` — use the structured `bd query` check
-- Do NOT run integration tests without explicit user approval
-- Work is NOT complete until `git push` succeeds — never stop before pushing
-- If push fails, resolve and retry
-- `obws_gate_preflight` in step 4 is a hard stop here, not advisory
+**Non-obvious traps**
+- Merge-slot acquire/release must pair — if the session crashes between them, the slot hangs; run `bd merge-slot release` manually on next session
+- Do NOT close the epic until it appears in `bd epic close-eligible --dry-run --json`
+- `obws_gate_preflight` is advisory for Go-toolchain checks (expected failures in this TypeScript repo)
+- `git push` failure is not complete — resolve the conflict and retry; work is NOT done until pushed

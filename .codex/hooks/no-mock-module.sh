@@ -1,0 +1,1 @@
+../../.claude/hooks/no-mock-module.sh

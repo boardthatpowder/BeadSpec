@@ -1,6 +1,10 @@
 #!/bin/bash
 # PreToolUse hook: Blocks Write/Edit that introduce TypeScript `any` usage.
 # Use specific types, generics, `unknown` with type guards, or discriminated unions instead.
+#
+# STACK: TypeScript
+# Delete this hook (and remove it from .claude/settings.json) if your project doesn't use TypeScript.
+# See README.md "Quality Hook Customization" for the wiring snippet.
 
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name')

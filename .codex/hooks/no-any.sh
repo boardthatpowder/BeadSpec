@@ -1,0 +1,1 @@
+../../.claude/hooks/no-any.sh

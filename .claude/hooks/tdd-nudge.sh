@@ -1,7 +1,11 @@
 #!/bin/bash
-# PreToolUse hook: non-blocking nudge when Claude creates a new .ts source file
-# under src/ without a matching test file.
-# CLAUDE.md rule: TDD is non-negotiable.
+# PreToolUse hook: non-blocking nudge when Claude creates a new source file without
+# a matching test file. Supports TypeScript projects out of the box.
+# CLAUDE.md rule: TDD — write tests first.
+#
+# STACK: TypeScript/Bun (default). Adapt the path patterns and extensions for your stack.
+# See README.md "Quality Hook Customization" for customization guidance.
+# This hook is non-blocking (exit 0 always) — it only warns.
 
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
@@ -10,7 +14,7 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 # Only fire on Write (new file). Edit of existing code isn't the trigger.
 [ "$TOOL" = "Write" ] || exit 0
 
-# Only .ts/.tsx source files
+# TODO: Customize extensions for your stack (e.g. *.py, *.go, *.rb, *.java)
 case "$FILE_PATH" in
   *.ts|*.tsx) ;;
   *) exit 0 ;;
@@ -24,7 +28,8 @@ case "$FILE_PATH" in
   */types.ts|*/types/*|*/index.ts) exit 0 ;;
 esac
 
-# Only care about source under src/ (the React/TS frontend)
+# TODO: Customize the source directory patterns for your project layout.
+# Current: fires for files under any src/ or backend/src/ or frontend/src/ directory.
 case "$FILE_PATH" in
   */src/*) ;;
   *) exit 0 ;;
@@ -45,7 +50,9 @@ for candidate in \
   "$DIR/__tests__/$BASE.test.ts" \
   "$DIR/__tests__/$BASE.test.tsx" \
   "$DIR/$BASE.unit.test.ts" \
-  "$DIR/$BASE.integration.test.ts"; do
+  "$DIR/$BASE.integration.test.ts" \
+  "$DIR/$BASE.spec.ts" \
+  "$DIR/$BASE.spec.tsx"; do
   if [ -f "$candidate" ]; then
     FOUND="$candidate"
     break

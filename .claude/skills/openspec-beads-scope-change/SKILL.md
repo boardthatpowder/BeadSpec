@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "1.2"
   generatedBy: "1.1.1"
 ---
 
@@ -13,94 +13,93 @@ Handle a scope change discovered during implementation. OpenSpec is updated firs
 
 **Source-of-truth rule:** OpenSpec owns the spec. Scope changes go to OpenSpec first. Never update only Beads for a behavior change.
 
-**When to use this skill:**
-- Public API response shape needs to change
-- Acceptance criteria need to change
-- New user-visible behavior is discovered as required
-- Data model or infrastructure changes are required
-- Security or tenancy behavior changes
-- Any spec artifact (proposal, design, spec delta) needs updating
+Use when public API shape, acceptance criteria, user-visible behavior, data model, or security/tenancy semantics need to change. For bugs within existing scope or follow-up ideas that don't affect the spec, use **openspec-beads-followup** instead.
 
-**When NOT to use this skill:**
-- A bug is found within existing, already-specified scope → use **openspec-beads-followup** instead
-- A follow-up idea is discovered that doesn't affect the current spec → use **openspec-beads-followup** instead
-
-**Large scope threshold** — escalate to user for explicit approval when the gap:
-- Touches more than one capability spec file, OR
-- Introduces a `breaking:` modifier to any spec delta (backward-incompatible change)
+Escalate to user for explicit approval when the gap touches more than one capability spec file, or introduces a `breaking:` modifier to any spec delta.
 
 **Input**: A description of the spec gap and the affected OpenSpec change ID.
 
-**Setup** — source the helper library:
+**Setup**
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-. "${REPO_ROOT}/scripts/openspec-beads/context.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/memory.sh"
-. "${REPO_ROOT}/scripts/openspec-beads/gates.sh"
-obws_resolve_prefix
+. "$(git rev-parse --show-toplevel)/scripts/openspec-beads/init.sh"
+obws_init scope-change || return 1
 ```
 
 **Steps**
 
-1. **Pause the current Beads issue**
+1. **Pause the current Beads issue and surface the decision**
 
    Do not close it. Update with notes and write a memory entry so the pause reason survives session boundaries:
    ```bash
-   bd update <current-issue-id> --notes="Paused: discovered spec gap — <brief description>. Updating OpenSpec before continuing."
+   bd update <current-issue-id> --append-notes="Paused: discovered spec gap — <brief description>. Updating OpenSpec before continuing."
+   bd set-state <current-issue-id> openspec=paused --reason "spec gap: <brief description>"
    obws_mem_write "<change-id>" "<current-issue-id>" "paused" "spec-gap" \
      "Paused: <description of spec gap>. Will resume after OpenSpec update and re-validation."
    ```
 
+   For large scope changes or binary decisions, create a human gate:
+   ```bash
+   bd gate create --type=human --blocks <current-issue-id> --reason "spec gap: <description>" --json
+   ```
+   Resolved via `bd gate resolve <gate-id>`. For decisions needing a comment response instead of a binary gate, see the traps section below.
+
 2. **Update OpenSpec artifacts**
 
-   Check whether this qualifies as a large scope change (see threshold above). If yes, present
-   the impact to the user and get explicit approval before invoking.
-
-   Use the built-in **openspec-continue-change** skill to add or revise artifacts:
-   > Invoke: `openspec-continue-change` with the change-id
-
-   Or if the gap is a delta spec update to an existing capability spec file:
-   > Invoke: `openspec-sync-specs` for the affected capability
-
-   These skills handle the artifact update workflow. Do not reproduce their steps inline.
-
-3. **Validate**
-
+   Fetch the canonical artifact template so edits stay structurally valid:
    ```bash
-   obws_gate_validate <change-id>
+   openspec instructions tasks --change <change-id> 2>/dev/null || true
    ```
 
-   Do not proceed if validation fails.
+   Use **openspec-continue-change** to add or revise artifacts, or **openspec-sync-specs** for delta spec updates to existing capability spec files. Treat them as black boxes — invoke them, don't reproduce their steps.
+
+   If an existing issue was made obsolete by this scope change, supersede it:
+   ```bash
+   bd supersede <obsoleted-issue-id> --with <new-issue-id>
+   ```
+
+3. **Validate** (non-strict — spec may still be in-flight)
+
+   ```bash
+   obws_gate_validate <change-id>   # non-strict mid-flow
+   ```
+
+   Do not proceed if validation fails. If `openspec-sync-specs` was invoked, also validate main capability specs:
+   ```bash
+   obws_validate_main_specs
+   ```
 
 4. **Create Beads issues for the new work**
 
    ```bash
-   bd create \
+   _acceptance="<updated acceptance criterion from the revised spec artifact>"
+   _new_issue_id=$(bd create \
      --title="<scope change title>" \
      --description="Scope update from openspec/changes/<change-id>. <Original task context>. Acceptance: <updated criteria from spec artifact>." \
      --type=task \
      --priority=2 \
-     --json
-   # Record the returned ID as <new-issue-id>
+     --acceptance="$_acceptance" \
+     --spec-id="openspec/changes/<change-id>/proposal.md" \
+     --labels "openspec:<change-id>,$OBWS_BRANCH_LABEL,$OBWS_WORKTREE_LABEL,$OBWS_REPO_LABEL" \
+     --validate \
+     --json | jq -r '.id // empty' 2>/dev/null)
    ```
 
-   Tag immediately (MANDATORY — every new issue must carry all four labels):
+   Confirm labels (# safety net: explicit tag in case --labels was empty):
    ```bash
-   obws_tag_context <new-issue-id>
-   obws_tag_change  <new-issue-id> <change-id>
+   obws_tag_context "$_new_issue_id"
+   obws_tag_change  "$_new_issue_id" <change-id>
    ```
 
 5. **Link dependencies**
 
-   If the scope change blocks currently in-flight issues:
    ```bash
-   bd dep add <blocked-issue-id> <new-issue-id>
-   ```
-
-   If the paused issue now depends on this scope issue:
-   ```bash
+   # in-flight issues blocked by the scope change:
+   bd dep add <blocked-issue-id> <new-issue-id> --type=caused-by
+   # paused issue now depends on the scope issue:
    bd dep add <current-issue-id> <new-issue-id>
+   # if a previously open issue was made obsolete:
+   bd supersede <obsoleted-issue-id> --with <new-issue-id>
    ```
 
 6. **Resume or hand off**
@@ -109,16 +108,9 @@ obws_resolve_prefix
    bd ready
    ```
 
-   Report the new work created, the updated dependency graph, and which issue is now the next
-   ready item.
+   Report the new work created, the updated dependency graph, and the next ready item. Use **openspec-beads-resume** when ready to pick up the paused issue.
 
-   When you are ready to resume the paused issue, use the **openspec-beads-resume** skill to
-   re-validate, re-claim, and continue from where you left off.
-
-**Guardrails**
-- NEVER update only Beads for a behavior change — OpenSpec must be updated first
-- NEVER implement new behavior before `obws_gate_validate` passes (step 3)
-- NEVER skip the context tagging step — use `obws_tag_context` + `obws_tag_change` (two calls, one for each concern)
-- Always pause the current issue before starting the scope update (step 1) and write the memory entry so context is recoverable
-- Treat openspec-continue-change and openspec-sync-specs as black boxes — invoke them, don't reproduce their steps
-- For large scope changes (threshold above), surface to the user before invoking artifact-update skills
+**Non-obvious traps**
+- OpenSpec update MUST land and validate before any Beads issue is created — never update only Beads for a behavior change
+- `bd gate create --type=human` vs human bead: use gate for binary proceed/stop decisions (`bd gate resolve <id>` to unblock). When a comment response is needed instead: `bd q "HUMAN: spec gap in <change-id> — <decision needed>" --type=task --priority=1 --labels "human,openspec:<change-id>,..."`, then `bd update <id> --description="..."`, user responds via `bd human respond <id>` or `bd human dismiss <id>`
+- Use `--type=caused-by` on dep edges that link the scope issue to the gap that caused it

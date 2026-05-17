@@ -62,7 +62,27 @@ bd close <id>         # Complete work
 
 - Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
 - Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+- Use `ruflo memory store -k "<key>" -v "<value>"` for persistent knowledge — `bd remember` and MEMORY.md files are deprecated
+
+### Worktree Setup
+
+- Create new worktrees with `scripts/create-worktree.sh <path> --branch <branch>` instead of raw `git worktree add`.
+- If a worktree was created manually, run `scripts/setup-worktree-beads.sh` before any `bd` command.
+
+### MANDATORY: Tag every Beads issue with branch / worktree / repo
+
+Every `bd create` **must** be followed by tagging with context labels:
+
+```bash
+source ~/.claude/ruflo/lib/tags.sh
+PREFIX=$(ruflo_key_prefix)
+BRANCH_LABEL=$(echo "$PREFIX"   | awk -F'|' '{print $1}')
+WORKTREE_LABEL=$(echo "$PREFIX" | awk -F'|' '{print $2}')
+REPO_LABEL=$(echo "$PREFIX"     | awk -F'|' '{print $3}')
+bd tag <new-issue-id> "$BRANCH_LABEL"
+bd tag <new-issue-id> "$WORKTREE_LABEL"
+bd tag <new-issue-id> "$REPO_LABEL"
+```
 
 ## Session Completion
 
@@ -70,31 +90,32 @@ bd close <id>         # Complete work
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+1. **File issues for remaining work** — Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) — Tests, linters, builds
+3. **Update issue status** — Close finished work, update in-progress items
+4. **PUSH TO REMOTE** — This is MANDATORY:
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+5. **Clean up** — Clear stashes, prune remote branches
+6. **Verify** — All changes committed AND pushed
+7. **Hand off** — Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
+- NEVER stop before pushing — that leaves work stranded locally
+- NEVER say "ready to push when you are" — YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **BeadSpec** (5453 symbols, 8112 relationships, 269 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BeadSpec** (5545 symbols, 8288 relationships, 277 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
