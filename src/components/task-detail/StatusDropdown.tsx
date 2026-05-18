@@ -91,7 +91,9 @@ export function StatusDropdown({ task, project }: Props) {
   const { toast } = useToast()
 
   const doChange = async (status: Status, force: boolean) => {
-    const previousData = queryClient.getQueryData(['task', project, task.id])
+    const taskKey = ['task', project, task.id] as const
+    await queryClient.cancelQueries({ queryKey: taskKey })
+    const previousData = queryClient.getQueryData(taskKey)
     queryClient.setQueryData(['task', project, task.id], (old: any) => ({ ...old, status }))
     try {
       await unwrap(commands.changeTaskStatus(project, task.id, status, force))
@@ -107,6 +109,9 @@ export function StatusDropdown({ task, project }: Props) {
       } else {
         toast(`Failed to update status: ${msg}`)
       }
+    } finally {
+      queryClient.invalidateQueries({ queryKey: taskKey })
+      queryClient.invalidateQueries({ queryKey: ['tasks', project] })
     }
   }
 

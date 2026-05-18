@@ -38,9 +38,10 @@ export function Tooltip({ label, shortcut, description, children }: TooltipProps
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content
+          forceMount
           side="bottom"
           sideOffset={6}
-          className="z-[9999] max-w-xs rounded bg-neutral-900 border border-neutral-700 px-2.5 py-1.5 shadow-lg"
+          className="z-[9999] max-w-xs rounded bg-neutral-900 border border-neutral-700 px-2.5 py-1.5 shadow-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 duration-100 motion-reduce:animate-none motion-reduce:transition-none"
         >
           <div className="flex items-center gap-2">
             <span className="text-xs text-neutral-200">{label}</span>

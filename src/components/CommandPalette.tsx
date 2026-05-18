@@ -105,7 +105,7 @@ export function CommandPalette() {
     <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) close() }}>
       <Dialog.Content
         aria-label="Command palette"
-        className="top-24 w-[560px] max-w-[calc(100vw-2rem)] -translate-y-0 p-0"
+        className="top-24 w-[560px] max-w-[calc(100vw-2rem)] -translate-y-0 p-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 duration-150 motion-reduce:animate-none motion-reduce:transition-none"
         onKeyDown={e => {
           if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, allResults.length - 1)) }
           if (e.key === 'ArrowUp') { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)) }
