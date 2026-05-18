@@ -339,6 +339,7 @@ export type Task = {
 	task_type: string,
 	assignee: string | null,
 	labels: string[],
+	worker_provenance: WorkerProvenance | null,
 	created_at: string,
 	updated_at: string,
 };
@@ -386,6 +387,11 @@ export type WorkerFinding = {
 	status: string,
 	notes_first_line: string,
 	created_at: string,
+};
+
+export type WorkerProvenance = {
+	worker: string,
+	notes_first_line: string,
 };
 
 /**  Workspace context derived from git for the connected project. */

@@ -1,0 +1,433 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: skill-output-capture",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "Execution tracker for openspec/changes/skill-output-capture. Captures skill review output (code-review, security-review, pr-review) into Ruflo memory and surfaces it in TaskDetailPanel and BdHealthPanel.",
+      "metadata": {"openspec_change": "skill-output-capture", "local_key": "epic"}
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Write scripts/bd-capture-review.sh with arg parsing",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §1.1. Write `scripts/bd-capture-review.sh`: parse `--kind`, `--branch`, `--pr`, `--title`, `--dedupe-sha` args; fail with exit 2 on missing required args.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "1.1", "local_key": "task-1-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Resolve ruflo_key_prefix in bd-capture-review.sh",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §1.2. Resolve `ruflo_key_prefix` via `source ~/.claude/ruflo/lib/tags.sh`; fail with exit 3 if unavailable.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "1.2", "local_key": "task-1-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Build structured key and call ruflo memory store",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §1.3. Build the structured key (`<prefix>|review:<kind>|branch:<name>|[pr:<num>|]ts:<epoch>`) and call `ruflo memory store -k \"$KEY\" -v \"$BODY\"`; fail with exit 4 on non-zero result.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "1.3", "local_key": "task-1-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-4",
+      "title": "1.4: Implement --dedupe-sha deduplication logic",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §1.4. Implement `--dedupe-sha`: compute `sha256` of body; abort (exit 0 + warning) if a key containing `sha:<digest>` already exists in `ruflo memory search` results.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "1.4", "local_key": "task-1-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-5",
+      "title": "1.5: chmod +x bd-capture-review.sh and smoke-test all exit codes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §1.5. `chmod +x scripts/bd-capture-review.sh`; smoke-test all exit codes in a manual session.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "1.5", "local_key": "task-1-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Create reviews.rs with ReviewKind, ReviewEntry, ReviewScope types",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §2.1. Create `src-tauri/src/commands/reviews.rs`; define `ReviewKind` enum, `ReviewEntry` struct, and `ReviewScope` enum, all deriving `serde::Serialize`, `serde::Deserialize`, and `specta::Type`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "2.1", "local_key": "task-2-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Implement list_reviews command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §2.2. Implement `list_reviews(project_path, scope)`: shell out to `ruflo memory search -q <query> --json`; parse JSON into `Vec<ReviewEntry>`; parse key segments defensively (skip unparseable entries with a `tracing::warn`).",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "2.2", "local_key": "task-2-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Implement get_review command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §2.3. Implement `get_review(key)`: call `ruflo memory retrieve -k <key> --json`; return `ReviewEntry` with full `body` populated.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "2.3", "local_key": "task-2-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Register list_reviews and get_review in lib.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §2.4. Register both commands in `src-tauri/src/lib.rs` in `tauri::generate_handler!` and `tauri_specta::collect_commands!`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "2.4", "local_key": "task-2-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"},
+        {"key": "task-2-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Unit-test key-parsing helper in reviews.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §3.1. Unit-test key-parsing helper: valid key round-trips; missing `review:` segment returns `None`; inner-colon slug `review:pr-review:extra` parses kind correctly (split on first colon after segment name).",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "3.1", "local_key": "task-3-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Unit-test ReviewKind deserialisation from string segments",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §3.2. Unit-test `ReviewKind` deserialisation from string segments.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "3.2", "local_key": "task-3-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-3",
+      "title": "3.3: Integration-test list_reviews with mocked subprocess",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §3.3. Integration test `list_reviews` with a mocked `ruflo memory search` subprocess: seed two entries, assert returned `Vec<ReviewEntry>` length and field values.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "3.3", "local_key": "task-3-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-4",
+      "title": "3.4: Test list_reviews scope filtering by branch",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §3.4. Test that `list_reviews` with scope `Branch(\"feat/x\")` generates the correct search query substring and filters entries for other branches.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "3.4", "local_key": "task-3-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Regenerate src/bindings.ts to include reviews types and commands",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §4.1. Regenerate `src/bindings.ts` via `bun tauri build` (or specta codegen script) to include `ReviewKind`, `ReviewEntry`, `ReviewScope`, `listReviews`, `getReview`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "4.1", "local_key": "task-4-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Add listReviews and getReview wrappers in src/ipc.ts",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §4.2. Add `listReviews(projectPath, scope): Promise<ReviewEntry[]>` and `getReview(key): Promise<ReviewEntry>` wrappers in `src/ipc.ts`, following the `invoke<T>` pattern of `getChangeBeadsProgress`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "4.2", "local_key": "task-4-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Create ReviewRow.tsx component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §5.1. Create `src/components/reviews/ReviewRow.tsx`: renders kind pill (using `LABEL_CHIP_COLORS` neutrals: slate/amber/rose), title, relative timestamp; click handler toggles expansion.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "5.1", "local_key": "task-5-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Create ReviewMarkdownViewer.tsx component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §5.2. Create `src/components/reviews/ReviewMarkdownViewer.tsx`: wraps the existing Tiptap markdown renderer for read-only display of review body; if the renderer requires context coupling, add a thin wrapper.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "5.2", "local_key": "task-5-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Create ReviewsSection.tsx component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §5.3. Create `src/components/reviews/ReviewsSection.tsx`: fetches `listReviews` scoped by branch (and PR if available); renders a list of `ReviewRow`; hides the entire section (no placeholder) when the result is empty; absent and makes no IPC call when Ruflo is disabled.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "5.3", "local_key": "task-5-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"},
+        {"key": "task-5-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Derive branch from task label in TaskDetailPanel",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §6.1. In `TaskDetailPanel.tsx`, derive `branch` from the task's `branch:<name>` label using the existing label-parse helper (split on first colon).",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "6.1", "local_key": "task-6-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Mount ReviewsSection in TaskDetailPanel Activity tab",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §6.2. Mount `ReviewsSection` in the Activity tab below the Related Memories section and above the Git/Dolt History section, gated on the Ruflo feature flag. No IPC call and no render when Ruflo is disabled.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "6.2", "local_key": "task-6-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-1",
+      "title": "7.1: Add Reviews sub-tab to BdHealthPanel",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §7.1. Add a \"Reviews\" sub-tab to `BdHealthPanel` alongside existing health check sections.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "7.1", "local_key": "task-7-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-2",
+      "title": "7.2: Implement branch grouping and kind filter chips in Reviews tab",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §7.2. Implement branch grouping (collapsible rows), kind filter chips (PR / Code / Security — all active by default), and text search over titles.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "7.2", "local_key": "task-7-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-3",
+      "title": "7.3: Render ReviewRow rows with inline ReviewMarkdownViewer in Reviews tab",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §7.3. Render each row as a `ReviewRow`; clicking opens `ReviewMarkdownViewer` inline.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "7.3", "local_key": "task-7-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-5-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-4",
+      "title": "7.4: Show empty state in Reviews tab when no reviews captured",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §7.4. Show the empty state copy \"No reviews captured yet. Run a review skill and pipe through `scripts/bd-capture-review.sh`.\" when the result is empty.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "7.4", "local_key": "task-7-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-1",
+      "title": "8.1: Add bd-capture-review save step to code-review SKILL.md",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §8.1. Add a \"Save with bd-capture-review\" final step to `code-review:code-review` SKILL.md: `<review output> | scripts/bd-capture-review.sh --kind code-review --branch <branch>`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "8.1", "local_key": "task-8-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-2",
+      "title": "8.2: Add bd-capture-review save step to security-review SKILL.md",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §8.2. Same for `security-review` SKILL.md: `--kind security-review`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "8.2", "local_key": "task-8-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-3",
+      "title": "8.3: Add bd-capture-review save step to gitnexus-pr-review SKILL.md",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §8.3. Same for `gitnexus-pr-review` SKILL.md: `--kind pr-review --pr <num>`.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "8.3", "local_key": "task-8-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-1",
+      "title": "9.1: cargo test passes for reviews module",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §9.1. `cargo test` passes for the new `reviews` module.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "9.1", "local_key": "task-9-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"},
+        {"key": "task-3-3", "type": "blocks"},
+        {"key": "task-3-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-2",
+      "title": "9.2: bun tsc --noEmit passes after bindings regeneration",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §9.2. `bun tsc --noEmit` passes after bindings regeneration.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "9.2", "local_key": "task-9-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-3",
+      "title": "9.3: openspec validate skill-output-capture passes with zero errors",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §9.3. `openspec validate skill-output-capture` passes with zero errors.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "9.3", "local_key": "task-9-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-9-1", "type": "blocks"},
+        {"key": "task-9-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-4",
+      "title": "9.4: Manual smoke test - pipe review through script and verify in UI",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §9.4. Manual smoke: pipe a synthetic review through `scripts/bd-capture-review.sh --kind code-review --branch feat/test`; verify the entry appears in the Activity tab Reviews section for a task labelled `branch:feat/test`, and in the BdHealthPanel Reviews sub-tab.",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "9.4", "local_key": "task-9-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-2", "type": "blocks"},
+        {"key": "task-7-4", "type": "blocks"},
+        {"key": "task-1-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-5",
+      "title": "9.5: Manual smoke test - Ruflo-disabled mode hides Reviews section",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:skill-output-capture"],
+      "description": "openspec/changes/skill-output-capture/tasks.md §9.5. Manual smoke: verify Ruflo-disabled mode hides the Reviews section and makes no IPC calls (confirm via DevTools network log).",
+      "metadata": {"openspec_change": "skill-output-capture", "task_ref": "9.5", "local_key": "task-9-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-2", "type": "blocks"}
+      ]
+    }
+  ]
+}

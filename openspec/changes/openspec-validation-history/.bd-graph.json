@@ -1,0 +1,615 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: openspec-validation-history",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "Execution tracker for openspec/changes/openspec-validation-history. Adds Tauri commands to record and list OpenSpec validation results in Ruflo AgentDB memory, plus a ValidationHistory UI panel inside OpenSpecPanel.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "local_key": "epic"
+      }
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Create openspec_validate_history.rs with ValidationHistoryEntry type",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §1.1. Create `src-tauri/src/commands/openspec_validate_history.rs` exporting type `ValidationHistoryEntry { change_slug: String, valid: bool, errors: Vec<String>, ts_epoch: u64, ts_iso: String }` deriving `serde::Serialize`, `serde::Deserialize`, and `specta::Type`.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "1.1",
+        "local_key": "task-1-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"}
+      ]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Add build_history_key helper",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §1.2. In `openspec_validate_history.rs`, add helper `build_history_key(workspace: &WorkspaceContext, change_slug: &str, valid: bool, ts_ms: u128) -> String` producing the pipe-delimited key format defined in design.md §1.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "1.2",
+        "local_key": "task-1-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Add derive_workspace_for_path helper",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §1.3. Add helper `derive_workspace_for_path(project_path: &str) -> Result<WorkspaceContext, String>` that reuses the `git rev-parse --abbrev-ref HEAD` + basename logic already in `get_workspace_context` (factor a shared inner fn or call through the public command).",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "1.3",
+        "local_key": "task-1-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Implement record_openspec_validation Tauri command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §2.1. Implement `record_openspec_validation(project_path, change_slug, result_json, settings)` Tauri command. It MUST: (a) parse `result_json`; (b) derive `WorkspaceContext` via 1.3; (c) compute `ts_ms`; (d) build key via 1.2; (e) build JSON value; (f) call `run_ruflo_managed` with `[\"memory\", \"store\", \"-k\", key, \"-v\", value]` and a 10s timeout; (g) return `()` on success.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "2.1",
+        "local_key": "task-2-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Implement list_openspec_validations Tauri command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §2.2. Implement `list_openspec_validations(project_path, change_slug, settings) -> Result<Vec<ValidationHistoryEntry>, String>`. Must call `ruflo memory search`, parse results, filter by slug and type, JSON-parse each value, sort by `ts_epoch` descending, truncate to 50.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "2.2",
+        "local_key": "task-2-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Register module in commands/mod.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §2.3. Register both commands with `pub mod openspec_validate_history;` in `src-tauri/src/commands/mod.rs`.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "2.3",
+        "local_key": "task-2-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Register commands in lib.rs tauri handlers and specta collect",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §2.4. Register both commands in `src-tauri/src/lib.rs` in BOTH `tauri::generate_handler!` AND `tauri_specta::collect_commands!` alongside the existing `openspec::*` commands.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "2.4",
+        "local_key": "task-2-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Unit test for build_history_key",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §3.1. Unit test for `build_history_key`: assert exact pipe-delimited format including `outcome:pass` / `outcome:fail` and millisecond `ts:` segment.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "3.1",
+        "local_key": "task-3-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Unit test for record_openspec_validation JSON round-trip",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §3.2. Unit test that the JSON value emitted by `record_openspec_validation`'s formatter round-trips back through `serde_json::from_str::<ValidationHistoryEntry>(value)` — asserts `ts_epoch` is in seconds (not ms) and `ts_iso` parses as valid RFC-3339.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "3.2",
+        "local_key": "task-3-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-3",
+      "title": "3.3: Unit test for list_openspec_validations filter logic",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §3.3. Unit test for the `list_openspec_validations` filter: feed a synthetic search result containing one matching entry, one entry with the wrong slug, one entry with `type:trajectory`, and one entry whose value is malformed JSON. Assert only the matching entry survives.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "3.3",
+        "local_key": "task-3-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-4",
+      "title": "3.4: Unit test for list_openspec_validations sort order",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §3.4. Unit test for sort order: three entries with descending `ts_epoch` values produce a newest-first list.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "3.4",
+        "local_key": "task-3-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Regenerate src/bindings.ts via specta codegen",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §4.1. Regenerate `src/bindings.ts` by running the existing specta codegen step. The new type `ValidationHistoryEntry` and both new commands MUST appear in the output.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "4.1",
+        "local_key": "task-4-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Add recordOpenspecValidation and listOpenspecValidations wrappers in ipc.ts",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §4.2. Add wrappers in `src/ipc.ts`: `recordOpenspecValidation(projectPath, changeSlug, resultJson): Promise<void>` and `listOpenspecValidations(projectPath, changeSlug): Promise<ValidationHistoryEntry[]>`. Style matches the existing `runOpenspecValidate` and `getChangeBeadsProgress` wrappers.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "4.2",
+        "local_key": "task-4-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Add ruflo_version_probe TanStack Query to OpenSpecPanel",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.1. In `src/components/task-detail/OpenSpecPanel.tsx`, ensure a TanStack Query for `ruflo_version_probe` keyed `['ruflo-version']` with `staleTime: Infinity` and `retry: false` is present (or add it) to gate the history section.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.1",
+        "local_key": "task-5-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Modify ValidateSection.handleValidate to call recordOpenspecValidation",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.2. Modify `ValidateSection` so `handleValidate` calls `recordOpenspecValidation(projectRoot, changeName, JSON.stringify({ valid, errors }))` after both the success path and the catch path, then invalidates `['validation-history', projectRoot, changeName]`. Recording errors are caught and `console.warn`'d.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.2",
+        "local_key": "task-5-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Add ValidationHistory sub-component with TanStack Query",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.3. Add sub-component `<ValidationHistory projectRoot changeName />` inside `OpenSpecPanel.tsx`. Runs a TanStack Query against `listOpenspecValidations`, keyed `['validation-history', projectRoot, changeName]`, with `staleTime: 30_000` and `enabled` gated on the ruflo-version probe succeeding.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.3",
+        "local_key": "task-5-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-4",
+      "title": "5.4: Render history in <details> with count badge and 5-row table",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.4. Render the section inside a `<details>` (closed by default) with header \"Validation history\" and count badge. Render up to 5 rows newest-first. Each row: timestamp (HH:MM · DD MMM) + pass/fail badge + one-line summary. Wrap timestamp in `<Tooltip>` showing full ISO string (mirrors ArtifactLink).",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.4",
+        "local_key": "task-5-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-5",
+      "title": "5.5: Implement per-row expansion for error list",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.5. Implement per-row expansion: click toggles a local `Set<number>` of expanded row indices. Expanded view renders the full `errors[]` list for `valid === false` entries, identical styling to the existing `ValidateSection` error list.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.5",
+        "local_key": "task-5-5"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-6",
+      "title": "5.6: Render empty state when query returns []",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.6. Render the empty state (\"No validations recorded yet — click Re-validate above.\") when the query returns `[]` and ruflo is available.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.6",
+        "local_key": "task-5-6"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-7",
+      "title": "5.7: Render gate message when ruflo_version_probe rejects",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.7. Render the gate message (\"Validation history requires the ruflo CLI (memory store).\") when `ruflo_version_probe` rejects.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.7",
+        "local_key": "task-5-7"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-8",
+      "title": "5.8: Render Show all footer when entries.length > 5",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.8. If `entries.length > 5`, render a \"Showing 5 of N · [Show all]\" footer where \"Show all\" toggles local state expanding the list inline (up to 50 entries, no modal, no new route).",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.8",
+        "local_key": "task-5-8"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-9",
+      "title": "5.9: Insert <ValidationHistory> into OpenSpecPanelBody below ValidateSection",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §5.9. Insert `<ValidationHistory>` directly below `<ValidateSection>` in `OpenSpecPanelBody`.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "5.9",
+        "local_key": "task-5-9"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"},
+        {"key": "task-5-4", "type": "blocks"},
+        {"key": "task-5-5", "type": "blocks"},
+        {"key": "task-5-6", "type": "blocks"},
+        {"key": "task-5-7", "type": "blocks"},
+        {"key": "task-5-8", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Vitest test — ValidationHistory empty state",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §6.1. Vitest / RTL test for `<ValidationHistory>`: mock `listOpenspecValidations` to return 0 entries → assert empty-state copy is rendered.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "6.1",
+        "local_key": "task-6-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-9", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Vitest test — ValidationHistory 3 entries newest-first, no Show all",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §6.2. Test with 3 entries → assert newest-first ordering and that no \"Show all\" footer renders.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "6.2",
+        "local_key": "task-6-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-9", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-3",
+      "title": "6.3: Vitest test — ValidationHistory 10 entries Show all toggle",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §6.3. Test with 10 entries → assert only 5 visible by default and that clicking \"Show all\" reveals the remainder.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "6.3",
+        "local_key": "task-6-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-9", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-4",
+      "title": "6.4: Vitest test — gate path renders gate message when ruflo unavailable",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §6.4. Test gate path: mock `ruflo_version_probe` rejection → assert gate message renders and no `listOpenspecValidations` call fires.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "6.4",
+        "local_key": "task-6-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-9", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-5",
+      "title": "6.5: Vitest test — recording side-effect calls recordOpenspecValidation",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §6.5. Test recording side-effect: mock `runOpenspecValidate` to return `{ valid: true, errors: [] }`, click Re-validate, assert `recordOpenspecValidation` is called once with the matching JSON payload.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "6.5",
+        "local_key": "task-6-5"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-9", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-1",
+      "title": "7.1: cargo test openspec_validate_history::tests passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.1. `cargo test -p beadspec_lib openspec_validate_history::tests` passes.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.1",
+        "local_key": "task-7-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"},
+        {"key": "task-3-3", "type": "blocks"},
+        {"key": "task-3-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-2",
+      "title": "7.2: bun tsc --noEmit passes after bindings regeneration",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.2. `bun tsc --noEmit` passes after bindings regeneration.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.2",
+        "local_key": "task-7-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-3",
+      "title": "7.3: bun run lint passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.3. `bun run lint` passes.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.3",
+        "local_key": "task-7-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-9", "type": "blocks"},
+        {"key": "task-6-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-4",
+      "title": "7.4: Manual — validate Re-validate records two rows with correct badges",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.4. Manual: open a project with at least one OpenSpec change, open the change's epic task, expand OpenSpec, click Re-validate twice (once on a valid spec, once after introducing a spec error). Confirm two rows appear in \"Validation history\" with the correct badges; expand each to confirm the error list matches the inline ValidateSection result.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.4",
+        "local_key": "task-7-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-5",
+      "title": "7.5: Manual — uninstall ruflo and verify graceful degradation",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.5. Manual: uninstall (or rename) the `ruflo` binary; confirm the section degrades to the gate message and `Re-validate` still works in `ValidateSection` (record call fails silently and is logged to the console).",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.5",
+        "local_key": "task-7-5"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-6",
+      "title": "7.6: Manual — switch worktrees and confirm history isolation",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.6. Manual: switch worktrees on the same repo; confirm history entries from worktree A do not appear in worktree B when the same change is opened.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.6",
+        "local_key": "task-7-6"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-7",
+      "title": "7.7: openspec validate openspec-validation-history passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:openspec-validation-history"],
+      "description": "openspec/changes/openspec-validation-history/tasks.md §7.7. `openspec validate openspec-validation-history` passes.",
+      "metadata": {
+        "openspec_change": "openspec-validation-history",
+        "task_ref": "7.7",
+        "local_key": "task-7-7"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    }
+  ]
+}

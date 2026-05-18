@@ -1,0 +1,699 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: memory-namespace-browser",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "Execution tracker for openspec/changes/memory-namespace-browser. Ruflo memory namespace browser: new Tauri commands, IPC bindings, and React UI for browsing/searching/managing Ruflo AgentDB memory entries from within BeadSpec.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "local_key": "epic"}
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Create ruflo_memory.rs with MemoryEntry and MemoryListResponse structs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §1.1. Create `src-tauri/src/commands/ruflo_memory.rs`. Define structs `MemoryEntry { key: String, score: f32, namespace: String, preview: String, body: String, ts: Option<i64> }` and `MemoryListResponse { entries: Vec<MemoryEntry>, total: u32 }`, both deriving `serde::Serialize`, `serde::Deserialize`, and `specta::Type`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "1.1", "local_key": "task-1-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Add is_valid_memory_key validator",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §1.2. Add a private validator `is_valid_memory_key(key: &str) -> bool`: non-empty, ≤ 1024 chars, characters drawn from `[A-Za-z0-9:|=._/-]`. Reject any other byte to keep the value out of shell-injection paths.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "1.2", "local_key": "task-1-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-1", "type": "blocks"}]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Add is_valid_memory_value validator",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §1.3. Add a private validator `is_valid_memory_value(value: &str) -> bool`: non-empty, ≤ 65536 bytes (64 KiB). No character restriction (value is passed as a single argv element, not via shell).",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "1.3", "local_key": "task-1-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-1", "type": "blocks"}]
+    },
+    {
+      "key": "task-1-4",
+      "title": "1.4: Make find_ruflo_with_override and run_ruflo_managed pub(crate) in external.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §1.4. Reuse `find_ruflo_with_override` and `run_ruflo_managed` from `external.rs` by making them `pub(crate)` if not already; do not duplicate them.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "1.4", "local_key": "task-1-4"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-1", "type": "blocks"}]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Add ruflo_memory_list Tauri command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §2.1. Add `ruflo_memory_list(namespace_prefix: Option<String>, limit: Option<u32>, settings: State<'_, Arc<Mutex<AppSettings>>>) -> Result<MemoryListResponse, String>`. Build argv `[\"memory\", \"list\", \"--format\", \"json\"]`, append `[\"--prefix\", <p>]` if `namespace_prefix` is `Some(non-empty)`, append `[\"--limit\", <n>]` (default 500 if `None`). Parse stdout as JSON into `MemoryListResponse`. 10 s timeout.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "2.1", "local_key": "task-2-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"},
+        {"key": "task-1-2", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"},
+        {"key": "task-1-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Add ruflo_memory_store Tauri command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §2.2. Add `ruflo_memory_store(key: String, value: String, settings: …) -> Result<(), String>`. Validate `key` and `value`. Build argv `[\"memory\", \"store\", \"-k\", <key>, \"-v\", <value>]`. 10 s timeout. Returns `Ok(())` on exit 0, `Err(stderr)` otherwise.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "2.2", "local_key": "task-2-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"},
+        {"key": "task-1-2", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"},
+        {"key": "task-1-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Add ruflo_memory_delete Tauri command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §2.3. Add `ruflo_memory_delete(key: String, settings: …) -> Result<(), String>`. Validate `key`. Build argv `[\"memory\", \"delete\", \"-k\", <key>]`. 10 s timeout. Same return contract as `store`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "2.3", "local_key": "task-2-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"},
+        {"key": "task-1-2", "type": "blocks"},
+        {"key": "task-1-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Register ruflo_memory module in commands/mod.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §2.4. Register the new module in `src-tauri/src/commands/mod.rs` as `pub mod ruflo_memory;`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "2.4", "local_key": "task-2-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"},
+        {"key": "task-2-2", "type": "blocks"},
+        {"key": "task-2-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-5",
+      "title": "2.5: Register the three commands in lib.rs handler and specta collector",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §2.5. Register the three commands in `src-tauri/src/lib.rs` inside `tauri::generate_handler!` and `tauri_specta::collect_commands!`, adjacent to `ruflo_memory_search` and `ruflo_version_probe`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "2.5", "local_key": "task-2-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Unit test is_valid_memory_key",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §3.1. Unit test `is_valid_memory_key`: accepts canonical examples (`branch:foo|repo:bar|type:note`, `openspec:abc-def|issue:BEADSPEC-xqf|type:trajectory|ts:1700000000`); rejects shell metacharacters (`;`, `$`, `` ` ``, spaces, newlines, empty string, and an over-long input).",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "3.1", "local_key": "task-3-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Unit test is_valid_memory_value",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §3.2. Unit test `is_valid_memory_value`: accepts a small string, accepts a 64 KiB string, rejects empty, rejects 65537-byte string.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "3.2", "local_key": "task-3-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-3",
+      "title": "3.3: Unit test ruflo_memory_list argv construction with prefix and limit",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §3.3. Unit test that the argv constructed by `ruflo_memory_list` is exactly `[\"memory\",\"list\",\"--format\",\"json\",\"--prefix\",\"branch:foo\",\"--limit\",\"250\"]` when `namespace_prefix=Some(\"branch:foo\")` and `limit=Some(250)`. Extract argv construction into a pure helper if needed to test without spawning.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "3.3", "local_key": "task-3-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-4",
+      "title": "3.4: Unit test ruflo_memory_list with None prefix omits --prefix and defaults limit to 500",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §3.4. Unit test that `ruflo_memory_list` with `None` prefix omits `--prefix` and defaults limit to 500.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "3.4", "local_key": "task-3-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-5",
+      "title": "3.5: Unit test ruflo_memory_store rejects invalid keys before spawn",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §3.5. Unit test that `ruflo_memory_store` rejects a key containing `;`, `$`, or a newline before any spawn happens.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "3.5", "local_key": "task-3-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-6",
+      "title": "3.6: Unit test ruflo_memory_delete rejects empty key before spawn",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §3.6. Unit test that `ruflo_memory_delete` rejects an empty key before any spawn happens.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "3.6", "local_key": "task-3-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Regenerate src/bindings.ts with new memory commands and types",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §4.1. Run `bun tauri build` (or the existing `specta` codegen script) to regenerate `src/bindings.ts` with `MemoryEntry`, `MemoryListResponse`, `rufloMemoryList`, `rufloMemoryStore`, `rufloMemoryDelete`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "4.1", "local_key": "task-4-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Add IPC wrappers to src/ipc.ts for memory commands",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §4.2. Add wrappers to `src/ipc.ts`: `rufloMemoryList(prefix?: string, limit?: number): Promise<MemoryListResponse>`, `rufloMemoryStore(key: string, value: string): Promise<void>`, `rufloMemoryDelete(key: string): Promise<void>`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "4.2", "local_key": "task-4-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Create parseMemoryKey.ts helper",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §5.1. Create `src/components/memory-browser/parseMemoryKey.ts` exporting `parseMemoryKey(key: string): MemoryFacets`. Implements \"split on first colon\" per the project label-parsing rule.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "5.1", "local_key": "task-5-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Vitest for parseMemoryKey",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §5.2. Vitest covering: canonical key parses into all known facets; unknown facets land in `rest`; missing `|` returns `{ rest: {}, raw }`; numeric `ts:` parses into `ts: number`; non-numeric `ts:` parses into `rest.ts` string and leaves `ts` undefined.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "5.2", "local_key": "task-5-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Create useRufloAvailable hook",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §5.3. Create `src/components/memory-browser/useRufloAvailable.ts` hook that lazily probes `commands.rufloVersionProbe`, memoises the boolean result per app session, and returns `{ available, loading }`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "5.3", "local_key": "task-5-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Create MemoryBrowser.tsx container component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.1. Create `src/components/memory-browser/MemoryBrowser.tsx`: container layout (top toolbar, left rail, right pane, optional drawer). TanStack Query keys `['ruflo-memory','list', prefix]` and `['ruflo-memory','search', query]`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.1", "local_key": "task-6-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Create NamespaceTree.tsx left-rail tree component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.2. Create `NamespaceTree.tsx`: builds a tree from `MemoryListResponse.entries` via `parseMemoryKey` and the canonical hierarchy. Collapsible nodes via local `useState<Set<string>>` of expanded paths. Each node shows count. Bucket unparseable keys under `(unparsed)`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.2", "local_key": "task-6-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-3",
+      "title": "6.3: Create MemoryList.tsx right-pane row list component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.3. Create `MemoryList.tsx`: renders the right-pane rows. Columns key·score·timestamp·preview. Sort by `ts` desc (entries without `ts` sink to the bottom). Per-row delete icon (opens confirm dialog).",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.3", "local_key": "task-6-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-4",
+      "title": "6.4: Create MemoryDetailDrawer.tsx detail pane component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.4. Create `MemoryDetailDrawer.tsx`: shows raw key (copyable), parsed facet chips, full body, score (search mode only), Open-issue button (when `facets.issue` set), Delete button.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.4", "local_key": "task-6-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"},
+        {"key": "task-6-1", "type": "blocks"},
+        {"key": "task-6-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-5",
+      "title": "6.5: Create StoreEntryDialog.tsx form dialog component",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.5. Create `StoreEntryDialog.tsx`: form with key (pre-filled from selected namespace) + value + Store/Cancel. Client-side validation mirrors backend.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.5", "local_key": "task-6-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-6",
+      "title": "6.6: Wire Open in Memory browser link in RufloMemoryPanel.tsx",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.6. Wire a small \"Open in Memory browser\" link in `RufloMemoryPanel.tsx` that calls `setState({ view: 'memory', memoryNamespace: <prefix derived from taskId+labels> })`. The browser reads `state.memoryNamespace` on mount and selects that node.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.6", "local_key": "task-6-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-7",
+      "title": "6.7: Add per-row Delete confirm dialog to MemoryList",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §6.7. Add a per-row Delete confirm dialog (re-use existing confirm-dialog primitive if one exists; otherwise inline modal). Confirm text shows the full key verbatim.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "6.7", "local_key": "task-6-7"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-3", "type": "blocks"},
+        {"key": "task-6-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-1",
+      "title": "7.1: Extend ALL_VIEWS in ViewSwitcher.tsx with Memory entry",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §7.1. Extend `ALL_VIEWS` in `src/components/layout/ViewSwitcher.tsx` with `{ id: 'memory', label: 'Memory', description: 'Ruflo memory browser', feature: 'ruflo' }`; widen the `feature?` type to `'openspec' | 'ruflo'`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "7.1", "local_key": "task-7-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-2",
+      "title": "7.2: AND-gate ruflo-flagged ViewSwitcher entries on useRufloAvailable",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §7.2. Update the filter in `ViewSwitcher` to also AND-gate the `'ruflo'`-flagged entries on `useRufloAvailable().available`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "7.2", "local_key": "task-7-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-3",
+      "title": "7.3: Add redirect effect for memory view when gates flip false",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §7.3. Add a redirect effect mirroring the OpenSpec one: if `activeView === 'memory'` and either gate flips false, `setState({ view: 'all' })`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "7.3", "local_key": "task-7-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-4",
+      "title": "7.4: Mount MemoryBrowser in layout/index.tsx when view === 'memory'",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §7.4. Update `src/components/layout/index.tsx` to mount `<MemoryBrowser />` when `state.view === 'memory'`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "7.4", "local_key": "task-7-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-5",
+      "title": "7.5: Extend hash-state schema to encode view: 'memory'",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §7.5. Extend the hash-state schema to encode `view: 'memory'` (no `memoryNamespace` in the hash for this change — it lives in local UI state to avoid bloating the URL hash).",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "7.5", "local_key": "task-7-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-1",
+      "title": "8.1: Vitest for parseMemoryKey (frontend test suite)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.1. Vitest for `parseMemoryKey` per task 5.2.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.1", "local_key": "task-8-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-2",
+      "title": "8.2: Vitest for NamespaceTree.buildTree pure builder",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.2. Vitest for `NamespaceTree.buildTree(entries)` (factor pure builder out of the component): canonical entries produce the expected tree shape; unparseable entries land in `(unparsed)`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.2", "local_key": "task-8-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-3",
+      "title": "8.3: RTL render MemoryBrowser with mocked rufloMemoryList",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.3. React Testing Library: render `MemoryBrowser` with a mocked `rufloMemoryList` returning three entries across two namespaces; assert tree shows both branches, list shows all three entries sorted by `ts` desc, breadcrumb defaults to root.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.3", "local_key": "task-8-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-4",
+      "title": "8.4: RTL namespace node click filters list and updates breadcrumb",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.4. RTL: click a namespace node, assert the list filters and the breadcrumb updates.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.4", "local_key": "task-8-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-8-3", "type": "blocks"},
+        {"key": "task-6-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-5",
+      "title": "8.5: RTL search input triggers rufloMemorySearch and swaps to search-mode",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.5. RTL: type in the search input, submit; assert `rufloMemorySearch` is called and list-mode swaps to search-mode (breadcrumb shows `Search: \"<q>\"`).",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.5", "local_key": "task-8-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-8-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-6",
+      "title": "8.6: RTL row click mounts MemoryDetailDrawer and Open issue navigates",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.6. RTL: click a row, assert `MemoryDetailDrawer` mounts; click \"Open issue\", assert `setState` invoked with `{ view: 'all', taskId: <id> }`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.6", "local_key": "task-8-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-4", "type": "blocks"},
+        {"key": "task-8-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-7",
+      "title": "8.7: RTL delete from drawer calls rufloMemoryDelete and invalidates query",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.7. RTL: click Delete in the drawer, confirm, assert `rufloMemoryDelete` called and the query is invalidated.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.7", "local_key": "task-8-7"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-7", "type": "blocks"},
+        {"key": "task-8-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-8",
+      "title": "8.8: RTL Store dialog calls rufloMemoryStore and invalidates list query",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.8. RTL: click + Store, fill the form, submit, assert `rufloMemoryStore` called with the composed key and that the list query is invalidated.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.8", "local_key": "task-8-8"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-5", "type": "blocks"},
+        {"key": "task-8-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-9",
+      "title": "8.9: RTL Memory view button absent when Ruflo flag disabled",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.9. RTL: with Ruflo flag disabled, the Memory view button is absent from `ViewSwitcher`.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.9", "local_key": "task-8-9"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-8-10",
+      "title": "8.10: RTL Memory view button absent when Ruflo flag on but useRufloAvailable returns false",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §8.10. RTL: with Ruflo flag enabled but `useRufloAvailable().available === false`, the Memory view button is absent.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "8.10", "local_key": "task-8-10"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-1",
+      "title": "9.1: cargo test -p beadspec_lib ruflo_memory:: passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.1. `cargo test -p beadspec_lib ruflo_memory::` passes.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.1", "local_key": "task-9-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"},
+        {"key": "task-3-3", "type": "blocks"},
+        {"key": "task-3-4", "type": "blocks"},
+        {"key": "task-3-5", "type": "blocks"},
+        {"key": "task-3-6", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-2",
+      "title": "9.2: bun tsc --noEmit passes after bindings regen",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.2. `bun tsc --noEmit` passes after bindings regen.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.2", "local_key": "task-9-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-3",
+      "title": "9.3: bun test passes (Vitest + RTL suites)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.3. `bun test` passes (Vitest + RTL suites).",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.3", "local_key": "task-9-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-8-1", "type": "blocks"},
+        {"key": "task-8-2", "type": "blocks"},
+        {"key": "task-8-3", "type": "blocks"},
+        {"key": "task-8-4", "type": "blocks"},
+        {"key": "task-8-5", "type": "blocks"},
+        {"key": "task-8-6", "type": "blocks"},
+        {"key": "task-8-7", "type": "blocks"},
+        {"key": "task-8-8", "type": "blocks"},
+        {"key": "task-8-9", "type": "blocks"},
+        {"key": "task-8-10", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-4",
+      "title": "9.4: Manual: launch bun tauri dev and verify memory tree populates and filters",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.4. Manual: with `ruflo` installed and the feature flag on, launch `bun tauri dev`, switch to Memory, confirm the tree populates, click a namespace, observe entries filter, search for a token, observe results swap.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.4", "local_key": "task-9-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-5",
+      "title": "9.5: Manual: store and delete an entry in the memory browser",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.5. Manual: + Store a new entry under the currently selected namespace, observe it appear in the list within one query cycle; delete it, observe it disappear.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.5", "local_key": "task-9-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-9-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-6",
+      "title": "9.6: Manual: open entry with issue facet and confirm TaskDetailPanel navigates",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.6. Manual: open an entry whose key includes `issue:<id>`; click Open issue; confirm `TaskDetailPanel` opens on that issue.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.6", "local_key": "task-9-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-9-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-7",
+      "title": "9.7: Manual: turn Ruflo flag off while on Memory view redirects to All",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.7. Manual: turn the Ruflo flag off in Settings while on the Memory view; confirm the view redirects to All and the nav entry disappears.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.7", "local_key": "task-9-7"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-9-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-8",
+      "title": "9.8: Manual: Memory view button hidden when ruflo missing from PATH",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.8. Manual: with `ruflo` missing from PATH, confirm the Memory view button is hidden even with the flag on.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.8", "local_key": "task-9-8"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-9-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-9-9",
+      "title": "9.9: openspec validate memory-namespace-browser passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-namespace-browser"],
+      "description": "openspec/changes/memory-namespace-browser/tasks.md §9.9. `openspec validate memory-namespace-browser` passes.",
+      "metadata": {"openspec_change": "memory-namespace-browser", "task_ref": "9.9", "local_key": "task-9-9"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-9-1", "type": "blocks"},
+        {"key": "task-9-2", "type": "blocks"},
+        {"key": "task-9-3", "type": "blocks"}
+      ]
+    }
+  ]
+}

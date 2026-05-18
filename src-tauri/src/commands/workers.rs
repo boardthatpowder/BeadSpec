@@ -14,6 +14,20 @@ pub struct WorkerFinding {
     pub created_at: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct WorkerProvenance {
+    pub worker: String,
+    pub notes_first_line: String,
+}
+
+const LIST_WORKER_FINDINGS_SQL: &str =
+    "SELECT id, title, priority, status, issue_type, notes, created_at \
+     FROM issues \
+     WHERE notes LIKE 'Auto-filed by ruflo-%' \
+       AND status NOT IN ('closed', 'deleted') \
+       AND issue_type != 'deleted' \
+     ORDER BY created_at DESC";
+
 fn decode_datetime(row: &sqlx::mysql::MySqlRow, col: &str) -> String {
     row.try_get::<sqlx::types::chrono::NaiveDateTime, _>(col)
         .map(|dt| dt.and_utc().to_rfc3339())
@@ -24,13 +38,16 @@ fn not_connected(project_path: &str) -> String {
     format!("Project not connected — call connect_project first for '{project_path}'")
 }
 
-fn parse_worker_from_notes(notes: &str) -> Option<String> {
+pub(crate) fn parse_worker_provenance(notes: &str) -> Option<WorkerProvenance> {
     const PREFIX: &str = "Auto-filed by ruflo-";
-    const DELIMITER: &str = " on ";
+    const CURRENT_DELIMITER: &str = " worker on ";
+    const LEGACY_DELIMITER: &str = " on ";
 
     let first_line = notes.lines().next()?;
     let rest = first_line.strip_prefix(PREFIX)?;
-    let delimiter_index = rest.find(DELIMITER)?;
+    let delimiter_index = rest
+        .find(CURRENT_DELIMITER)
+        .or_else(|| rest.find(LEGACY_DELIMITER))?;
     let worker = &rest[..delimiter_index];
 
     if worker.is_empty()
@@ -41,7 +58,19 @@ fn parse_worker_from_notes(notes: &str) -> Option<String> {
         return None;
     }
 
-    Some(worker.to_string())
+    Some(WorkerProvenance {
+        worker: worker.to_string(),
+        notes_first_line: first_line.to_string(),
+    })
+}
+
+#[cfg(test)]
+fn parse_worker_from_notes(notes: &str) -> Option<String> {
+    parse_worker_provenance(notes).map(|provenance| provenance.worker)
+}
+
+pub(crate) fn is_unresolved_worker_finding_row(status: &str, issue_type: &str) -> bool {
+    status != "closed" && status != "deleted" && issue_type != "deleted"
 }
 
 #[tauri::command]
@@ -55,31 +84,29 @@ pub async fn list_worker_findings(
         .await
         .map_err(|_| not_connected(&project_path))?;
 
-    let rows = sqlx::query(
-        "SELECT id, title, priority, status, notes, created_at \
-         FROM issues \
-         WHERE notes LIKE 'Auto-filed by ruflo-%' \
-           AND status IN ('open', 'in_progress') \
-           AND issue_type != 'deleted' \
-         ORDER BY created_at DESC",
-    )
-    .fetch_all(pool.pool())
-    .await
-    .map_err(|e| format!("Query failed: {e}"))?;
+    let rows = sqlx::query(LIST_WORKER_FINDINGS_SQL)
+        .fetch_all(pool.pool())
+        .await
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     let findings = rows
         .iter()
         .filter_map(|row| {
             let notes: String = row.try_get("notes").unwrap_or_default();
-            let worker = parse_worker_from_notes(&notes)?;
+            let status: String = row.try_get("status").unwrap_or_default();
+            let issue_type: String = row.try_get("issue_type").unwrap_or_default();
+            if !is_unresolved_worker_finding_row(&status, &issue_type) {
+                return None;
+            }
+            let provenance = parse_worker_provenance(&notes)?;
 
             Some(WorkerFinding {
                 issue_id: row.try_get("id").unwrap_or_default(),
                 title: row.try_get("title").unwrap_or_default(),
-                worker,
+                worker: provenance.worker,
                 priority: row.try_get::<i32, _>("priority").unwrap_or(2),
-                status: row.try_get("status").unwrap_or_default(),
-                notes_first_line: notes.lines().next().unwrap_or_default().to_string(),
+                status,
+                notes_first_line: provenance.notes_first_line,
                 created_at: decode_datetime(row, "created_at"),
             })
         })
@@ -90,23 +117,32 @@ pub async fn list_worker_findings(
 
 #[cfg(test)]
 mod tests {
-    use super::parse_worker_from_notes;
+    use super::{
+        is_unresolved_worker_finding_row, parse_worker_from_notes, LIST_WORKER_FINDINGS_SQL,
+    };
 
     #[test]
     fn parse_worker_from_notes_accepts_canonical_prefix() {
-        let notes = "Auto-filed by ruflo-alpha on 2026-05-17\nSecond line";
+        let notes = "Auto-filed by ruflo-alpha worker on 2026-05-17\nSecond line";
 
         assert_eq!(parse_worker_from_notes(notes), Some("alpha".to_string()));
     }
 
     #[test]
-    fn parse_worker_from_notes_accepts_hyphenated_worker_names() {
+    fn parse_worker_from_notes_accepts_legacy_prefix_without_worker_marker() {
         let notes = "Auto-filed by ruflo-feature-scanner-7 on 2026-05-17";
 
         assert_eq!(
             parse_worker_from_notes(notes),
             Some("feature-scanner-7".to_string())
         );
+    }
+
+    #[test]
+    fn parse_worker_from_notes_accepts_hyphenated_worker_tags() {
+        let notes = "Auto-filed by ruflo-test-gap worker on 2026-05-17";
+
+        assert_eq!(parse_worker_from_notes(notes), Some("test-gap".to_string()));
     }
 
     #[test]
@@ -133,5 +169,24 @@ mod tests {
         let notes = "Auto-filed by ruflo-Alpha on 2026-05-17";
 
         assert_eq!(parse_worker_from_notes(notes), None);
+    }
+
+    #[test]
+    fn worker_finding_row_visibility_includes_blocked_but_excludes_terminal_rows() {
+        assert!(is_unresolved_worker_finding_row("open", "bug"));
+        assert!(is_unresolved_worker_finding_row("in_progress", "task"));
+        assert!(is_unresolved_worker_finding_row("blocked", "bug"));
+        assert!(is_unresolved_worker_finding_row("needs_review", "task"));
+        assert!(!is_unresolved_worker_finding_row("closed", "bug"));
+        assert!(!is_unresolved_worker_finding_row("deleted", "bug"));
+        assert!(!is_unresolved_worker_finding_row("open", "deleted"));
+    }
+
+    #[test]
+    fn list_worker_findings_sql_matches_visibility_contract() {
+        assert!(LIST_WORKER_FINDINGS_SQL.contains("notes LIKE 'Auto-filed by ruflo-%'"));
+        assert!(LIST_WORKER_FINDINGS_SQL.contains("status NOT IN ('closed', 'deleted')"));
+        assert!(LIST_WORKER_FINDINGS_SQL.contains("issue_type != 'deleted'"));
+        assert!(LIST_WORKER_FINDINGS_SQL.contains("ORDER BY created_at DESC"));
     }
 }

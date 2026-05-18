@@ -73,7 +73,7 @@ export function AppLayout() {
 
   return (
     <div
-      className="flex flex-col h-screen w-screen overflow-hidden bg-neutral-950 text-neutral-100 select-none"
+      className="flex flex-col h-screen w-screen overflow-hidden bg-neutral-950 text-neutral-100"
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >

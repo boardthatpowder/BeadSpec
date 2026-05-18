@@ -8,6 +8,15 @@ import {
 
 describe('parseWorkerProvenance', () => {
   it('accepts the canonical worker prefix', () => {
+    const notes = 'Auto-filed by ruflo-security worker on 2026-05-17T10:00Z. Branch: main\nDetails'
+
+    expect(parseWorkerProvenance(notes)).toEqual({
+      worker: 'security',
+      firstLine: 'Auto-filed by ruflo-security worker on 2026-05-17T10:00Z. Branch: main',
+    })
+  })
+
+  it('accepts the legacy worker prefix without the worker marker', () => {
     const notes = 'Auto-filed by ruflo-security-audit on 2026-05-17T10:00Z. Branch: main\nDetails'
 
     expect(parseWorkerProvenance(notes)).toEqual({
@@ -16,7 +25,7 @@ describe('parseWorkerProvenance', () => {
     })
   })
 
-  it('accepts hyphenated worker names', () => {
+  it('accepts legacy hyphenated worker names', () => {
     const notes = 'Auto-filed by ruflo-test-gap-detector on 2026-05-17T10:00Z'
 
     expect(parseWorkerProvenance(notes)).toEqual({
@@ -50,11 +59,12 @@ describe('worker finding formatting', () => {
     expect(priorityToSeverity(2)).toBe('high')
     expect(priorityToSeverity(3)).toBe('medium')
     expect(priorityToSeverity(4)).toBe('low')
-    expect(priorityToSeverity(99)).toBe('low')
+    expect(priorityToSeverity(0)).toBe('unknown')
+    expect(priorityToSeverity(99)).toBe('unknown')
   })
 
   it('formats nonzero severity breakdowns in priority order', () => {
-    expect(formatSeverityBreakdown([2, 1, 2, 3])).toBe('1 critical, 2 high, 1 medium')
+    expect(formatSeverityBreakdown([2, 1, 2, 3, 99])).toBe('1 critical, 2 high, 1 medium, 1 unknown')
     expect(formatSeverityBreakdown([])).toBe('')
   })
 
