@@ -121,6 +121,7 @@ function ArchivedSection({
       <Button
         variant="ghost"
         size="sm"
+        aria-label={collapsed ? 'Show archived' : 'Hide archived'}
         onClick={() => setCollapsed(c => !c)}
         className="h-auto w-full justify-start gap-2 border-0 px-1 py-1.5 text-left group"
       >

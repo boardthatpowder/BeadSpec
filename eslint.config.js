@@ -1,7 +1,15 @@
 // @ts-check
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
+
+const jsxA11yRecommendedRules = Object.fromEntries(
+  Object.entries(jsxA11yPlugin.configs.recommended.rules ?? {}).map(([rule, severity]) => [
+    rule,
+    Array.isArray(severity) ? ["warn", ...severity.slice(1)] : "warn",
+  ]),
+);
 
 /** @type {import("eslint").Linter.Config[]} */
 export default [
@@ -22,9 +30,19 @@ export default [
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
+      "jsx-a11y": jsxA11yPlugin,
       "react-hooks": reactHooksPlugin,
     },
     rules: {
+      ...jsxA11yRecommendedRules,
+      "jsx-a11y/label-has-for": [
+        "warn",
+        {
+          required: {
+            some: ["nesting", "id"],
+          },
+        },
+      ],
       // Security: ban raw @tauri-apps/api/core imports everywhere except src/bindings.ts.
       // All invoke() calls must go through the typed wrappers in src/bindings.ts.
       "no-restricted-imports": [
