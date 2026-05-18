@@ -1,4 +1,5 @@
 import type { Task } from '../../bindings'
+import type { WorkerProvenance } from '../../lib/worker-findings'
 
 export const STATUS_DOT: Record<string, string> = {
   open:        'bg-neutral-500',
@@ -49,6 +50,7 @@ export function labelChipClass(label: string): string {
 
 interface TaskListItemProps {
   task: Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'labels'>
+  provenance?: WorkerProvenance | null
   isActive?: boolean
   isFocused?: boolean
   isSelected?: boolean
@@ -56,8 +58,9 @@ interface TaskListItemProps {
   onDoubleClick?: () => void
 }
 
-export function TaskListItem({ task, isActive, isFocused, isSelected, onClick, onDoubleClick }: TaskListItemProps) {
+export function TaskListItem({ task, provenance, isActive, isFocused, isSelected, onClick, onDoubleClick }: TaskListItemProps) {
   const visibleLabels = task.labels.slice(0, 2)
+  const hasMetadata = provenance || visibleLabels.length > 0
 
   return (
     <button
@@ -88,9 +91,18 @@ export function TaskListItem({ task, isActive, isFocused, isSelected, onClick, o
             {task.status.replace('_', ' ')}
           </span>
         </div>
-        {visibleLabels.length > 0 && (
+        {hasMetadata && (
           <div className="flex items-center gap-1 mt-1">
             <span className="text-[10px] font-mono text-neutral-700">{task.id}</span>
+            {provenance && (
+              <span
+                className={`text-[10px] px-1.5 py-0 rounded font-mono leading-4 max-w-24 truncate ${labelChipClass(`worker:${provenance.worker}`)}`}
+                title={provenance.firstLine}
+                aria-label={`Filed by ruflo-${provenance.worker}`}
+              >
+                {formatLabel(`worker:${provenance.worker}`)}
+              </span>
+            )}
             {visibleLabels.map(l => (
               <span
                 key={l}
@@ -105,7 +117,7 @@ export function TaskListItem({ task, isActive, isFocused, isSelected, onClick, o
             )}
           </div>
         )}
-        {visibleLabels.length === 0 && (
+        {!hasMetadata && (
           <div className="mt-0.5">
             <span className="text-[10px] font-mono text-neutral-700">{task.id}</span>
           </div>

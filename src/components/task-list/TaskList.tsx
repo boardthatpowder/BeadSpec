@@ -12,9 +12,11 @@ import { useAppState } from '../../contexts/HashStateContext'
 import { groupTasks, deserializeGroupConfig, type GroupedSection } from '../../lib/filterParser'
 import { readGroupBy, writeGroupBy } from '../../stores/layoutStore'
 import { useLineageForTask } from '../../hooks/useDependencyLineage'
+import { useWorkerFindings } from '../../hooks/useWorkerFindings'
 import { TaskLinkChip } from '../common/TaskLinkChip'
 import { useDensity } from '../../contexts/DensityContext'
 import type { Density } from '../../contexts/DensityContext'
+import type { WorkerProvenance } from '../../lib/worker-findings'
 
 const DENSITY_ROW_HEIGHT: Record<Density, number> = {
   compact:     42,
@@ -196,6 +198,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
   const queryClient = useQueryClient()
   const { state, setState } = useAppState()
   const { density } = useDensity()
+  const { data: workerFindings = [] } = useWorkerFindings(project)
 
   const [sortField, setSortField] = useState<SortField>('priority')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
@@ -239,6 +242,17 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
     () => virtualItems.filter((vi): vi is Extract<VirtualListItem, { type: 'task' }> => vi.type === 'task'),
     [virtualItems],
   )
+
+  const workerProvenanceByIssue = useMemo(() => {
+    const map = new Map<string, WorkerProvenance>()
+    for (const finding of workerFindings) {
+      map.set(finding.issue_id, {
+        worker: finding.worker,
+        firstLine: finding.notes_first_line,
+      })
+    }
+    return map
+  }, [workerFindings])
 
   // ── Tauri store persistence: task 3.3 (on mount, read stored groupBy) ───────
   useEffect(() => {
@@ -451,6 +465,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                     <div style={{ height: 54 }}>
                       <TaskListItem
                         task={item.task}
+                        provenance={workerProvenanceByIssue.get(item.task.id) ?? null}
                         isActive={(() => {
                           const { root: r, activePaneId: ap } = useWorkspaceStore.getState()
                           return r.kind === 'leaf' && r.activeTabId === item.task.id && r.id === ap

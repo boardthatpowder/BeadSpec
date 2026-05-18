@@ -25,11 +25,11 @@
 
 ## 5. TaskListItem chip
 
-- [ ] 5.1 Confirm whether `Task` row payload already carries `notes` (likely yes via `bindings.ts`). If yes: in `TaskListItem.tsx`, compute `const provenance = parseWorkerProvenance(task.notes)` and render a chip *before* the existing `visibleLabels.map(...)` chip row. If no: hoist a `Map<issue_id, worker>` from a `useWorkerFindingsLookup(projectPath)` hook in the parent `TaskList` and pass `workerForRow` as an optional prop; chip renders when the prop is defined.
-- [ ] 5.2 Update the `TaskListItemProps` `task` `Pick<>` set to include `notes` if the inline path is chosen.
-- [ ] 5.3 Style the chip identically to other label chips: `text-[10px] px-1.5 py-0 rounded font-mono leading-4 max-w-24 truncate ${labelChipClass('worker:' + worker)}`. Use the `worker:` prefix so it picks up `LABEL_CHIP_COLORS.worker`. Apply `formatLabel('worker:' + worker)` so the chip text shows just the worker name (e.g. `security-audit`).
-- [ ] 5.4 Add `title={provenance.firstLine}` so the full prefix is visible on hover, and `aria-label={"Filed by ruflo-" + provenance.worker}`.
-- [ ] 5.5 Ensure the chip does NOT count toward the `task.labels.length > 2` `+N` overflow indicator.
+- [x] 5.1 Confirm whether `Task` row payload already carries `notes` (likely yes via `bindings.ts`). If yes: in `TaskListItem.tsx`, compute `const provenance = parseWorkerProvenance(task.notes)` and render a chip *before* the existing `visibleLabels.map(...)` chip row. If no: hoist a `Map<issue_id, worker>` from a `useWorkerFindingsLookup(projectPath)` hook in the parent `TaskList` and pass `workerForRow` as an optional prop; chip renders when the prop is defined.
+- [x] 5.2 Update the `TaskListItemProps` `task` `Pick<>` set to include `notes` if the inline path is chosen.
+- [x] 5.3 Style the chip identically to other label chips: `text-[10px] px-1.5 py-0 rounded font-mono leading-4 max-w-24 truncate ${labelChipClass('worker:' + worker)}`. Use the `worker:` prefix so it picks up `LABEL_CHIP_COLORS.worker`. Apply `formatLabel('worker:' + worker)` so the chip text shows just the worker name (e.g. `security-audit`).
+- [x] 5.4 Add `title={provenance.firstLine}` so the full prefix is visible on hover, and `aria-label={"Filed by ruflo-" + provenance.worker}`.
+- [x] 5.5 Ensure the chip does NOT count toward the `task.labels.length > 2` `+N` overflow indicator.
 
 ## 6. WorkerFindingsPanel
 
