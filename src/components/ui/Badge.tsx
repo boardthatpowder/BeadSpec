@@ -14,7 +14,7 @@ const BADGE_PALETTE: Record<BadgeVariant, PaletteClassSet> = {
   warning: { bg: 'bg-amber-950/40', text: 'text-amber-300', border: 'border-amber-800/50' },
   danger: { bg: 'bg-red-950/40', text: 'text-red-300', border: 'border-red-800/50' },
   info: { bg: 'bg-blue-950/40', text: 'text-blue-300', border: 'border-blue-800/50' },
-  muted: { bg: 'bg-neutral-800/60', text: 'text-neutral-400', border: 'border-neutral-700/50' },
+  muted: { bg: 'bg-[--color-surface-hi]/60', text: 'text-[--color-fg-muted]', border: 'border-[--color-border-strong]/50' },
 }
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(

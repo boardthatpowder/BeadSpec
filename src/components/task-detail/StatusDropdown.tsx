@@ -25,13 +25,13 @@ function BlockerConfirmDialog({ blockingIds, onConfirm, onCancel }: BlockerConfi
             <Icon name="AlertTriangle" size="lg" className="text-amber-400" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-neutral-100">Close anyway?</h3>
-            <p className="mt-1 text-xs text-neutral-400">
+            <h3 className="text-sm font-semibold text-[--color-fg]">Close anyway?</h3>
+            <p className="mt-1 text-xs text-[--color-fg-muted]">
               This issue is blocked by open {blockingIds.length === 1 ? 'issue' : 'issues'}:
             </p>
             <div className="mt-2 flex flex-wrap gap-1">
               {blockingIds.map(id => (
-                <code key={id} className="font-mono bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-200 text-xs">
+                <code key={id} className="font-mono bg-[--color-surface-hi] px-1.5 py-0.5 rounded text-[--color-fg] text-xs">
                   {id}
                 </code>
               ))}
@@ -137,7 +137,7 @@ export function StatusDropdown({ task, project }: Props) {
           </Button>
         </Popover.Trigger>
 
-        <Popover.Content align="start" className="min-w-[130px] bg-neutral-900 py-1">
+        <Popover.Content align="start" className="min-w-[130px] bg-[--color-surface] py-1">
             {STATUS_OPTIONS.map(s => (
               <Button
                 key={s}

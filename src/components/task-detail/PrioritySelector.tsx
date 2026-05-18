@@ -41,7 +41,7 @@ export function PrioritySelector({ task, project }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-0.5 bg-neutral-800 rounded-full px-1 py-0.5">
+    <div className="flex items-center gap-0.5 bg-[--color-surface-hi] rounded-full px-1 py-0.5">
       {PRIORITIES.map(p => {
         const active = p === task.priority
         return (
@@ -53,8 +53,8 @@ export function PrioritySelector({ task, project }: Props) {
               className={[
                 'h-auto rounded-full px-2 py-0.5 text-xs',
                 active
-                  ? 'bg-neutral-600 text-neutral-100'
-                  : 'border-0 text-neutral-500 hover:text-neutral-300',
+                  ? 'bg-neutral-600 text-[--color-fg]'
+                  : 'border-0 text-[--color-fg-subtle] hover:text-[--color-fg-muted]',
               ].join(' ')}
             >
               P{p}

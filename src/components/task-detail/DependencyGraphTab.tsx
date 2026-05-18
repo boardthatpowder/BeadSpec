@@ -69,13 +69,13 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
         boxShadow: isSelf ? `0 0 0 3px rgba(59,130,246,0.2), 0 4px 20px rgba(0,0,0,0.5)` : undefined,
       }}
       className={[
-        'group px-3 py-2 rounded-lg bg-neutral-900 border-2 text-left min-w-44 max-w-56 shadow-lg transition-all',
+        'group px-3 py-2 rounded-lg bg-[--color-surface] border-2 text-left min-w-44 max-w-56 shadow-lg transition-all',
         isSelf
           ? 'ring-2 ring-blue-400'
           : 'cursor-pointer hover:border-neutral-400 hover:shadow-xl hover:-translate-y-0.5',
       ].join(' ')}
     >
-      <Handle type="target" position={Position.Left} className="!bg-neutral-700 !border-neutral-600" />
+      <Handle type="target" position={Position.Left} className="!bg-[--color-surface-hi] !border-neutral-600" />
 
       {/* Header row: short id + priority + expand badge */}
       <div className="flex items-center justify-between mb-1">
@@ -86,7 +86,7 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
             </span>
           )}
           {!isSelf && (
-            <span className="font-mono text-[10px] text-neutral-500">{shortId}</span>
+            <span className="font-mono text-[10px] text-[--color-fg-subtle]">{shortId}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -106,8 +106,8 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
               className={[
                 'flex items-center gap-0.5 text-[10px] font-medium px-1 rounded leading-none py-0.5 transition-all',
                 data.hiddenCount > 0 || data.isExpanded
-                  ? 'bg-neutral-700 hover:bg-neutral-600 text-neutral-200 cursor-pointer'
-                  : 'text-neutral-600 cursor-default',
+                  ? 'bg-[--color-surface-hi] hover:bg-neutral-600 text-[--color-fg] cursor-pointer'
+                  : 'text-[--color-fg-subtle] cursor-default',
               ].join(' ')}
             >
               <Icon
@@ -128,7 +128,7 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
               size="xs"
               aria-label="Open in new tab"
               onClick={(e) => { e.stopPropagation(); openPinned(data.id) }}
-              className="w-4 h-4 flex items-center justify-center rounded text-neutral-500 opacity-0 group-hover:opacity-100 hover:text-neutral-200 hover:bg-neutral-700 transition-all"
+              className="w-4 h-4 flex items-center justify-center rounded text-[--color-fg-subtle] opacity-0 group-hover:opacity-100 hover:text-[--color-fg] hover:bg-[--color-surface-hi] transition-all"
             >
               <Icon name="ExternalLink" size="sm" className="h-2.5 w-2.5" strokeWidth={1.5} />
             </Button>
@@ -137,7 +137,7 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
       </div>
 
       {/* Title — primary element */}
-      <div className="text-xs text-neutral-100 font-medium leading-snug line-clamp-2 mb-1.5">
+      <div className="text-xs text-[--color-fg] font-medium leading-snug line-clamp-2 mb-1.5">
         {data.title}
       </div>
 
@@ -152,7 +152,7 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
         {data.status.replace('_', ' ')}
       </div>
 
-      <Handle type="source" position={Position.Right} className="!bg-neutral-700 !border-neutral-600" />
+      <Handle type="source" position={Position.Right} className="!bg-[--color-surface-hi] !border-neutral-600" />
     </div>
   )
 }
@@ -413,7 +413,7 @@ export function DependencyGraphTab({ task, project }: Props) {
 
   if (!task.dependencies?.length && !task.dependents?.length) {
     return (
-      <div style={{ position: 'absolute', inset: 0, background: '#0a0a0a' }} className="flex items-center justify-center text-neutral-400 text-sm">
+      <div style={{ position: 'absolute', inset: 0, background: '#0a0a0a' }} className="flex items-center justify-center text-[--color-fg-muted] text-sm">
         No dependencies
       </div>
     )
@@ -463,10 +463,10 @@ export function DependencyGraphTab({ task, project }: Props) {
           style={{ background: '#0a0a0a' }}
         >
           <Background color="#262626" gap={20} />
-          <Controls className="!bg-neutral-900 !border-neutral-700" />
+          <Controls className="!bg-[--color-surface] !border-[--color-border-strong]" />
           <MiniMap
             nodeColor={n => STATUS_BORDER[(n.data as unknown as TaskNode).status] ?? '#525252'}
-            className="!bg-neutral-900 !border-neutral-700"
+            className="!bg-[--color-surface] !border-[--color-border-strong]"
           />
         </ReactFlow>
       </div>
@@ -591,7 +591,7 @@ function CytoscapeGraph({ nodes, edges, onNodeClick, onToggle }: {
           onClick={(e) => { e.stopPropagation(); onToggle(b.id, b.branch) }}
           title={b.isExpanded ? 'Collapse' : `Expand ${b.hiddenCount} more`}
           style={{ position: 'absolute', left: b.x, top: b.y, transform: 'translate(-50%, -50%)' }}
-          className="text-[9px] font-medium px-1 rounded bg-neutral-700 hover:bg-neutral-600 text-neutral-300 transition-colors leading-none py-0.5 z-10 pointer-events-auto"
+          className="text-[9px] font-medium px-1 rounded bg-[--color-surface-hi] hover:bg-neutral-600 text-[--color-fg-muted] transition-colors leading-none py-0.5 z-10 pointer-events-auto"
         >
           {b.isExpanded ? '−' : `+${b.hiddenCount}`}
         </Button>

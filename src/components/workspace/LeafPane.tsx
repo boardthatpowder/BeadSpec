@@ -102,14 +102,14 @@ function EdgeDropZone({ paneId, edge }: { paneId: string; edge: EdgeSide }) {
 export function EmptyPlaceholder({ paneId, isRoot }: { paneId: string; isRoot: boolean }) {
   const { closePane } = useWorkspaceStore()
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-3 text-neutral-600">
+    <div className="h-full flex flex-col items-center justify-center gap-3 text-[--color-fg-subtle]">
       <span className="text-sm">Select a task to open</span>
       {!isRoot && (
         <Button
           variant="ghost"
           size="xs"
           onClick={(e) => { e.stopPropagation(); closePane(paneId) }}
-          className="border-neutral-800 text-neutral-500 hover:text-neutral-300"
+          className="border-[--color-border] text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
         >
           Close pane
         </Button>

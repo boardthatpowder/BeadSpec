@@ -69,7 +69,7 @@ export function ActivityFeed() {
             retry={() => query.refetch()}
           />
         ) : query.isLoading ? (
-          <div className="overflow-hidden rounded border border-neutral-800/60">
+          <div className="overflow-hidden rounded border border-[--color-border]/60">
             <TaskRowSkeleton />
             <TaskRowSkeleton />
             <TaskRowSkeleton />

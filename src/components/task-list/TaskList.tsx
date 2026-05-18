@@ -82,27 +82,27 @@ export function GroupHeaderRow({ label, count, collapsed, onToggle }: GroupHeade
       variant="ghost"
       size="md"
       onClick={onToggle}
-      className="group h-full w-full justify-start gap-2 rounded-none border-0 border-b border-l-2 border-neutral-800/80 border-l-neutral-700/60 bg-neutral-900/60 px-3 font-normal hover:bg-neutral-800/60"
+      className="group h-full w-full justify-start gap-2 rounded-none border-0 border-b border-l-2 border-[--color-border]/80 border-l-neutral-700/60 bg-[--color-surface]/60 px-3 font-normal hover:bg-[--color-surface-hi]/60"
     >
       <Icon
         name="ChevronDown"
         size="sm"
-        className={`h-3 w-3 text-neutral-500 group-hover:text-neutral-400 flex-shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}
+        className={`h-3 w-3 text-[--color-fg-subtle] group-hover:text-[--color-fg-muted] flex-shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}
       />
 
       {/* Label */}
-      <span className="text-xs font-semibold text-neutral-400 capitalize flex-1 text-left truncate">
+      <span className="text-xs font-semibold text-[--color-fg-muted] capitalize flex-1 text-left truncate">
         {label}
       </span>
 
       {/* Count badge */}
-      <span className="text-[10px] bg-neutral-800 text-neutral-500 border border-neutral-700/50 rounded-full px-1.5 leading-4 flex-shrink-0 tabular-nums">
+      <span className="text-[10px] bg-[--color-surface-hi] text-[--color-fg-subtle] border border-[--color-border-strong]/50 rounded-full px-1.5 leading-4 flex-shrink-0 tabular-nums">
         {count}
       </span>
 
       {/* Hidden indicator */}
       {collapsed && count > 0 && (
-        <span className="text-[10px] text-neutral-600 flex-shrink-0">
+        <span className="text-[10px] text-[--color-fg-subtle] flex-shrink-0">
           ({count} hidden)
         </span>
       )}
@@ -139,10 +139,10 @@ function TaskRowLineage({ taskId }: { taskId: string }) {
   return (
     <div ref={rowRef}>
       {hasLineage && (
-        <div className="px-3 pb-2 pt-0.5 flex flex-col gap-1 bg-neutral-900/30">
+        <div className="px-3 pb-2 pt-0.5 flex flex-col gap-1 bg-[--color-surface]/30">
           {unblockedBy.length > 0 && (
             <div className="flex items-start gap-1.5 flex-wrap">
-              <span className="text-[10px] text-neutral-600 flex-shrink-0 leading-4 mt-0.5">
+              <span className="text-[10px] text-[--color-fg-subtle] flex-shrink-0 leading-4 mt-0.5">
                 Unblocked by:
               </span>
               {unblockedBy.map(dep => (
@@ -157,7 +157,7 @@ function TaskRowLineage({ taskId }: { taskId: string }) {
                 variant="ghost"
                 size="xs"
                 onClick={e => { e.stopPropagation(); setUnlocksExpanded(x => !x) }}
-                className="h-auto w-fit border-0 bg-transparent px-0 py-0 text-[10px] font-normal text-neutral-500 hover:bg-transparent hover:text-neutral-300"
+                className="h-auto w-fit border-0 bg-transparent px-0 py-0 text-[10px] font-normal text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
               >
                 <span>Unblocks: {unblocks.length} task{unblocks.length !== 1 ? 's' : ''}</span>
                 <Icon
@@ -406,12 +406,12 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sort header */}
-      <div className="flex items-center px-3 py-2 border-b border-neutral-800/60 bg-neutral-900/40 flex-shrink-0">
+      <div className="flex items-center px-3 py-2 border-b border-[--color-border]/60 bg-[--color-surface]/40 flex-shrink-0">
         {groupConfig !== null ? (
           <IconButton
             label={hasCollapsed ? 'Expand all' : 'Collapse all'}
             onClick={toggleExpandCollapseAll}
-            className="mr-2 h-auto w-4 flex-shrink-0 border-0 bg-transparent px-0 py-0 text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+            className="mr-2 h-auto w-4 flex-shrink-0 border-0 bg-transparent px-0 py-0 text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
           >
             <Icon
               name={hasCollapsed ? 'ChevronsUpDown' : 'ChevronsDownUp'}
@@ -427,7 +427,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
           size="xs"
           aria-label={sortLabel('title')}
           onClick={() => handleSort('title')}
-          className="h-auto flex-1 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+          className="h-auto flex-1 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
         >
           Title <SortIcon field="title" />
         </Button>
@@ -436,7 +436,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
           size="xs"
           aria-label={sortLabel('status')}
           onClick={() => handleSort('status')}
-          className="h-auto w-20 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+          className="h-auto w-20 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
         >
           Status <SortIcon field="status" />
         </Button>
@@ -445,7 +445,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
           size="xs"
           aria-label={sortLabel('priority')}
           onClick={() => handleSort('priority')}
-          className="h-auto w-8 justify-end rounded-none border-0 bg-transparent px-0 py-0 text-right text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+          className="h-auto w-8 justify-end rounded-none border-0 bg-transparent px-0 py-0 text-right text-xs font-normal text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
         >
           P <SortIcon field="priority" />
         </Button>
@@ -477,7 +477,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                     onToggle={() => toggleCollapse(item.sectionKey)}
                   />
                 ) : (
-                  <div className="relative w-full border-b border-neutral-800/40">
+                  <div className="relative w-full border-b border-[--color-border]/40">
                     <div style={{ height: 54 }}>
                       <TaskListItem
                         task={item.task}
@@ -502,7 +502,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
 
                     {/* Quick status picker (Space) */}
                     {quickStatusFlatIdx === item.flatIndex && (
-                      <div className="absolute inset-0 bg-neutral-950/96 backdrop-blur-sm flex items-center gap-1.5 px-3 z-10 border-l-2 border-l-blue-500">
+                      <div className="absolute inset-0 bg-[--color-bg]/96 backdrop-blur-sm flex items-center gap-1.5 px-3 z-10 border-l-2 border-l-blue-500">
                         {STATUSES.map(s => (
                           <Button
                             key={s}
@@ -524,7 +524,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                           variant="ghost"
                           size="xs"
                           onClick={() => setQuickStatusFlatIdx(null)}
-                          className="ml-auto h-auto border-0 bg-transparent px-0 py-0 text-[10px] font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+                          className="ml-auto h-auto border-0 bg-transparent px-0 py-0 text-[10px] font-normal text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
                         >
                           esc
                         </Button>
@@ -540,7 +540,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
         {sorted.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-40 gap-3">
             <Icon name="ListTodo" size="lg" className="h-8 w-8 text-neutral-800" />
-            <span className="text-neutral-600 text-sm">No tasks match the current filters</span>
+            <span className="text-[--color-fg-subtle] text-sm">No tasks match the current filters</span>
           </div>
         )}
       </div>

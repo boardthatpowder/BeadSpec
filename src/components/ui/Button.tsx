@@ -15,7 +15,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'border-transparent bg-[--color-accent] text-[--color-accent-fg] hover:bg-blue-600',
-  secondary: 'border-[--color-border] bg-[--color-surface-hi] text-[--color-fg] hover:bg-neutral-700',
+  secondary: 'border-[--color-border] bg-[--color-surface-hi] text-[--color-fg] hover:bg-[--color-surface-hi]',
   ghost: 'border-transparent bg-transparent text-[--color-fg-muted] hover:bg-[--color-surface-hi] hover:text-[--color-fg]',
   danger: 'border-transparent bg-[--color-danger] text-white hover:bg-red-600',
   link: 'border-transparent bg-transparent px-0 text-[--color-accent] underline-offset-4 hover:underline',

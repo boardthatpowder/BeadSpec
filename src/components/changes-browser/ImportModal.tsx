@@ -86,7 +86,7 @@ export function ImportModal({ changeName, changeSlug, onClose, allTasks }: Impor
             <IconButton
               label="Close"
               onClick={onClose}
-              className="text-neutral-500 hover:text-neutral-300 transition-colors"
+              className="text-[--color-fg-subtle] hover:text-[--color-fg-muted] transition-colors"
             >
               <Icon name="X" size="sm" />
             </IconButton>
@@ -98,7 +98,7 @@ export function ImportModal({ changeName, changeSlug, onClose, allTasks }: Impor
           {modalState.phase === 'running' && (
             <div className="flex flex-col items-center gap-4 py-8">
               <span className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin block" />
-              <p className="text-sm text-neutral-400">Running openspec-beads-import…</p>
+              <p className="text-sm text-[--color-fg-muted]">Running openspec-beads-import…</p>
             </div>
           )}
 
@@ -108,9 +108,9 @@ export function ImportModal({ changeName, changeSlug, onClose, allTasks }: Impor
                 <Icon name="AlertTriangle" size="lg" className="text-amber-400" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-neutral-200">openspec-beads-import not found</p>
-                <p className="text-xs text-neutral-500 mt-1">
-                  Run <code className="font-mono bg-neutral-800 px-1 rounded">openspec-beads-import {changeName}</code> from the terminal.
+                <p className="text-sm font-medium text-[--color-fg]">openspec-beads-import not found</p>
+                <p className="text-xs text-[--color-fg-subtle] mt-1">
+                  Run <code className="font-mono bg-[--color-surface-hi] px-1 rounded">openspec-beads-import {changeName}</code> from the terminal.
                 </p>
               </div>
               <Button
@@ -131,7 +131,7 @@ export function ImportModal({ changeName, changeSlug, onClose, allTasks }: Impor
                 <span className="text-sm font-medium">Import complete</span>
               </div>
               {modalState.output.stdout && (
-                <pre className="text-xs font-mono text-neutral-300 bg-neutral-950 border border-neutral-800 rounded-lg p-3 max-h-48 overflow-y-auto whitespace-pre-wrap leading-5">
+                <pre className="text-xs font-mono text-[--color-fg-muted] bg-[--color-bg] border border-[--color-border] rounded-lg p-3 max-h-48 overflow-y-auto whitespace-pre-wrap leading-5">
                   {modalState.output.stdout}
                 </pre>
               )}

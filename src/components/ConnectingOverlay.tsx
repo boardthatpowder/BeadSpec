@@ -36,18 +36,19 @@ export function ConnectingOverlay() {
       role="status"
       aria-live="polite"
       style={{ zIndex: 9000 }}
-      className="fixed inset-0 bg-black/40 flex items-center justify-center pointer-events-none"
+      // Intentionally opaque backdrop; it should dim both light and dark themes.
+      className="fixed inset-0 bg-[rgb(0_0_0_/_0.40)] flex items-center justify-center pointer-events-none"
     >
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl px-6 py-5 w-[420px] pointer-events-auto">
+      <div className="bg-[--color-surface] border border-[--color-border-strong] rounded-lg shadow-xl px-6 py-5 w-[420px] pointer-events-auto">
         <div className="flex items-center gap-3">
           <Spinner />
-          <div className="text-sm font-medium text-neutral-100">
+          <div className="text-sm font-medium text-[--color-fg]">
             Connecting to {projectName}
           </div>
-          <div className="ml-auto text-xs text-neutral-500 tabular-nums">{elapsed}s</div>
+          <div className="ml-auto text-xs text-[--color-fg-subtle] tabular-nums">{elapsed}s</div>
         </div>
-        <div className="mt-2 text-xs text-neutral-400">{connecting.status}</div>
-        <div className="mt-1 text-xs text-neutral-500">{detail}</div>
+        <div className="mt-2 text-xs text-[--color-fg-muted]">{connecting.status}</div>
+        <div className="mt-1 text-xs text-[--color-fg-subtle]">{detail}</div>
       </div>
     </div>
   )
@@ -58,7 +59,7 @@ function Spinner() {
     <Icon
       name="LoaderCircle"
       size="lg"
-      className="animate-spin text-neutral-300"
+      className="animate-spin text-[--color-fg-muted]"
       aria-hidden="true"
     />
   )

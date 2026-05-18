@@ -46,7 +46,7 @@ export function WorkerFindingsPanel() {
     return (
       <WorkerFindingsFrame>
         <div className="flex items-center justify-center py-16">
-          <Icon name="Loader2" size="lg" className="animate-spin text-neutral-500" />
+          <Icon name="Loader2" size="lg" className="animate-spin text-[--color-fg-subtle]" />
         </div>
       </WorkerFindingsFrame>
     )
@@ -76,8 +76,8 @@ export function WorkerFindingsPanel() {
     <WorkerFindingsFrame>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-neutral-500">Total worker findings</span>
-        <span className="text-xs tabular-nums text-neutral-300">{findings.length}</span>
+        <span className="text-xs text-[--color-fg-subtle]">Total worker findings</span>
+        <span className="text-xs tabular-nums text-[--color-fg-muted]">{findings.length}</span>
       </div>
 
       {groups.map(group => {
@@ -93,35 +93,35 @@ export function WorkerFindingsPanel() {
                   {formatLabel(`worker:${group.worker}`)}
                 </span>
               </Tooltip>
-              <span className="text-[10px] text-neutral-500 tabular-nums">
+              <span className="text-[10px] text-[--color-fg-subtle] tabular-nums">
                 {group.findings.length} total
               </span>
               {severityBreakdown && (
-                <span className="text-[10px] text-neutral-600">
+                <span className="text-[10px] text-[--color-fg-subtle]">
                   ({severityBreakdown})
                 </span>
               )}
             </div>
 
-            <div className="border border-neutral-800 rounded-lg overflow-hidden">
+            <div className="border border-[--color-border] rounded-lg overflow-hidden">
               {group.findings.map(finding => (
                 <Button
                   variant="ghost"
                   size="sm"
                   key={finding.issue_id}
                   onClick={() => openPinned(finding.issue_id)}
-                  className="h-auto w-full justify-start gap-2 rounded-none border-0 border-b border-neutral-800/70 bg-neutral-950 px-3 py-2 text-left hover:bg-neutral-900 last:border-b-0"
+                  className="h-auto w-full justify-start gap-2 rounded-none border-0 border-b border-[--color-border]/70 bg-[--color-bg] px-3 py-2 text-left hover:bg-[--color-surface] last:border-b-0"
                 >
-                  <span className="w-24 text-[10px] font-mono text-neutral-500 truncate">
+                  <span className="w-24 text-[10px] font-mono text-[--color-fg-subtle] truncate">
                     {finding.issue_id}
                   </span>
                   <span className={`w-7 text-[10px] tabular-nums ${priorityClass(finding.priority)}`}>
                     P{finding.priority}
                   </span>
-                  <span className="flex-1 min-w-0 text-xs text-neutral-300 truncate">
+                  <span className="flex-1 min-w-0 text-xs text-[--color-fg-muted] truncate">
                     {finding.title}
                   </span>
-                  <span className="text-[10px] text-neutral-600 tabular-nums flex-shrink-0">
+                  <span className="text-[10px] text-[--color-fg-subtle] tabular-nums flex-shrink-0">
                     {formatAbsolute(finding.created_at, { includeTime: true })}
                   </span>
                 </Button>

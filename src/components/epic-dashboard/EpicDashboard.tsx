@@ -63,11 +63,11 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
     <div className="h-full flex flex-col overflow-hidden">
       <PanelHeader title="Epic Progress" />
       <div className="flex-1 overflow-auto p-5 space-y-4">
-      <header className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4">
+      <header className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-neutral-100">Epic: {epicId}</div>
-            <div className="mt-1 text-xs text-neutral-500">
+            <div className="text-sm font-semibold text-[--color-fg]">Epic: {epicId}</div>
+            <div className="mt-1 text-xs text-[--color-fg-subtle]">
               {(snapshot.data?.ready.length ?? 0)} ready · {snapshot.data?.total_in_progress ?? 0} in progress · via {snapshot.data?.source ?? 'loading'}
             </div>
           </div>
@@ -119,8 +119,8 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
         />
       ) : (
         Object.entries(grouped).map(([name, tasks]) => tasks.length > 0 && (
-          <section key={name} className="rounded-lg border border-neutral-800/60 bg-neutral-900/30">
-            <div className="border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-400">{name} ({tasks.length})</div>
+          <section key={name} className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30">
+            <div className="border-b border-[--color-border] px-4 py-2 text-xs font-medium text-[--color-fg-muted]">{name} ({tasks.length})</div>
             <div className="divide-y divide-neutral-800/50">
               {tasks.map(task => <EpicTaskRow key={task.id} task={task} paused={snapshot.data?.paused_task_ids.includes(task.id) ?? false} project={project} onClaimed={() => {
                 queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -169,7 +169,7 @@ function EpicTaskRow({ task, paused, project, onClaimed }: { task: Task; paused:
         <div className="flex items-center gap-2">
           <span className={`rounded border px-1.5 py-0.5 text-[10px] ${paletteClass(task.status)}`}>{task.status.replace('_', ' ')}</span>
           {paused && <span className="rounded bg-violet-950/40 px-1.5 py-0.5 text-[10px] text-violet-300">Paused</span>}
-          <span className="truncate text-sm text-neutral-200">{task.title}</span>
+          <span className="truncate text-sm text-[--color-fg]">{task.title}</span>
         </div>
         <div className="mt-1 flex gap-1">
           {task.labels.slice(0, 3).map(label => <span key={label} className={`rounded px-1.5 py-0.5 text-[10px] ${labelChipClass(label)}`}>{formatLabel(label)}</span>)}
@@ -198,7 +198,7 @@ function EpicValidationPill({ project, change }: { project: string; change: stri
         variant="secondary"
         size="xs"
         onClick={() => validate.mutate()}
-        className={!result ? 'border-neutral-700 text-neutral-400' : result.valid ? 'border-green-800 bg-green-950/30 text-green-300' : 'border-red-800 bg-red-950/30 text-red-300'}
+        className={!result ? 'border-[--color-border-strong] text-[--color-fg-muted]' : result.valid ? 'border-green-800 bg-green-950/30 text-green-300' : 'border-red-800 bg-red-950/30 text-red-300'}
       >
         {validate.isPending ? 'validating…' : !result ? 'Validate' : result.valid ? 'Validation: pass' : `Validation: fail (${result.errors.length})`}
       </Button>

@@ -42,7 +42,7 @@ function revisionLabel(revision: DoltRevision): string {
 
 function NullableValue({ value, variant }: { value: string | null; variant: 'from' | 'to' }) {
   if (value === null || value === undefined) {
-    return <span className="text-neutral-600 italic">—</span>
+    return <span className="text-[--color-fg-subtle] italic">—</span>
   }
   if (variant === 'from') {
     return <span className="text-red-400 line-through">{value}</span>
@@ -74,11 +74,11 @@ export function DoltRevisionEntry({ revision }: Props) {
           </span>
 
           {/* Diff type */}
-          <span className="text-xs text-neutral-500 capitalize">{revision.diff_type}</span>
+          <span className="text-xs text-[--color-fg-subtle] capitalize">{revision.diff_type}</span>
 
           {/* Pseudo-hash */}
           {label && (
-            <span className="text-xs font-mono text-neutral-600">{label}</span>
+            <span className="text-xs font-mono text-[--color-fg-subtle]">{label}</span>
           )}
 
           {/* Expand toggle */}
@@ -87,7 +87,7 @@ export function DoltRevisionEntry({ revision }: Props) {
               variant="ghost"
               size="xs"
               onClick={() => setExpanded(prev => !prev)}
-              className="ml-auto text-xs text-neutral-600 hover:text-neutral-400 hover:bg-neutral-700 px-1.5 py-0.5 rounded transition-colors"
+              className="ml-auto text-xs text-[--color-fg-subtle] hover:text-[--color-fg-muted] hover:bg-[--color-surface-hi] px-1.5 py-0.5 rounded transition-colors"
               aria-expanded={expanded}
             >
               {expanded ? 'Hide changes' : `${fieldDiffs.length} change${fieldDiffs.length > 1 ? 's' : ''}`}
@@ -97,19 +97,19 @@ export function DoltRevisionEntry({ revision }: Props) {
 
         {/* Field diff table — collapsed by default */}
         {expanded && fieldDiffs.length > 0 && (
-          <div className="mt-2 rounded border border-neutral-800 overflow-hidden">
+          <div className="mt-2 rounded border border-[--color-border] overflow-hidden">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-neutral-800">
-                  <th className="text-left px-2 py-1 text-neutral-500 font-medium w-20">Field</th>
-                  <th className="text-left px-2 py-1 text-neutral-500 font-medium">Before</th>
-                  <th className="text-left px-2 py-1 text-neutral-500 font-medium">After</th>
+                <tr className="border-b border-[--color-border]">
+                  <th className="text-left px-2 py-1 text-[--color-fg-subtle] font-medium w-20">Field</th>
+                  <th className="text-left px-2 py-1 text-[--color-fg-subtle] font-medium">Before</th>
+                  <th className="text-left px-2 py-1 text-[--color-fg-subtle] font-medium">After</th>
                 </tr>
               </thead>
               <tbody>
                 {fieldDiffs.map(diff => (
-                  <tr key={diff.field} className="border-b border-neutral-800/60 last:border-0">
-                    <td className="px-2 py-1 text-neutral-400 font-medium capitalize">{diff.field}</td>
+                  <tr key={diff.field} className="border-b border-[--color-border]/60 last:border-0">
+                    <td className="px-2 py-1 text-[--color-fg-muted] font-medium capitalize">{diff.field}</td>
                     <td className="px-2 py-1">
                       <NullableValue value={diff.fromValue} variant="from" />
                     </td>
@@ -125,7 +125,7 @@ export function DoltRevisionEntry({ revision }: Props) {
 
         {/* No-diff fallback */}
         {expanded && fieldDiffs.length === 0 && (
-          <div className="mt-1 text-xs text-neutral-600 italic">No field changes detected</div>
+          <div className="mt-1 text-xs text-[--color-fg-subtle] italic">No field changes detected</div>
         )}
       </div>
     </div>

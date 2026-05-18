@@ -67,12 +67,12 @@ function CheckSection({ label, result, open, onToggle }: CheckSectionProps) {
   const combinedOutput = [output?.stdout, output?.stderr].filter(Boolean).join('\n').trim()
 
   return (
-    <div className="border border-neutral-800 rounded-lg overflow-hidden">
+    <div className="border border-[--color-border] rounded-lg overflow-hidden">
       <Button
         variant="ghost"
         size="sm"
         onClick={onToggle}
-        className="h-auto w-full justify-start gap-3 rounded-none border-0 bg-neutral-900 px-4 py-3 text-left hover:bg-neutral-800/60"
+        className="h-auto w-full justify-start gap-3 rounded-none border-0 bg-[--color-surface] px-4 py-3 text-left hover:bg-[--color-surface-hi]/60"
       >
         {/* Status badge */}
         <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
@@ -83,11 +83,11 @@ function CheckSection({ label, result, open, onToggle }: CheckSectionProps) {
           ) : failed ? (
             <Icon name="X" size="md" className="h-4 w-4 text-red-400" />
           ) : (
-            <span className="w-3 h-3 rounded-full bg-neutral-700 block" />
+            <span className="w-3 h-3 rounded-full bg-[--color-surface-hi] block" />
           )}
         </div>
 
-        <span className="flex-1 text-sm font-medium text-neutral-200">{label}</span>
+        <span className="flex-1 text-sm font-medium text-[--color-fg]">{label}</span>
 
         {exitCode !== null && !isRunning && (
           <span className={[
@@ -102,20 +102,20 @@ function CheckSection({ label, result, open, onToggle }: CheckSectionProps) {
         <Icon
           name="ChevronDown"
           size="md"
-          className={['h-4 w-4 text-neutral-500 transition-transform', open ? 'rotate-180' : ''].join(' ')}
+          className={['h-4 w-4 text-[--color-fg-subtle] transition-transform', open ? 'rotate-180' : ''].join(' ')}
         />
       </Button>
 
       {open && (
-        <div className="px-4 py-3 bg-neutral-950 border-t border-neutral-800">
+        <div className="px-4 py-3 bg-[--color-bg] border-t border-[--color-border]">
           {isRunning ? (
-            <p className="text-xs text-neutral-500 italic">Running…</p>
+            <p className="text-xs text-[--color-fg-subtle] italic">Running…</p>
           ) : combinedOutput ? (
-            <pre className="text-xs text-neutral-300 whitespace-pre-wrap font-mono leading-5 max-h-64 overflow-y-auto">
+            <pre className="text-xs text-[--color-fg-muted] whitespace-pre-wrap font-mono leading-5 max-h-64 overflow-y-auto">
               {renderWithChips(combinedOutput)}
             </pre>
           ) : (
-            <p className="text-xs text-neutral-500 italic">No output.</p>
+            <p className="text-xs text-[--color-fg-subtle] italic">No output.</p>
           )}
         </div>
       )}
@@ -200,7 +200,7 @@ export function BdHealthPanel() {
   if (!project) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-neutral-500 text-sm">No project connected. Open a project first.</p>
+        <p className="text-[--color-fg-subtle] text-sm">No project connected. Open a project first.</p>
       </div>
     )
   }
@@ -212,10 +212,10 @@ export function BdHealthPanel() {
       className="h-full flex flex-col overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[--color-border] flex-shrink-0">
         <div>
-          <h2 className="text-base font-semibold text-neutral-100">bd Health</h2>
-          <p className="text-xs text-neutral-500 mt-0.5">Run bd diagnostics checks on the connected project</p>
+          <h2 className="text-base font-semibold text-[--color-fg]">bd Health</h2>
+          <p className="text-xs text-[--color-fg-subtle] mt-0.5">Run bd diagnostics checks on the connected project</p>
         </div>
         {tab === 'checks' && (
           <Button
@@ -223,7 +223,7 @@ export function BdHealthPanel() {
             size="xs"
             onClick={runChecks}
             disabled={isRunning}
-            className="border-neutral-700 bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100 disabled:text-neutral-500"
+            className="border-[--color-border-strong] bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-[--color-surface-hi] hover:text-[--color-fg] disabled:text-[--color-fg-subtle]"
           >
             {isRunning ? 'Running…' : 'Re-run'}
           </Button>
@@ -238,7 +238,7 @@ export function BdHealthPanel() {
           <Tabs.Trigger
             key={value}
             value={value}
-            className="px-0 py-2 text-xs font-medium data-[state=active]:border-neutral-100 data-[state=active]:text-neutral-100"
+            className="px-0 py-2 text-xs font-medium data-[state=active]:border-neutral-100 data-[state=active]:text-[--color-fg]"
           >
             {label}
           </Tabs.Trigger>
@@ -257,21 +257,21 @@ export function BdHealthPanel() {
               <Icon name="AlertTriangle" size="lg" className="h-6 w-6 text-amber-400" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-neutral-200">bd CLI not configured</p>
-              <p className="text-xs text-neutral-500 mt-1 max-w-xs">
-                The <code className="font-mono bg-neutral-800 px-1 rounded">bd</code> command was not found on PATH.
+              <p className="text-sm font-medium text-[--color-fg]">bd CLI not configured</p>
+              <p className="text-xs text-[--color-fg-subtle] mt-1 max-w-xs">
+                The <code className="font-mono bg-[--color-surface-hi] px-1 rounded">bd</code> command was not found on PATH.
                 Install Beads CLI and ensure it is available in your shell, then re-run.
               </p>
             </div>
           </div>
         ) : projectNotConnected ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-              <Icon name="Lock" size="lg" className="h-6 w-6 text-neutral-400" />
+            <div className="w-12 h-12 rounded-full bg-[--color-surface-hi] border border-[--color-border-strong] flex items-center justify-center">
+              <Icon name="Lock" size="lg" className="h-6 w-6 text-[--color-fg-muted]" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-neutral-200">Project not fully connected</p>
-              <p className="text-xs text-neutral-500 mt-1 max-w-xs">
+              <p className="text-sm font-medium text-[--color-fg]">Project not fully connected</p>
+              <p className="text-xs text-[--color-fg-subtle] mt-1 max-w-xs">
                 Try reopening the project from the Project menu, then re-run.
               </p>
             </div>
@@ -307,7 +307,7 @@ export function BdHealthPanel() {
 
         {!hasRun && !isRunning && (
           <div className="flex items-center justify-center py-16">
-            <p className="text-neutral-600 text-sm">Click Re-run to start checks.</p>
+            <p className="text-[--color-fg-subtle] text-sm">Click Re-run to start checks.</p>
           </div>
         )}
       </Tabs.Content>

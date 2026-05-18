@@ -13,7 +13,8 @@ const Content = forwardRef<
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      // Intentionally opaque backdrop; it should dim both light and dark themes.
+      className="fixed inset-0 z-50 bg-[rgb(0_0_0_/_0.60)] backdrop-blur-sm"
     />
     <DialogPrimitive.Content
       ref={ref}

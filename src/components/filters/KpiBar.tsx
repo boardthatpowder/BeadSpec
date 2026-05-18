@@ -6,7 +6,7 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 
 const STATUS_CONFIG = [
-  { key: 'open',        label: 'Open',        color: 'text-neutral-300',  activeColor: 'text-neutral-100',  dot: 'bg-neutral-500' },
+  { key: 'open',        label: 'Open',        color: 'text-[--color-fg-muted]',  activeColor: 'text-[--color-fg]',  dot: 'bg-neutral-500' },
   { key: 'in_progress', label: 'In Progress', color: 'text-blue-400',     activeColor: 'text-blue-300',     dot: 'bg-blue-500'    },
   { key: 'blocked',     label: 'Blocked',     color: 'text-amber-400',    activeColor: 'text-amber-300',    dot: 'bg-amber-500'   },
   { key: 'closed',      label: 'Closed',      color: 'text-green-400',    activeColor: 'text-green-300',    dot: 'bg-green-500'   },
@@ -63,10 +63,10 @@ export function KpiBar() {
         className="h-auto gap-2 border-0 px-3 py-1.5 group"
       >
         <span className="text-base font-semibold tabular-nums text-white">{total}</span>
-        <span className="text-xs text-neutral-500 group-hover:text-neutral-400 transition-colors">Total</span>
+        <span className="text-xs text-[--color-fg-subtle] group-hover:text-[--color-fg-muted] transition-colors">Total</span>
       </Button>
 
-      <div className="w-px h-5 bg-neutral-800/80" />
+      <div className="w-px h-5 bg-[--color-surface-hi]/80" />
 
       {STATUS_CONFIG.map(s => {
         const isActive = activeStatusList.includes(s.key)
@@ -84,15 +84,15 @@ export function KpiBar() {
               disabled
                 ? 'opacity-40 cursor-not-allowed'
                 : isActive
-                  ? 'bg-neutral-800/80 ring-1 ring-neutral-700/60'
-                  : 'hover:bg-neutral-800/40',
+                  ? 'bg-[--color-surface-hi]/80 ring-1 ring-neutral-700/60'
+                  : 'hover:bg-[--color-surface-hi]/40',
             ].join(' ')}
           >
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot} ${isActive ? 'opacity-100' : 'opacity-60'}`} />
             <span className={`text-sm font-semibold tabular-nums ${isActive ? s.activeColor : s.color}`}>
               {count}
             </span>
-            <span className={`text-xs transition-colors ${isActive ? 'text-neutral-400' : 'text-neutral-600'}`}>
+            <span className={`text-xs transition-colors ${isActive ? 'text-[--color-fg-muted]' : 'text-[--color-fg-subtle]'}`}>
               {s.label}
             </span>
           </Button>
@@ -106,7 +106,7 @@ export function KpiBar() {
           onClick={togglePaused}
           className={[
             'h-auto gap-1.5 border-0 px-3 py-1.5',
-            pausedActive ? 'bg-violet-950/60 ring-1 ring-violet-800/60' : 'hover:bg-neutral-800/40',
+            pausedActive ? 'bg-violet-950/60 ring-1 ring-violet-800/60' : 'hover:bg-[--color-surface-hi]/40',
           ].join(' ')}
         >
           <Icon name="Pause" size="sm" className="text-violet-300" />

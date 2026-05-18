@@ -4,7 +4,7 @@ export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       className={clsx(
-        'animate-pulse rounded bg-neutral-800',
+        'animate-pulse rounded bg-[--color-surface-hi]',
         className
       )}
     />
@@ -13,7 +13,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function TaskRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 px-3 border-b border-neutral-800/50"
+    <div className="flex items-center gap-3 px-3 border-b border-[--color-border]/50"
          style={{ height: 'var(--row-height, 44px)' }}>
       <Skeleton className="w-16 h-3" />
       <Skeleton className="flex-1 h-3" />

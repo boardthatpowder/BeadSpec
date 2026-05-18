@@ -130,7 +130,7 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
     <div className="h-full flex flex-col overflow-hidden">
       <BreadcrumbBar />
       {/* Header */}
-      <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-neutral-800">
+      <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-[--color-border]">
         <div className="flex items-start justify-between gap-3 mb-2">
           <InlineTitle task={task} project={project ?? ""} />
           <div className="flex items-center gap-2 flex-shrink-0 mt-1">
@@ -139,19 +139,19 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
               gitRefsData &&
               gitRefsData.branches.length > 0 && (
                 <span
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-400 border border-neutral-700"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[--color-surface-hi] text-[--color-fg-muted] border border-[--color-border-strong]"
                   title={gitRefsData.branches.join(", ")}
                 >
                   <Icon name="GitBranch" size="sm" />
                   {gitRefsData.branches[0]}
                   {gitRefsData.branches.length > 1 && (
-                    <span className="text-neutral-600">
+                    <span className="text-[--color-fg-subtle]">
                       +{gitRefsData.branches.length - 1}
                     </span>
                   )}
                 </span>
               )}
-            <span className="text-[11px] text-neutral-600 font-mono select-all">
+            <span className="text-[11px] text-[--color-fg-subtle] font-mono select-all">
               {task.id}
             </span>
             <TaskHeaderActions task={task} project={project ?? ""} />
@@ -170,7 +170,7 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
           {task.task_type && (
             <>
               <span className="text-neutral-700 text-xs">·</span>
-              <span className="text-xs text-neutral-500 capitalize">
+              <span className="text-xs text-[--color-fg-subtle] capitalize">
                 {task.task_type}
               </span>
             </>
@@ -356,8 +356,8 @@ function DetailsTab({
   return (
     <div className="p-5 flex flex-col gap-4">
       {/* Description card */}
-      <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4">
-        <div className="text-xs font-medium text-neutral-400 mb-3">
+      <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 p-4">
+        <div className="text-xs font-medium text-[--color-fg-muted] mb-3">
           Description
         </div>
         <DescriptionEditor
@@ -372,9 +372,9 @@ function DetailsTab({
       </div>
 
       {/* Details card */}
-      <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 px-4 py-3">
-        <div className="text-xs font-medium text-neutral-400 mb-2">Details</div>
-        <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+      <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 px-4 py-3">
+        <div className="text-xs font-medium text-[--color-fg-muted] mb-2">Details</div>
+        <div className="flex items-center gap-1.5 text-xs text-[--color-fg-subtle]">
           <span>Created {formatDate(task.created_at)}</span>
           <span className="text-neutral-700">·</span>
           <span>Updated {formatDate(task.updated_at)}</span>
@@ -407,7 +407,7 @@ function DetailsTab({
       )}
 
       {/* Comments card */}
-      <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4">
+      <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 p-4">
         <CommentsSection taskId={task.id} project={project} />
       </div>
     </div>

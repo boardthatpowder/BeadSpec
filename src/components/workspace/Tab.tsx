@@ -45,19 +45,19 @@ export function Tab({ taskId, paneId, label, isPreview, isActive, onContextMenu 
       onContextMenu={onContextMenu}
       className={[
         'group flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-pointer select-none shrink-0',
-        'border-r border-neutral-800 transition-colors',
+        'border-r border-[--color-border] transition-colors',
         isActive
-          ? 'bg-neutral-900/60 text-neutral-100'
-          : 'bg-neutral-900/20 text-neutral-400 hover:bg-neutral-900/40 hover:text-neutral-200',
+          ? 'bg-[--color-surface]/60 text-[--color-fg]'
+          : 'bg-[--color-surface]/20 text-[--color-fg-muted] hover:bg-[--color-surface]/40 hover:text-[--color-fg]',
         isPreview && !isDoc ? 'italic' : '',
       ].join(' ')}
     >
-      {isDoc && <span className="text-neutral-500 text-xs leading-none">·</span>}
+      {isDoc && <span className="text-[--color-fg-subtle] text-xs leading-none">·</span>}
       <span className="max-w-[160px] truncate">{label}</span>
       <IconButton
         label="Close tab"
         onClick={handleClose}
-        className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-neutral-300 leading-none transition-opacity"
+        className="opacity-0 group-hover:opacity-100 text-[--color-fg-subtle] hover:text-[--color-fg-muted] leading-none transition-opacity"
       >
         ×
       </IconButton>

@@ -96,17 +96,17 @@ function BdHumanQueuePopover({ items, onClose }: PopoverProps) {
   return (
     <div
       ref={popoverRef}
-      className="absolute top-full right-0 mt-2 w-96 max-h-[480px] overflow-y-auto rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl z-50"
+      className="absolute top-full right-0 mt-2 w-96 max-h-[480px] overflow-y-auto rounded-xl border border-[--color-border-strong] bg-[--color-surface] shadow-2xl z-50"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 sticky top-0 bg-neutral-900">
-        <span className="text-sm font-semibold text-neutral-100">Pending decisions</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[--color-border] sticky top-0 bg-[--color-surface]">
+        <span className="text-sm font-semibold text-[--color-fg]">Pending decisions</span>
         <Button
           aria-label="Close"
           variant="ghost"
           size="xs"
           onClick={onClose}
-          className="h-7 w-7 px-0 text-neutral-500 hover:text-neutral-300"
+          className="h-7 w-7 px-0 text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
         >
           <Icon name="X" size="sm" />
         </Button>
@@ -114,7 +114,7 @@ function BdHumanQueuePopover({ items, onClose }: PopoverProps) {
 
       {/* Items or empty state */}
       {items.length === 0 ? (
-        <div className="px-4 py-8 text-center text-sm text-neutral-500">
+        <div className="px-4 py-8 text-center text-sm text-[--color-fg-subtle]">
           No pending decisions
         </div>
       ) : (
@@ -179,10 +179,10 @@ function HumanQueueItemRow({
   return (
     <div className="px-4 py-3 flex flex-col gap-2">
       {/* Title */}
-      <div className="text-sm font-semibold text-neutral-100">{item.title}</div>
+      <div className="text-sm font-semibold text-[--color-fg]">{item.title}</div>
 
       {/* Prompt */}
-      <div className="text-xs text-neutral-400 leading-relaxed whitespace-pre-wrap">{item.prompt}</div>
+      <div className="text-xs text-[--color-fg-muted] leading-relaxed whitespace-pre-wrap">{item.prompt}</div>
 
       {/* Respond inline input */}
       {isResponding && (
@@ -194,7 +194,7 @@ function HumanQueueItemRow({
             onChange={e => onRespondTextChange(e.target.value)}
             onKeyDown={onRespondKeyDown}
             placeholder="Type a response… (Enter to send, Shift+Enter for newline, Esc to cancel)"
-            className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 text-neutral-100 placeholder-neutral-500 resize-none focus:outline-none focus:border-amber-500/60"
+            className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-[--color-surface-hi] border border-neutral-600 text-[--color-fg] placeholder-neutral-500 resize-none focus:outline-none focus:border-amber-500/60"
           />
           <div className="flex gap-2">
             <Button
@@ -210,7 +210,7 @@ function HumanQueueItemRow({
               variant="ghost"
               size="xs"
               onClick={onRespondCancel}
-              className="text-neutral-400 hover:text-neutral-200"
+              className="text-[--color-fg-muted] hover:text-[--color-fg]"
             >
               Cancel
             </Button>
@@ -225,7 +225,7 @@ function HumanQueueItemRow({
             variant="secondary"
             size="xs"
             onClick={onRespondOpen}
-            className="border-neutral-700 bg-neutral-800 text-neutral-300 hover:border-amber-500/50 hover:text-amber-300"
+            className="border-[--color-border-strong] bg-[--color-surface-hi] text-[--color-fg-muted] hover:border-amber-500/50 hover:text-amber-300"
           >
             Respond
           </Button>
@@ -233,7 +233,7 @@ function HumanQueueItemRow({
             variant="secondary"
             size="xs"
             onClick={onDismiss}
-            className="border-neutral-700 bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+            className="border-[--color-border-strong] bg-[--color-surface-hi] text-[--color-fg-muted] hover:text-[--color-fg]"
           >
             Dismiss
           </Button>
@@ -241,7 +241,7 @@ function HumanQueueItemRow({
             variant="ghost"
             size="xs"
             onClick={onViewIssue}
-            className="ml-auto text-neutral-500 hover:text-neutral-300"
+            className="ml-auto text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
             trailingIcon={<Icon name="ArrowRight" size="sm" />}
           >
             View issue

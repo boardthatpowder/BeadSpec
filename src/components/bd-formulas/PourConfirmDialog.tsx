@@ -18,10 +18,10 @@ export function PourConfirmDialog({ formulaName, onConfirm, onCancel }: PourConf
             <Icon name="AlertTriangle" size="lg" className="text-amber-400" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-neutral-100">Pour formula?</h3>
-            <p className="mt-1 text-xs text-neutral-400">
+            <h3 className="text-sm font-semibold text-[--color-fg]">Pour formula?</h3>
+            <p className="mt-1 text-xs text-[--color-fg-muted]">
               You are about to pour{' '}
-              <code className="font-mono bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-200">
+              <code className="font-mono bg-[--color-surface-hi] px-1.5 py-0.5 rounded text-[--color-fg]">
                 {formulaName}
               </code>{' '}
               into the connected project. This action may be irreversible.

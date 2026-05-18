@@ -8,6 +8,8 @@ import { ACTIVE_PROJECT_EVENT } from './hooks/useProject'
 import type { ActiveProjectChangedPayload } from './hooks/useProject'
 import { Button } from './components/ui/Button'
 import { Icon } from './components/ui/Icon'
+import { DEFAULT_SETTINGS, type AppSettings } from './stores/settingsStore'
+import { useThemeEffect } from './lib/theme'
 import './index.css'
 
 // Helper: unwrap tauri-specta typed Result
@@ -35,6 +37,7 @@ function contextToChips(ctx: WorkspaceContext): string[] {
 }
 
 export default function QuickCaptureApp() {
+  const [theme, setTheme] = useState<AppSettings['theme']>(DEFAULT_SETTINGS.theme)
   const [title, setTitle] = useState('')
   const [chips, setChips] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -45,6 +48,23 @@ export default function QuickCaptureApp() {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const appWindow = getCurrentWindow()
+
+  useThemeEffect(theme)
+
+  useEffect(() => {
+    let cancelled = false
+
+    load('settings.json', { defaults: {}, autoSave: false })
+      .then(store => store.get<Partial<AppSettings>>('settings'))
+      .then(settings => {
+        if (!cancelled) setTheme(settings?.theme ?? DEFAULT_SETTINGS.theme)
+      })
+      .catch(() => {
+        if (!cancelled) setTheme(DEFAULT_SETTINGS.theme)
+      })
+
+    return () => { cancelled = true }
+  }, [])
 
   const loadActiveProject = useCallback(async (pathOverride?: string | null) => {
     try {
@@ -169,18 +189,18 @@ export default function QuickCaptureApp() {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col gap-0 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl h-full overflow-hidden"
+      className="flex flex-col gap-0 bg-[--color-surface] border border-[--color-border] rounded-xl shadow-2xl h-full overflow-hidden"
       onKeyDown={handleKeyDown}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-neutral-800">
-        <span className="text-sm font-semibold text-neutral-100">Quick Capture</span>
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[--color-border]">
+        <span className="text-sm font-semibold text-[--color-fg]">Quick Capture</span>
         <Button
           variant="ghost"
           size="xs"
           onClick={hide}
           aria-label="Close"
-          className="h-auto border-0 p-0.5 text-neutral-500 hover:text-neutral-300"
+          className="h-auto border-0 p-0.5 text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
           tabIndex={-1}
         >
           <Icon name="X" size="sm" />
@@ -190,12 +210,12 @@ export default function QuickCaptureApp() {
       {/* Body */}
       {loadingProject ? (
         <div className="flex flex-col flex-1 items-center justify-center px-5 py-4">
-          <span className="text-neutral-500 text-sm">Loading…</span>
+          <span className="text-[--color-fg-subtle] text-sm">Loading…</span>
         </div>
       ) : !projectPath ? (
         <div className="flex flex-col flex-1 items-center justify-center gap-1.5 px-5 py-4 text-center">
-          <span className="text-neutral-300 text-sm font-medium">No active project</span>
-          <span className="text-neutral-500 text-xs">Open a project in BeadSpec to use Quick Capture.</span>
+          <span className="text-[--color-fg-muted] text-sm font-medium">No active project</span>
+          <span className="text-[--color-fg-subtle] text-xs">Open a project in BeadSpec to use Quick Capture.</span>
         </div>
       ) : (
         <div className="flex flex-col gap-3 px-5 py-4 flex-1">
@@ -211,10 +231,10 @@ export default function QuickCaptureApp() {
               }}
               placeholder="Issue title…"
               className={[
-                'w-full bg-neutral-950 border rounded-lg px-3 py-2.5 text-neutral-100 text-sm',
+                'w-full bg-[--color-bg] border rounded-lg px-3 py-2.5 text-[--color-fg] text-sm',
                 'placeholder-neutral-500 outline-none transition-all',
                 'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60',
-                error ? 'border-red-500' : 'border-neutral-700',
+                error ? 'border-red-500' : 'border-[--color-border-strong]',
               ].join(' ')}
               autoComplete="off"
               spellCheck={false}
@@ -230,7 +250,7 @@ export default function QuickCaptureApp() {
               {chips.map(chip => (
                 <span
                   key={chip}
-                  className="flex items-center gap-1 bg-neutral-800 text-neutral-300 text-xs px-2 py-0.5 rounded-full border border-neutral-700"
+                  className="flex items-center gap-1 bg-[--color-surface-hi] text-[--color-fg-muted] text-xs px-2 py-0.5 rounded-full border border-[--color-border-strong]"
                 >
                   {chip}
                   <Button
@@ -239,7 +259,7 @@ export default function QuickCaptureApp() {
                     type="button"
                     aria-label={`Remove ${chip}`}
                     onClick={() => removeChip(chip)}
-                    className="h-auto border-0 px-0 text-neutral-500 hover:text-neutral-200"
+                    className="h-auto border-0 px-0 text-[--color-fg-subtle] hover:text-[--color-fg]"
                     tabIndex={-1}
                   >
                     <Icon name="X" size="sm" />
@@ -259,8 +279,8 @@ export default function QuickCaptureApp() {
       )}
 
       {/* Footer / actions */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-800">
-        <span className="text-neutral-600 text-xs">
+      <div className="flex items-center justify-between px-5 py-3 border-t border-[--color-border]">
+        <span className="text-[--color-fg-subtle] text-xs">
           <kbd className="font-sans">Esc</kbd> to cancel
         </span>
         {projectPath && (

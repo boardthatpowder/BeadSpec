@@ -34,12 +34,12 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
     : null
 
   return (
-    <div className="border border-neutral-800 rounded-lg bg-neutral-900 overflow-hidden">
+    <div className="border border-[--color-border] rounded-lg bg-[--color-surface] overflow-hidden">
       <div className="px-4 py-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-neutral-100 font-mono">{formula.name}</p>
+          <p className="text-sm font-medium text-[--color-fg] font-mono">{formula.name}</p>
           {formula.description && (
-            <p className="text-xs text-neutral-400 mt-0.5 leading-4">{formula.description}</p>
+            <p className="text-xs text-[--color-fg-muted] mt-0.5 leading-4">{formula.description}</p>
           )}
         </div>
         <Button
@@ -50,7 +50,7 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
           className={[
             'flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
             isPouring
-              ? 'bg-neutral-800 text-neutral-600 border-neutral-700 cursor-not-allowed'
+              ? 'bg-[--color-surface-hi] text-[--color-fg-subtle] border-[--color-border-strong] cursor-not-allowed'
               : 'bg-blue-900/30 text-blue-300 border-blue-800/40 hover:bg-blue-800/50 hover:text-blue-200',
           ].join(' ')}
         >
@@ -62,7 +62,7 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
       {ownResult && combinedOutput && (
         <div className={[
           'px-4 py-3 border-t',
-          failed ? 'border-red-900/40 bg-red-950/20' : 'border-neutral-800 bg-neutral-950',
+          failed ? 'border-red-900/40 bg-red-950/20' : 'border-[--color-border] bg-[--color-bg]',
         ].join(' ')}>
           {failed && (
             <div className="flex items-center gap-1.5 mb-2">
@@ -76,7 +76,7 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
               <span className="text-[10px] text-green-400 font-medium">Pour succeeded</span>
             </div>
           )}
-          <pre className="text-xs text-neutral-300 whitespace-pre-wrap font-mono leading-5 max-h-48 overflow-y-auto">
+          <pre className="text-xs text-[--color-fg-muted] whitespace-pre-wrap font-mono leading-5 max-h-48 overflow-y-auto">
             {renderWithChips(combinedOutput)}
           </pre>
         </div>
@@ -165,7 +165,7 @@ export function FormulasBrowser() {
   if (!project) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-neutral-500 text-sm">No project connected. Open a project first.</p>
+        <p className="text-[--color-fg-subtle] text-sm">No project connected. Open a project first.</p>
       </div>
     )
   }
@@ -182,10 +182,10 @@ export function FormulasBrowser() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[--color-border] flex-shrink-0">
         <div>
-          <h2 className="text-base font-semibold text-neutral-100">Formulas</h2>
-          <p className="text-xs text-neutral-500 mt-0.5">Pour bd formulas into the connected project</p>
+          <h2 className="text-base font-semibold text-[--color-fg]">Formulas</h2>
+          <p className="text-xs text-[--color-fg-subtle] mt-0.5">Pour bd formulas into the connected project</p>
         </div>
         <Button
           variant="secondary"
@@ -195,8 +195,8 @@ export function FormulasBrowser() {
           className={[
             'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
             isLoading
-              ? 'bg-neutral-800 text-neutral-500 border-neutral-700 cursor-not-allowed'
-              : 'bg-neutral-800 text-neutral-300 border-neutral-700 hover:bg-neutral-700 hover:text-neutral-100',
+              ? 'bg-[--color-surface-hi] text-[--color-fg-subtle] border-[--color-border-strong] cursor-not-allowed'
+              : 'bg-[--color-surface-hi] text-[--color-fg-muted] border-[--color-border-strong] hover:bg-[--color-surface-hi] hover:text-[--color-fg]',
           ].join(' ')}
         >
           {isLoading ? 'Loading…' : 'Refresh'}
@@ -215,9 +215,9 @@ export function FormulasBrowser() {
               <Icon name="TriangleAlert" size="lg" className="text-amber-400" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-neutral-200">bd CLI not configured</p>
-              <p className="text-xs text-neutral-500 mt-1 max-w-xs">
-                The <code className="font-mono bg-neutral-800 px-1 rounded">bd</code> command was not found on PATH.
+              <p className="text-sm font-medium text-[--color-fg]">bd CLI not configured</p>
+              <p className="text-xs text-[--color-fg-subtle] mt-1 max-w-xs">
+                The <code className="font-mono bg-[--color-surface-hi] px-1 rounded">bd</code> command was not found on PATH.
               </p>
             </div>
           </div>
@@ -227,14 +227,14 @@ export function FormulasBrowser() {
               <Icon name="X" size="md" className="flex-shrink-0 text-red-400" />
               <span className="text-xs text-red-300 font-medium">Formula list unavailable</span>
             </div>
-            <pre className="text-xs text-neutral-400 whitespace-pre-wrap font-mono bg-neutral-900 border border-neutral-800 rounded-lg p-4 max-h-48 overflow-y-auto">
+            <pre className="text-xs text-[--color-fg-muted] whitespace-pre-wrap font-mono bg-[--color-surface] border border-[--color-border] rounded-lg p-4 max-h-48 overflow-y-auto">
               {rawErrorOutput}
             </pre>
           </div>
         ) : formulas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <p className="text-sm text-neutral-400">No formulas available</p>
-            <p className="text-xs text-neutral-600">
+            <p className="text-sm text-[--color-fg-muted]">No formulas available</p>
+            <p className="text-xs text-[--color-fg-subtle]">
               Formulas will appear here when your project has any configured.
             </p>
           </div>

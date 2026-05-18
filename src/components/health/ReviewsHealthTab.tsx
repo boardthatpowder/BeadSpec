@@ -39,8 +39,8 @@ export function ReviewsHealthTab({ project }: { project: string }) {
     <div className="h-full overflow-auto p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-neutral-200">Captured reviews</div>
-          <div className="text-xs text-neutral-600">{rowsCount} matching rows</div>
+          <div className="text-sm font-medium text-[--color-fg]">Captured reviews</div>
+          <div className="text-xs text-[--color-fg-subtle]">{rowsCount} matching rows</div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {KINDS.map(kind => {
@@ -55,24 +55,24 @@ export function ReviewsHealthTab({ project }: { project: string }) {
                   active ? next.delete(kind) : next.add(kind)
                   return next
                 })}
-                className={`h-auto rounded px-2 py-1 ${active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-neutral-800 text-neutral-500'}`}
+                className={`h-auto rounded px-2 py-1 ${active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-[--color-border] text-[--color-fg-subtle]'}`}
               >
                 {kind.replace('-review', '')}
               </Button>
             )
           })}
           <label className="sr-only" htmlFor="reviews-search">Search reviews</label>
-          <input id="reviews-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews" className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm" />
+          <input id="reviews-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews" className="rounded border border-[--color-border] bg-[--color-bg] px-3 py-2 text-sm" />
         </div>
       </div>
-      {query.isLoading ? <div className="text-sm text-neutral-600">Loading…</div> : rowsCount === 0 ? (
-        <div className="text-sm text-neutral-600">No reviews captured yet. Run a review skill and pipe through `scripts/bd-capture-review.sh`.</div>
+      {query.isLoading ? <div className="text-sm text-[--color-fg-subtle]">Loading…</div> : rowsCount === 0 ? (
+        <div className="text-sm text-[--color-fg-subtle]">No reviews captured yet. Run a review skill and pipe through `scripts/bd-capture-review.sh`.</div>
       ) : (
         <div className="space-y-3">
           {groups.map(([branch, rows]) => {
             const isCollapsed = collapsed.has(branch)
             return (
-              <section key={branch} className="rounded border border-neutral-800 bg-neutral-950/30">
+              <section key={branch} className="rounded border border-[--color-border] bg-[--color-bg]/30">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -83,10 +83,10 @@ export function ReviewsHealthTab({ project }: { project: string }) {
                   })}
                   className="h-auto w-full justify-between rounded-none border-0 px-3 py-2 text-left"
                 >
-                  <span className="font-mono text-xs text-neutral-300">{branch}</span>
-                  <span className="text-xs text-neutral-600">{rows.length}</span>
+                  <span className="font-mono text-xs text-[--color-fg-muted]">{branch}</span>
+                  <span className="text-xs text-[--color-fg-subtle]">{rows.length}</span>
                 </Button>
-                {!isCollapsed && <div className="space-y-2 border-t border-neutral-800 p-2">{rows.map(r => <ReviewRow key={r.key} review={r} />)}</div>}
+                {!isCollapsed && <div className="space-y-2 border-t border-[--color-border] p-2">{rows.map(r => <ReviewRow key={r.key} review={r} />)}</div>}
               </section>
             )
           })}
