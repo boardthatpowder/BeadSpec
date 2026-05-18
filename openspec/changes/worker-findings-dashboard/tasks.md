@@ -41,11 +41,11 @@
 
 ## 7. BdHealthPanel tab strip
 
-- [ ] 7.1 In `BdHealthPanel.tsx`, introduce a `useState<'checks' | 'findings'>('checks')` and render a small tab strip below the existing header. Style: underline tabs, `text-neutral-300` inactive, `text-neutral-100 border-b border-neutral-100` active. The strip is `border-b border-neutral-800` so it visually anchors to the header.
-- [ ] 7.2 Move the existing body (`bdNotFound`, `projectNotConnected`, `allPassed`, and the `CHECKS.map(...)` render) into a `<ChecksBody />` sub-component or inline conditional, gated by `tab === 'checks'`.
-- [ ] 7.3 When `tab === 'findings'`, render `<WorkerFindingsPanel />`.
-- [ ] 7.4 The `Re-run` button is gated to `tab === 'checks'`. When the findings tab is active, the button is hidden (no `Re-run` for findings — they refresh via the task-cache cycle).
-- [ ] 7.5 Verify the auto-run-on-mount effect (`useEffect` keyed on `[project, hasRun, runChecks]`) still triggers only the checks side and is not affected by tab state.
+- [x] 7.1 In `BdHealthPanel.tsx`, introduce a `useState<'checks' | 'findings'>('checks')` and render a small tab strip below the existing header. Style: underline tabs, `text-neutral-300` inactive, `text-neutral-100 border-b border-neutral-100` active. The strip is `border-b border-neutral-800` so it visually anchors to the header.
+- [x] 7.2 Move the existing body (`bdNotFound`, `projectNotConnected`, `allPassed`, and the `CHECKS.map(...)` render) into a `<ChecksBody />` sub-component or inline conditional, gated by `tab === 'checks'`.
+- [x] 7.3 When `tab === 'findings'`, render `<WorkerFindingsPanel />`.
+- [x] 7.4 The `Re-run` button is gated to `tab === 'checks'`. When the findings tab is active, the button is hidden (no `Re-run` for findings — they refresh via the task-cache cycle).
+- [x] 7.5 Verify the auto-run-on-mount effect (`useEffect` keyed on `[project, hasRun, runChecks]`) still triggers only the checks side and is not affected by tab state.
 
 ## 8. Verification
 

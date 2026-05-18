@@ -3,6 +3,7 @@ import { commands, unwrap } from '../../ipc'
 import type { CommandOutput } from '../../bindings'
 import { useActiveProject } from '../../hooks/useProject'
 import { renderWithChips } from '../shared/issueChips'
+import { WorkerFindingsPanel } from './WorkerFindingsPanel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ interface CheckResult {
 }
 
 type CheckState = Record<CheckKey, CheckResult>
+type HealthTab = 'checks' | 'findings'
 
 const CHECKS: CheckConfig[] = [
   { key: 'preflight', label: 'Preflight' },
@@ -131,6 +133,7 @@ export function BdHealthPanel() {
   const [bdNotFound, setBdNotFound] = useState(false)
   const [projectNotConnected, setProjectNotConnected] = useState(false)
   const [hasRun, setHasRun] = useState(false)
+  const [tab, setTab] = useState<HealthTab>('checks')
 
   const setCheck = useCallback((key: CheckKey, patch: Partial<CheckResult>) => {
     setChecks(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }))
@@ -210,86 +213,115 @@ export function BdHealthPanel() {
           <h2 className="text-base font-semibold text-neutral-100">bd Health</h2>
           <p className="text-xs text-neutral-500 mt-0.5">Run bd diagnostics checks on the connected project</p>
         </div>
-        <button
-          onClick={runChecks}
-          disabled={isRunning}
-          className={[
-            'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
-            isRunning
-              ? 'bg-neutral-800 text-neutral-500 border-neutral-700 cursor-not-allowed'
-              : 'bg-neutral-800 text-neutral-300 border-neutral-700 hover:bg-neutral-700 hover:text-neutral-100',
-          ].join(' ')}
-        >
-          {isRunning ? 'Running…' : 'Re-run'}
-        </button>
+        {tab === 'checks' && (
+          <button
+            onClick={runChecks}
+            disabled={isRunning}
+            className={[
+              'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+              isRunning
+                ? 'bg-neutral-800 text-neutral-500 border-neutral-700 cursor-not-allowed'
+                : 'bg-neutral-800 text-neutral-300 border-neutral-700 hover:bg-neutral-700 hover:text-neutral-100',
+            ].join(' ')}
+          >
+            {isRunning ? 'Running…' : 'Re-run'}
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-5 px-5 border-b border-neutral-800 flex-shrink-0">
+        {([
+          ['checks', 'Checks'],
+          ['findings', 'Worker findings'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setTab(value)}
+            className={[
+              'py-2 text-xs font-medium border-b transition-colors',
+              tab === value
+                ? 'text-neutral-100 border-neutral-100'
+                : 'text-neutral-300 border-transparent hover:text-neutral-100',
+            ].join(' ')}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
-        {bdNotFound ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-12 h-12 rounded-full bg-amber-900/30 border border-amber-800/40 flex items-center justify-center">
-              <svg className="w-6 h-6 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-neutral-200">bd CLI not configured</p>
-              <p className="text-xs text-neutral-500 mt-1 max-w-xs">
-                The <code className="font-mono bg-neutral-800 px-1 rounded">bd</code> command was not found on PATH.
-                Install Beads CLI and ensure it is available in your shell, then re-run.
-              </p>
-            </div>
-          </div>
-        ) : projectNotConnected ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-              <svg className="w-6 h-6 text-neutral-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-neutral-200">Project not fully connected</p>
-              <p className="text-xs text-neutral-500 mt-1 max-w-xs">
-                Try reopening the project from the Project menu, then re-run.
-              </p>
-            </div>
-          </div>
-        ) : allPassed ? (
-          <>
-            <div className="flex items-center gap-3 px-4 py-3 bg-green-900/20 border border-green-800/40 rounded-lg">
-              <svg className="w-5 h-5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-              </svg>
-              <span className="text-sm font-medium text-green-300">All checks passed</span>
-            </div>
-            {/* Still show collapsed sections for reference */}
-            {CHECKS.map(check => (
-              <CheckSection
-                key={check.key}
-                label={check.label}
-                result={checks[check.key]}
-                open={openSections.has(check.key)}
-                onToggle={() => toggleSection(check.key)}
-              />
-            ))}
-          </>
+        {tab === 'findings' ? (
+          <WorkerFindingsPanel />
         ) : (
-          CHECKS.map(check => (
-            <CheckSection
-              key={check.key}
-              label={check.label}
-              result={checks[check.key]}
-              open={openSections.has(check.key)}
-              onToggle={() => toggleSection(check.key)}
-            />
-          ))
-        )}
+          <>
+            {bdNotFound ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-12 h-12 rounded-full bg-amber-900/30 border border-amber-800/40 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-200">bd CLI not configured</p>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-xs">
+                    The <code className="font-mono bg-neutral-800 px-1 rounded">bd</code> command was not found on PATH.
+                    Install Beads CLI and ensure it is available in your shell, then re-run.
+                  </p>
+                </div>
+              </div>
+            ) : projectNotConnected ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-neutral-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-200">Project not fully connected</p>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-xs">
+                    Try reopening the project from the Project menu, then re-run.
+                  </p>
+                </div>
+              </div>
+            ) : allPassed ? (
+              <>
+                <div className="flex items-center gap-3 px-4 py-3 bg-green-900/20 border border-green-800/40 rounded-lg">
+                  <svg className="w-5 h-5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-300">All checks passed</span>
+                </div>
+                {/* Still show collapsed sections for reference */}
+                {CHECKS.map(check => (
+                  <CheckSection
+                    key={check.key}
+                    label={check.label}
+                    result={checks[check.key]}
+                    open={openSections.has(check.key)}
+                    onToggle={() => toggleSection(check.key)}
+                  />
+                ))}
+              </>
+            ) : (
+              CHECKS.map(check => (
+                <CheckSection
+                  key={check.key}
+                  label={check.label}
+                  result={checks[check.key]}
+                  open={openSections.has(check.key)}
+                  onToggle={() => toggleSection(check.key)}
+                />
+              ))
+            )}
 
-        {!hasRun && !isRunning && (
-          <div className="flex items-center justify-center py-16">
-            <p className="text-neutral-600 text-sm">Click Re-run to start checks.</p>
-          </div>
+            {!hasRun && !isRunning && (
+              <div className="flex items-center justify-center py-16">
+                <p className="text-neutral-600 text-sm">Click Re-run to start checks.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
