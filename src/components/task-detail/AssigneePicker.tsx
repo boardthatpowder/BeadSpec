@@ -70,7 +70,7 @@ export function AssigneePicker({ task, project }: Props) {
           if (e.key === 'Escape') { e.preventDefault(); cancel() }
         }}
         placeholder="Assignee…"
-        className="text-xs bg-[--color-surface-hi] text-[--color-fg-muted] px-2 py-0.5 rounded
+        className="text-xs bg-(--color-surface-hi) text-(--color-fg-muted) px-2 py-0.5 rounded
                    border border-blue-500 outline-none w-32"
       />
     )
@@ -82,7 +82,7 @@ export function AssigneePicker({ task, project }: Props) {
         variant="ghost"
         size="xs"
         onClick={() => setEditing(true)}
-        className="h-auto border-0 px-0 py-0 text-xs font-normal text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
+        className="h-auto border-0 px-0 py-0 text-xs font-normal text-(--color-fg-subtle) hover:text-(--color-fg-muted)"
       >
         {task.assignee ? `→ ${task.assignee}` : '+ assignee'}
       </Button>

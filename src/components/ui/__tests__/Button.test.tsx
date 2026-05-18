@@ -60,8 +60,8 @@ describe('Button', () => {
 
     const buttons = Array.from(container.querySelectorAll('button'))
     expect(buttons).toHaveLength(variants.length)
-    expect(buttons[0].className).toContain('bg-[--color-accent]')
-    expect(buttons[3].className).toContain('bg-[--color-danger]')
+    expect(buttons[0].className).toContain('bg-(--color-accent)')
+    expect(buttons[3].className).toContain('bg-(--color-danger)')
   })
 
   it('renders loading state as disabled with a spinner', () => {

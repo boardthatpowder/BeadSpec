@@ -18,7 +18,7 @@ function timestamp(epoch?: number | null) {
 export function ReviewRow({ review }: { review: ReviewEntry }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded border border-[--color-border] bg-[--color-bg]/40">
+    <div className="rounded border border-(--color-border) bg-(--color-bg)/40">
       <Button
         variant="ghost"
         size="sm"
@@ -26,14 +26,14 @@ export function ReviewRow({ review }: { review: ReviewEntry }) {
         className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-3 py-2 text-left font-normal"
       >
         <span className="min-w-0">
-          <span className="block truncate text-sm text-[--color-fg-muted]">{review.title}</span>
-          <span className="block truncate text-[11px] text-[--color-fg-subtle]">
+          <span className="block truncate text-sm text-(--color-fg-muted)">{review.title}</span>
+          <span className="block truncate text-[11px] text-(--color-fg-subtle)">
             {[review.branch, review.pr ? `PR ${review.pr}` : null, timestamp(review.ts_epoch)]
               .filter(Boolean)
               .join(' · ')}
           </span>
         </span>
-        <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${KIND_CLASSES[review.kind_raw] ?? 'border-[--color-border-strong] bg-[--color-surface] text-[--color-fg-muted]'}`}>
+        <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${KIND_CLASSES[review.kind_raw] ?? 'border-(--color-border-strong) bg-(--color-surface) text-(--color-fg-muted)'}`}>
           {review.kind_raw}
         </span>
       </Button>

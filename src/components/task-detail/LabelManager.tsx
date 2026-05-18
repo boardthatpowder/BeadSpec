@@ -79,7 +79,7 @@ export function LabelManager({ task, project }: Props) {
         <span
           key={l}
           className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded
-                     bg-[--color-surface-hi] text-[--color-fg-muted] font-mono group"
+                     bg-(--color-surface-hi) text-(--color-fg-muted) font-mono group"
         >
           {l}
           <Button
@@ -87,7 +87,7 @@ export function LabelManager({ task, project }: Props) {
             size="xs"
             aria-label={`Remove ${l}`}
             onClick={() => removeLabel(l)}
-            className="text-[--color-fg-subtle] hover:text-[--color-fg-muted] transition-colors
+            className="text-(--color-fg-subtle) hover:text-(--color-fg-muted) transition-colors
                        h-auto border-0 px-0 py-0 leading-none -mr-0.5 opacity-0 group-hover:opacity-100"
           >
             <Icon name="X" size="sm" />
@@ -106,7 +106,7 @@ export function LabelManager({ task, project }: Props) {
             if (e.key === 'Escape') { e.preventDefault(); cancelAdd() }
           }}
           placeholder="label…"
-          className="text-xs bg-[--color-surface-hi] text-[--color-fg-muted] px-2 py-0.5 rounded
+          className="text-xs bg-(--color-surface-hi) text-(--color-fg-muted) px-2 py-0.5 rounded
                      border border-blue-500 outline-none font-mono w-24"
         />
       ) : (
@@ -114,7 +114,7 @@ export function LabelManager({ task, project }: Props) {
           variant="ghost"
           size="xs"
           onClick={() => setAdding(true)}
-          className="h-auto border-0 px-0 py-0 text-xs font-normal text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
+          className="h-auto border-0 px-0 py-0 text-xs font-normal text-(--color-fg-subtle) hover:text-(--color-fg-muted)"
         >
           + Add label
         </Button>

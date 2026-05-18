@@ -63,7 +63,7 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
 
   if (isLoading) return <LoadingSkeleton />
   if (isError || !content) return (
-    <div className="p-6 text-sm text-[--color-fg-subtle]">Could not load this artifact.</div>
+    <div className="p-6 text-sm text-(--color-fg-subtle)">Could not load this artifact.</div>
   )
 
   return (
@@ -72,7 +72,7 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
       onPointerOver={handlePointerEnter}
       onPointerLeave={() => setSymbolPopover(null)}
     >
-      <div className="text-xs text-[--color-fg-subtle] mb-4 font-mono">{change}/{artifact}</div>
+      <div className="text-xs text-(--color-fg-subtle) mb-4 font-mono">{change}/{artifact}</div>
       <OpenSpecDocReferenceNav
         references={docReferences}
         onOpen={(nextArtifact) => openDocTab(change, nextArtifact)}
@@ -100,16 +100,16 @@ function OpenSpecDocReferenceNav({
   onOpen: (artifact: string) => void
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-1.5 border-b border-[--color-border]/70 pb-3">
-      <span className="mr-1 text-xs text-[--color-fg-subtle]">Docs</span>
+    <div className="mb-5 flex flex-wrap items-center gap-1.5 border-b border-(--color-border)/70 pb-3">
+      <span className="mr-1 text-xs text-(--color-fg-subtle)">Docs</span>
       {references.map((reference) => {
         const baseClass = [
           'rounded border px-2 py-1 text-xs transition-colors',
           reference.current
             ? 'border-blue-500/50 bg-blue-500/10 text-blue-200'
             : reference.present
-              ? 'border-[--color-border-strong] text-[--color-fg-muted] hover:border-neutral-500 hover:bg-[--color-surface-hi]/60 hover:text-[--color-fg]'
-              : 'cursor-not-allowed border-[--color-border] text-[--color-fg-subtle] opacity-60',
+              ? 'border-(--color-border-strong) text-(--color-fg-muted) hover:border-neutral-500 hover:bg-(--color-surface-hi)/60 hover:text-(--color-fg)'
+              : 'cursor-not-allowed border-(--color-border) text-(--color-fg-subtle) opacity-60',
         ].join(' ')
 
         if (reference.current || !reference.present) {
@@ -145,7 +145,7 @@ function LoadingSkeleton() {
   return (
     <div className="p-6 space-y-3 animate-pulse">
       {[80, 60, 90, 50, 70].map((w, i) => (
-        <div key={i} className="h-3 bg-[--color-surface-hi] rounded" style={{ width: `${w}%` }} />
+        <div key={i} className="h-3 bg-(--color-surface-hi) rounded" style={{ width: `${w}%` }} />
       ))}
     </div>
   )

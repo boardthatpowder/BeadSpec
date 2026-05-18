@@ -99,34 +99,34 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 overflow-hidden">
+    <div className="overflow-hidden">
       {/* Section header */}
       <Button
         variant="ghost"
         size="sm"
         onClick={handleToggle}
-        className="h-auto w-full justify-between rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-[--color-surface-hi]/30"
+        className="h-auto w-full justify-between rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-(--color-surface-hi)/30"
       >
-        <span className="text-xs font-medium text-[--color-fg-muted]">Related memories</span>
+        <span className="text-xs font-medium text-(--color-fg-muted)">Related memories</span>
         <Icon
           name="ChevronDown"
           size="sm"
-          className={`w-3.5 h-3.5 text-[--color-fg-subtle] transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-(--color-fg-subtle) transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
           strokeWidth={2}
         />
       </Button>
 
       {open && (
-        <div className="border-t border-[--color-border]/60">
-          <div className="flex items-center justify-between border-b border-[--color-border]/40 px-4 py-2">
-            <div className="flex rounded border border-[--color-border] p-0.5">
+        <div className="border-t border-(--color-border)/60">
+          <div className="flex items-center justify-between border-b border-(--color-border)/40 px-4 py-2">
+            <div className="flex rounded border border-(--color-border) p-0.5">
               {(['search', 'trajectory'] as const).map(tab => (
                 <Button
                   key={tab}
                   variant="ghost"
                   size="xs"
                   onClick={() => setSubTab(tab)}
-                  className={`h-auto rounded-sm border-0 px-2 py-0.5 text-[10px] capitalize ${subTab === tab ? 'bg-[--color-surface-hi] text-[--color-fg]' : 'text-[--color-fg-subtle]'}`}
+                  className={`h-auto rounded-sm border-0 px-2 py-0.5 text-[10px] capitalize ${subTab === tab ? 'bg-(--color-surface-hi) text-(--color-fg)' : 'text-(--color-fg-subtle)'}`}
                 >
                   {tab}
                 </Button>
@@ -147,7 +147,7 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
           ) : (
             <>
           {loadState.status === 'loading' && (
-            <div className="px-4 py-3 text-xs text-[--color-fg-subtle]">Loading…</div>
+            <div className="px-4 py-3 text-xs text-(--color-fg-subtle)">Loading…</div>
           )}
 
           {loadState.status === 'error' && (
@@ -155,7 +155,7 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
           )}
 
           {loadState.status === 'loaded' && loadState.memories.length === 0 && (
-            <div className="px-4 py-3 text-xs text-[--color-fg-subtle] italic">No related memories found</div>
+            <div className="px-4 py-2 text-xs text-(--color-fg-subtle)">No related memories found — they appear as Ruflo learns from this work.</div>
           )}
 
           {loadState.status === 'loaded' && loadState.memories.length > 0 && (
@@ -169,13 +169,13 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpanded(idx)}
-                    className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-[--color-surface-hi]/20"
+                    className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-(--color-surface-hi)/20"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-[--color-fg-muted] truncate">{shortKey}</span>
-                      <span className="text-[10px] text-[--color-fg-subtle] shrink-0">{mem.namespace}</span>
+                      <span className="text-xs font-medium text-(--color-fg-muted) truncate">{shortKey}</span>
+                      <span className="text-[10px] text-(--color-fg-subtle) shrink-0">{mem.namespace}</span>
                     </div>
-                    <div className="text-xs text-[--color-fg-subtle] whitespace-pre-wrap break-words">
+                    <div className="text-xs text-(--color-fg-subtle) whitespace-pre-wrap break-words">
                       {isExpanded ? mem.preview : excerpt(mem.preview)}
                     </div>
                   </Button>

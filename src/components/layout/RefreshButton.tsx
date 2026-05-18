@@ -16,7 +16,7 @@ export function RefreshButton() {
         'flex items-center px-2.5 py-1 rounded-md text-sm transition-colors',
         fetching > 0
           ? 'text-blue-400'
-          : 'text-[--color-fg-muted] hover:text-[--color-fg] hover:bg-[--color-surface-hi]'
+          : 'text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-hi)'
       )}
     >
       <Icon name="RefreshCw" size="md" className={clsx(fetching > 0 && 'animate-spin')} />

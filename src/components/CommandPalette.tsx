@@ -112,27 +112,27 @@ export function CommandPalette() {
           if (e.key === 'Enter') { e.preventDefault(); runSelected() }
         }}
       >
-        <div className="flex items-center px-4 border-b border-[--color-border]">
-          <Icon name="Search" size="md" className="text-[--color-fg-subtle] mr-3" />
+        <div className="flex items-center px-4 border-b border-(--color-border)">
+          <Icon name="Search" size="md" className="text-(--color-fg-subtle) mr-3" />
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search tasks, actions, views…"
-            className="flex-1 bg-transparent py-3.5 text-sm text-[--color-fg] placeholder-neutral-500 outline-none"
+            className="flex-1 bg-transparent py-3.5 text-sm text-(--color-fg) placeholder-neutral-500 outline-none"
           />
         </div>
 
         <div className="max-h-80 overflow-y-auto py-2">
           {allResults.length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-[--color-fg-subtle]">No results for "{query}"</div>
+            <div className="px-4 py-6 text-center text-sm text-(--color-fg-subtle)">No results for "{query}"</div>
           )}
           {groups.map(type => {
             const group = allResults.filter(r => r.type === type)
             if (!group.length) return null
             return (
               <div key={type}>
-                <div className="px-4 py-1.5 text-xs text-[--color-fg-subtle] uppercase tracking-wider">
+                <div className="px-4 py-1.5 text-xs text-(--color-fg-subtle) uppercase tracking-wider">
                   {groupLabel(type)}
                 </div>
                 {group.map(r => {
@@ -145,12 +145,12 @@ export function CommandPalette() {
                       onClick={r.action}
                       className={[
                         'h-auto w-full justify-start text-left px-4 py-2.5 gap-3 rounded-none border-0',
-                        i === selected ? 'bg-blue-600/20 text-blue-300' : 'text-[--color-fg] hover:bg-[--color-surface-hi]',
+                        i === selected ? 'bg-blue-600/20 text-blue-300' : 'text-(--color-fg) hover:bg-(--color-surface-hi)',
                       ].join(' ')}
                       onMouseEnter={() => setSelected(i)}
                     >
                       <span className="flex-1">{r.label}</span>
-                      {r.sub && <span className="text-xs text-[--color-fg-subtle]">{r.sub}</span>}
+                      {r.sub && <span className="text-xs text-(--color-fg-subtle)">{r.sub}</span>}
                     </Button>
                   )
                 })}
@@ -159,7 +159,7 @@ export function CommandPalette() {
           })}
         </div>
 
-        <div className="px-4 py-2 border-t border-[--color-border] flex items-center gap-4 text-xs text-[--color-fg-subtle]">
+        <div className="px-4 py-2 border-t border-(--color-border) flex items-center gap-4 text-xs text-(--color-fg-subtle)">
           <span>Up/Down navigate</span><span>Enter select</span><span>Esc close</span>
         </div>
       </Dialog.Content>

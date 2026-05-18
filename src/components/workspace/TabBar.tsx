@@ -57,7 +57,7 @@ export function TabBar({ paneId, tasks }: TabBarProps) {
   return (
     <div
       ref={setBarRef}
-      className={`flex overflow-x-auto border-b border-[--color-border] bg-[--color-bg] shrink-0 relative transition-colors
+      className={`flex overflow-x-auto border-b border-(--color-border) bg-(--color-bg) shrink-0 relative transition-colors
         ${isBarOver ? 'ring-1 ring-blue-500/40 bg-blue-900/10' : ''}`}
     >
       <SortableContext items={leaf.tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>

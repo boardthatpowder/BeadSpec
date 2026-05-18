@@ -17,9 +17,9 @@ describe('accessibility pass contract', () => {
     expect(indexCss).toContain('outline: none')
     for (const source of [button, iconButton, tabs]) {
       expect(source).toContain('focus-visible:ring-2')
-      expect(source).toContain('focus-visible:ring-[--color-accent]')
+      expect(source).toContain('focus-visible:ring-(--color-accent)')
       expect(source).toContain('focus-visible:ring-offset-1')
-      expect(source).toContain('focus-visible:ring-offset-[--color-bg]')
+      expect(source).toContain('focus-visible:ring-offset-(--color-bg)')
     }
   })
 

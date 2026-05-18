@@ -96,7 +96,7 @@ function ArtifactLink({
 
   if (!exists) {
     return (
-      <span className="flex items-center gap-1.5 text-xs text-[--color-fg-subtle] cursor-not-allowed">
+      <span className="flex items-center gap-1.5 text-xs text-(--color-fg-subtle) cursor-not-allowed">
         <span className="text-neutral-700">○</span>
         <span className={archived ? 'opacity-50' : ''}>{label}</span>
       </span>
@@ -112,11 +112,11 @@ function ArtifactLink({
         className={[
           'h-auto justify-start gap-1.5 text-left',
           archived
-            ? 'text-[--color-fg-subtle] opacity-50 hover:opacity-75 hover:text-[--color-fg-muted]'
+            ? 'text-(--color-fg-subtle) opacity-50 hover:opacity-75 hover:text-(--color-fg-muted)'
             : 'text-blue-400 hover:text-blue-300',
         ].join(' ')}
       >
-        <Icon name="ExternalLink" size="sm" className="text-[--color-fg-subtle]" />
+        <Icon name="ExternalLink" size="sm" className="text-(--color-fg-subtle)" />
         {label}
       </Button>
     </Tooltip>
@@ -141,12 +141,12 @@ function ProgressBar({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-[--color-fg-muted]">Progress</span>
-        <span className={allDone ? 'text-green-400' : 'text-[--color-fg-muted]'}>
+        <span className="text-(--color-fg-muted)">Progress</span>
+        <span className={allDone ? 'text-green-400' : 'text-(--color-fg-muted)'}>
           {done} / {total} ({pct}%)
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-[--color-surface-hi] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-(--color-surface-hi) overflow-hidden">
         <div
           className={[
             'h-full rounded-full transition-all',
@@ -200,7 +200,7 @@ function ValidateSection({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-[--color-fg-muted]">Validate</span>
+        <span className="text-xs text-(--color-fg-muted)">Validate</span>
         {!archived && (
           <Button
             variant="secondary"
@@ -221,7 +221,7 @@ function ValidateSection({
       )}
 
       {result === null && !err && (
-        <span className="text-xs text-[--color-fg-subtle]">Not yet validated</span>
+        <span className="text-xs text-(--color-fg-subtle)">Not yet validated</span>
       )}
 
       {result !== null && (
@@ -236,7 +236,7 @@ function ValidateSection({
               {result.valid ? 'Valid' : 'Invalid'}
             </span>
             {timestamp && (
-              <span className="text-[--color-fg-subtle]">as of {timestamp}</span>
+              <span className="text-(--color-fg-subtle)">as of {timestamp}</span>
             )}
           </div>
           {!result.valid && result.errors.length > 0 && (
@@ -271,16 +271,16 @@ function ValidationHistory({ projectRoot, changeName }: { projectRoot: string; c
     retry: false,
   })
   if (!rufloAvailable) {
-    return <div className="text-xs text-[--color-fg-subtle]">Validation history requires the ruflo CLI.</div>
+    return <div className="text-xs text-(--color-fg-subtle)">Validation history requires the ruflo CLI.</div>
   }
   const entries = history.data ?? []
   const visible = showAll ? entries : entries.slice(0, 5)
   return (
-    <details className="rounded border border-[--color-border]/60 bg-[--color-bg]/30">
-      <summary className="cursor-pointer px-2 py-1.5 text-xs text-[--color-fg-muted]">Validation history ({entries.length})</summary>
-      <div className="border-t border-[--color-border]/60">
+    <details className="rounded border border-(--color-border)/60 bg-(--color-bg)/30">
+      <summary className="cursor-pointer px-2 py-1.5 text-xs text-(--color-fg-muted)">Validation history ({entries.length})</summary>
+      <div className="border-t border-(--color-border)/60">
         {entries.length === 0 ? (
-          <div className="px-2 py-2 text-xs text-[--color-fg-subtle]">No validations recorded yet — click Re-validate above.</div>
+          <div className="px-2 py-2 text-xs text-(--color-fg-subtle)">No validations recorded yet — click Re-validate above.</div>
         ) : visible.map((entry, idx) => {
           const open = expanded.has(idx)
           return (
@@ -289,11 +289,11 @@ function ValidationHistory({ projectRoot, changeName }: { projectRoot: string; c
               if (next.has(idx)) next.delete(idx)
               else next.add(idx)
               return next
-            })} className="block h-auto w-full rounded-none border-0 border-b border-[--color-border]/40 px-2 py-2 text-left text-xs">
+            })} className="block h-auto w-full rounded-none border-0 border-b border-(--color-border)/40 px-2 py-2 text-left text-xs">
               <div className="flex items-center gap-2">
-                <span title={entry.ts_iso} className="text-[--color-fg-subtle]">{new Date(entry.ts_iso).toLocaleString()}</span>
+                <span title={entry.ts_iso} className="text-(--color-fg-subtle)">{new Date(entry.ts_iso).toLocaleString()}</span>
                 <span aria-label={entry.valid ? 'passed' : 'failed'} className={entry.valid ? 'text-green-400' : 'text-red-400'}>{entry.valid ? 'pass' : 'fail'}</span>
-                <span className="truncate text-[--color-fg-subtle]">{entry.valid ? 'No errors' : entry.errors[0]}</span>
+                <span className="truncate text-(--color-fg-subtle)">{entry.valid ? 'No errors' : entry.errors[0]}</span>
               </div>
               {open && !entry.valid && <ul className="mt-1 list-disc pl-4 text-red-300">{entry.errors.map(e => <li key={e}>{e}</li>)}</ul>}
             </Button>
@@ -404,9 +404,9 @@ function OpenSpecPanelBody({
     <div className="flex flex-col gap-3 text-sm">
       {/* Change name / archived badge */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-mono text-[--color-fg-muted]">{changeName}</span>
+        <span className="text-xs font-mono text-(--color-fg-muted)">{changeName}</span>
         {archived && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[--color-surface-hi] text-[--color-fg-muted] uppercase tracking-wide">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-(--color-surface-hi) text-(--color-fg-muted) uppercase tracking-wide">
             archived
           </span>
         )}
@@ -421,12 +421,12 @@ function OpenSpecPanelBody({
         <ProgressBar done={progress.done} total={progress.total} />
       )}
       {progress?.total === 0 && (
-        <span className="text-xs text-[--color-fg-subtle]">Tasks not created yet</span>
+        <span className="text-xs text-(--color-fg-subtle)">Tasks not created yet</span>
       )}
 
       {/* Artifact links */}
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-[--color-fg-muted] mb-0.5">Artifacts</span>
+        <span className="text-xs text-(--color-fg-muted) mb-0.5">Artifacts</span>
         {FIXED_ARTIFACTS.map((artifact) => (
           <ArtifactLink
             key={artifact}
@@ -442,7 +442,7 @@ function OpenSpecPanelBody({
       {/* Spec links */}
       {changeInfo?.specs && changeInfo.specs.length > 0 && (
         <div>
-          <div className="text-xs text-[--color-fg-subtle] mb-1">Specs</div>
+          <div className="text-xs text-(--color-fg-subtle) mb-1">Specs</div>
           {changeInfo.specs.map((specId) => (
             <Button
               key={specId}
@@ -521,16 +521,16 @@ export function OpenSpecPanel({
       onToggle={(e) => {
         if (storeKey) setOpenspecExpanded(paneId!, taskId!, e.currentTarget.open)
       }}
-      className="group rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30"
+      className="group"
     >
       <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none list-none">
-        <span className="text-xs text-[--color-fg-subtle] group-open:rotate-90 transition-transform inline-block">
+        <span className="text-xs text-(--color-fg-subtle) group-open:rotate-90 transition-transform inline-block">
           <Icon name="ChevronRight" size="sm" />
         </span>
-        <span className="text-xs font-medium text-[--color-fg-muted]">OpenSpec</span>
-        <span className="text-xs text-[--color-fg-subtle] font-mono ml-1">{changeName}</span>
+        <span className="text-xs font-medium text-(--color-fg-muted)">OpenSpec</span>
+        <span className="text-xs text-(--color-fg-subtle) font-mono ml-1">{changeName}</span>
       </summary>
-      <div className="px-4 pb-4 pt-1 border-t border-[--color-border]/40">
+      <div className="px-4 pb-4 pt-1 border-t border-(--color-border)/40">
         <OpenSpecPanelBody
           changeName={changeName}
           projectRoot={projectRoot}

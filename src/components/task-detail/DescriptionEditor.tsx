@@ -204,12 +204,12 @@ export function DescriptionEditor({ taskId, project, initialContent, onOpenImpac
       className={[
         'min-h-16 rounded-lg p-3 transition-colors cursor-text relative',
         editing
-          ? `bg-[--color-surface-hi] border ${isDirty ? 'border-amber-500/50' : 'border-blue-500/50'} ${ringClass}`
-          : 'hover:bg-[--color-surface-hi]/50 border border-transparent',
+          ? `bg-(--color-surface-hi) border ${isDirty ? 'border-amber-500/50' : 'border-blue-500/50'} ${ringClass}`
+          : 'hover:bg-(--color-surface-hi)/50 border border-transparent',
       ].join(' ')}
     >
       {(!saved && !editing) ? (
-        <p className="text-sm text-[--color-fg-subtle] italic">Click to add description…</p>
+        <p className="text-sm text-(--color-fg-subtle) italic">Click to add description…</p>
       ) : (
         <div className="relative">
           <EditorContent

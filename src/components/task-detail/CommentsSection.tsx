@@ -7,6 +7,19 @@ import { useToast } from '../ui/useToast'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
+
+function EmptyStateInline({ iconName, title, description }: { iconName: string; title: string; description?: string }) {
+  return (
+    <div className="flex items-center gap-3 py-3 text-(--color-fg-subtle)">
+      <Icon name={iconName as Parameters<typeof Icon>[0]['name']} size="sm" className="w-4 h-4 flex-shrink-0 opacity-50" />
+      <div>
+        <span className="text-sm text-(--color-fg-muted)">{title}</span>
+        {description && <p className="text-xs text-(--color-fg-subtle) mt-0.5">{description}</p>}
+      </div>
+    </div>
+  )
+}
 
 interface Props { taskId: string; project: string }
 
@@ -50,26 +63,26 @@ export function CommentsSection({ taskId, project }: Props) {
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-[--color-border]">
-      <div className="text-xs text-[--color-fg-subtle] uppercase tracking-wider mb-3">Comments</div>
+    <div className="mt-4 pt-4 border-t border-(--color-border)">
+      <div className="text-xs text-(--color-fg-subtle) uppercase tracking-wider mb-3">Comments</div>
 
       {comments.length === 0 && (
-        <p className="text-sm text-[--color-fg-subtle] italic mb-3">No comments yet</p>
+        <EmptyStateInline iconName="MessageSquare" title="No comments yet" description="Add context for collaborators or future you." />
       )}
 
       {comments.map(c => (
         <div key={c.id} className="flex gap-3 mb-3">
-          <div className="w-6 h-6 rounded-full bg-[--color-surface-hi] flex-shrink-0 flex items-center justify-center text-xs text-[--color-fg-muted] font-medium">
+          <div className="w-6 h-6 rounded-full bg-(--color-surface-hi) flex-shrink-0 flex items-center justify-center text-xs text-(--color-fg-muted) font-medium">
             {c.actor?.[0]?.toUpperCase() ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-xs font-medium text-[--color-fg-muted]">{c.actor}</span>
-              <span className="text-xs text-[--color-fg-subtle]">
+              <span className="text-xs font-medium text-(--color-fg-muted)">{c.actor}</span>
+              <span className="text-xs text-(--color-fg-subtle)">
                 {formatAbsolute(c.timestamp)}
               </span>
             </div>
-            <div className="text-sm text-[--color-fg-muted] whitespace-pre-wrap leading-relaxed bg-[--color-surface-hi]/50 rounded-lg px-3 py-2">
+            <div className="text-sm text-(--color-fg-muted) whitespace-pre-wrap leading-relaxed bg-(--color-surface-hi)/50 rounded-lg px-3 py-2">
               {c.body}
             </div>
           </div>
@@ -81,11 +94,11 @@ export function CommentsSection({ taskId, project }: Props) {
         <div
           onClick={() => editor?.commands.focus()}
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
-          className="relative flex-1 min-h-12 max-h-32 overflow-y-auto bg-[--color-surface-hi] border border-[--color-border-strong] focus-within:border-blue-500 rounded-lg px-3 py-2 text-sm text-[--color-fg] cursor-text transition-colors"
+          className="relative flex-1 min-h-12 max-h-32 overflow-y-auto bg-(--color-surface-hi) border border-(--color-border-strong) focus-within:border-blue-500 rounded-lg px-3 py-2 text-sm text-(--color-fg) cursor-text transition-colors"
         >
           <EditorContent editor={editor} />
           {editor?.isEmpty && (
-            <div className="text-[--color-fg-subtle] pointer-events-none absolute top-2 left-3">
+            <div className="text-(--color-fg-subtle) pointer-events-none absolute top-2 left-3">
               Add a comment… (⌘Enter to submit)
             </div>
           )}

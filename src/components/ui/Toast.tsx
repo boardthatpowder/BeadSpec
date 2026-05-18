@@ -14,7 +14,7 @@ export function ToastContainer() {
           key={t.id}
           className={clsx(
             'pointer-events-auto flex items-center gap-3',
-            'bg-[--color-surface-hi] border border-[--color-border-strong] text-[--color-fg] text-sm',
+            'bg-(--color-surface-hi) border border-(--color-border-strong) text-(--color-fg) text-sm',
             'px-4 py-2.5 rounded-lg shadow-xl transition-all',
             'motion-reduce:animate-none motion-reduce:transition-none',
             t.dismissing
@@ -37,7 +37,7 @@ export function ToastContainer() {
             variant="ghost"
             size="xs"
             aria-label="Dismiss notification"
-            className="h-auto border-0 px-1 text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
+            className="h-auto border-0 px-1 text-(--color-fg-subtle) hover:text-(--color-fg-muted)"
             onClick={() => remove(t.id)}
           >
             <Icon name="X" size="sm" />

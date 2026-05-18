@@ -38,7 +38,7 @@ describe('dashboard cohesion contract', () => {
     expect(contents).toContain('description')
     expect(contents).toContain('filters')
     expect(contents).toContain('actions')
-    expect(contents).toContain('border-b border-[--color-border]')
+    expect(contents).toContain('border-b border-(--color-border)')
     expect(contents).toContain('px-5 py-4')
   })
 

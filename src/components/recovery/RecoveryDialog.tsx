@@ -41,12 +41,12 @@ export function RecoveryDialog() {
 
 function Header({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <div className="px-6 py-4 border-b border-[--color-border] flex items-start justify-between">
+    <div className="px-6 py-4 border-b border-(--color-border) flex items-start justify-between">
       <div>
-        <h2 id="recovery-title" className="text-base font-semibold text-[--color-fg]">
+        <h2 id="recovery-title" className="text-base font-semibold text-(--color-fg)">
           Dolt Server Recovery Required
         </h2>
-        <p className="mt-1 text-sm text-[--color-fg-muted]">
+        <p className="mt-1 text-sm text-(--color-fg-muted)">
           A stale Dolt SQL server was detected for this project and could not be
           recovered automatically. Choose an action below.
         </p>
@@ -56,7 +56,7 @@ function Header({ onDismiss }: { onDismiss: () => void }) {
         size="xs"
         aria-label="Close"
         onClick={onDismiss}
-        className="ml-4 h-auto border-0 px-2 py-1 text-[--color-fg-muted] hover:text-[--color-fg]"
+        className="ml-4 h-auto border-0 px-2 py-1 text-(--color-fg-muted) hover:text-(--color-fg)"
       >
         <Icon name="X" size="sm" />
       </Button>
@@ -71,26 +71,26 @@ function Body({ report }: { report: HealthReport }) {
 
   return (
     <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
-      <div className="text-sm text-[--color-fg-muted]">
-        <span className="font-medium text-[--color-fg]">Status: </span>
+      <div className="text-sm text-(--color-fg-muted)">
+        <span className="font-medium text-(--color-fg)">Status: </span>
         {healthLabel}
       </div>
 
       {stderrTail && (
         <div>
-          <div className="text-xs font-medium text-[--color-fg-muted] mb-1">
+          <div className="text-xs font-medium text-(--color-fg-muted) mb-1">
             dolt stderr (last lines)
           </div>
-          <pre className="text-xs text-[--color-fg-muted] bg-[--color-bg] border border-[--color-border] rounded p-2 max-h-[200px] overflow-auto whitespace-pre-wrap font-mono">
+          <pre className="text-xs text-(--color-fg-muted) bg-(--color-bg) border border-(--color-border) rounded p-2 max-h-[200px] overflow-auto whitespace-pre-wrap font-mono">
             {stderrTail}
           </pre>
         </div>
       )}
 
       {report.orphans.length > 0 && (
-        <table className="w-full text-xs text-[--color-fg-muted] border border-[--color-border] rounded">
+        <table className="w-full text-xs text-(--color-fg-muted) border border-(--color-border) rounded">
           <thead>
-            <tr className="bg-[--color-surface-hi]/60 text-[--color-fg-muted]">
+            <tr className="bg-(--color-surface-hi)/60 text-(--color-fg-muted)">
               <th className="px-3 py-2 text-left font-medium">PID</th>
               <th className="px-3 py-2 text-left font-medium">Port</th>
               <th className="px-3 py-2 text-left font-medium">Data dir</th>
@@ -115,7 +115,7 @@ function OrphanRow({ orphan }: { orphan: OrphanInfo }) {
       : <span className="text-amber-400" title={orphan.safety.reason}>Unsafe</span>
 
   return (
-    <tr className="border-t border-[--color-border]">
+    <tr className="border-t border-(--color-border)">
       <td className="px-3 py-2 font-mono">{orphan.pid}</td>
       <td className="px-3 py-2 font-mono">{orphan.port ?? '—'}</td>
       <td className="px-3 py-2 font-mono truncate max-w-[200px]" title={orphan.data_dir}>
@@ -195,12 +195,12 @@ function Footer({ report, onDismiss }: { report: HealthReport; onDismiss: () => 
   }
 
   return (
-    <div className="px-6 py-4 border-t border-[--color-border] flex gap-2 justify-end">
+    <div className="px-6 py-4 border-t border-(--color-border) flex gap-2 justify-end">
       <Button
         variant="ghost"
         size="sm"
         onClick={handleOpenLog}
-        className="text-[--color-fg-muted] hover:text-[--color-fg]"
+        className="text-(--color-fg-muted) hover:text-(--color-fg)"
       >
         Open recovery log
       </Button>
@@ -208,7 +208,7 @@ function Footer({ report, onDismiss }: { report: HealthReport; onDismiss: () => 
         variant="ghost"
         size="sm"
         onClick={handleQuit}
-        className="text-[--color-fg-muted] hover:text-[--color-fg]"
+        className="text-(--color-fg-muted) hover:text-(--color-fg)"
       >
         Quit app
       </Button>

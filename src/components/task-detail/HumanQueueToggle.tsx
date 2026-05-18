@@ -58,7 +58,7 @@ export function HumanQueueToggle({ task, project }: Props) {
         variant="ghost"
         size="xs"
         onClick={toggle}
-        className="h-auto border-0 px-0 py-0 text-xs font-normal text-[--color-fg-subtle] hover:text-amber-400"
+        className="h-auto border-0 px-0 py-0 text-xs font-normal text-(--color-fg-subtle) hover:text-amber-400"
       >
         Flag for decision
       </Button>

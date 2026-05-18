@@ -84,11 +84,11 @@ export function AppLayout() {
   const isProcessesView = state.view === 'processes'
   const isMemoryView = state.view === 'memory'
 
-  if (!isLoaded) return <div className="h-screen w-screen bg-[--color-bg]" />
+  if (!isLoaded) return <div className="h-screen w-screen bg-(--color-bg)" />
 
   return (
     <div
-      className="flex flex-col h-screen w-screen overflow-hidden bg-[--color-bg] text-[--color-fg]"
+      className="flex flex-col h-screen w-screen overflow-hidden bg-(--color-bg) text-(--color-fg)"
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
@@ -116,13 +116,13 @@ export function AppLayout() {
         ) : (
           <div className="flex flex-1 overflow-hidden">
             {isNarrow ? (
-              <div className="w-12 flex-shrink-0 border-r border-[--color-border] bg-[--color-surface] flex flex-col items-center py-3">
-                <span className="text-[--color-fg-muted] text-lg">≡</span>
+              <div className="w-12 flex-shrink-0 border-r border-(--color-border) bg-(--color-surface) flex flex-col items-center py-3">
+                <span className="text-(--color-fg-muted) text-lg">≡</span>
               </div>
             ) : (
               <>
                 <div
-                  className="flex-shrink-0 overflow-hidden border-r border-[--color-border]"
+                  className="flex-shrink-0 overflow-hidden border-r border-(--color-border)"
                   style={{ width: `${leftWidth}%` }}
                 >
                   <TaskListPanel />
@@ -141,7 +141,7 @@ export function AppLayout() {
 
 function TopBar() {
   return (
-    <div className="flex-shrink-0 border-b border-[--color-border]/80 bg-[--color-bg]">
+    <div className="flex-shrink-0 border-b border-(--color-border)/80 bg-(--color-bg)">
       <div className="flex min-h-12 items-center gap-3 px-4 py-2">
         {/* Brand + project */}
         <div className="flex min-w-0 items-center gap-3 flex-shrink-0">
@@ -151,7 +151,7 @@ function TopBar() {
             </div>
             <span className="text-sm font-semibold text-white tracking-tight">BeadSpec</span>
           </div>
-          <div className="w-px h-5 bg-[--color-surface-hi]" />
+          <div className="w-px h-5 bg-(--color-surface-hi)" />
           <ProjectSwitcher />
         </div>
 
@@ -169,7 +169,7 @@ function TopBar() {
           <SettingsButton />
         </div>
       </div>
-      <div className="border-t border-[--color-border] px-4 py-1.5">
+      <div className="border-t border-(--color-border) px-4 py-1.5">
         <ViewSwitcher />
       </div>
     </div>
@@ -234,7 +234,7 @@ function DetailPanel() {
 function ResizableDivider({ onMouseDown }: { onMouseDown: () => void }) {
   return (
     <div
-      className="w-1 flex-shrink-0 bg-[--color-surface-hi]/50 hover:bg-blue-500/60 cursor-col-resize transition-colors"
+      className="w-1 flex-shrink-0 bg-(--color-surface-hi)/50 hover:bg-blue-500/60 cursor-col-resize transition-colors"
       onMouseDown={onMouseDown}
     />
   )

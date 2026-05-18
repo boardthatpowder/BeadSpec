@@ -21,7 +21,7 @@ const Content = forwardRef<
       forceMount
       className={cn(
         'fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden',
-        'bg-[--color-surface] border border-[--color-border] rounded-xl shadow-2xl text-[--color-fg]',
+        'bg-(--color-surface) border border-(--color-border) rounded-xl shadow-2xl text-(--color-fg)',
         'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
         'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
         'duration-150 motion-reduce:animate-none motion-reduce:transition-none',
@@ -40,7 +40,7 @@ function Header({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <DialogPrimitive.Title asChild>
       <div
-        className={cn('border-b border-[--color-border] px-5 py-4 text-base font-semibold text-[--color-fg]', className)}
+        className={cn('border-b border-(--color-border) px-5 py-4 text-base font-semibold text-(--color-fg)', className)}
         {...props}
       />
     </DialogPrimitive.Title>
@@ -50,7 +50,7 @@ function Header({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 function Body({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <DialogPrimitive.Description asChild>
-      <div className={cn('px-5 py-4 text-sm text-[--color-fg-muted]', className)} {...props} />
+      <div className={cn('px-5 py-4 text-sm text-(--color-fg-muted)', className)} {...props} />
     </DialogPrimitive.Description>
   )
 }
@@ -59,7 +59,7 @@ function Footer({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'flex items-center justify-end gap-2 border-t border-[--color-border] px-5 py-4',
+        'flex items-center justify-end gap-2 border-t border-(--color-border) px-5 py-4',
         className,
       )}
       {...props}
