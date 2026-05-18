@@ -389,6 +389,9 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
     openPinned(task.id)
   }, [openPinned, clearHistory])
 
+  const sortLabel = (field: SortField) =>
+    sortField === field ? `Sort ${sortDir === 'asc' ? 'descending' : 'ascending'}` : 'Sort'
+
   const SortIcon = ({ field }: { field: SortField }) =>
     sortField === field ? (
       <Icon
@@ -422,6 +425,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
         <Button
           variant="ghost"
           size="xs"
+          aria-label={sortLabel('title')}
           onClick={() => handleSort('title')}
           className="h-auto flex-1 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
         >
@@ -430,6 +434,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
         <Button
           variant="ghost"
           size="xs"
+          aria-label={sortLabel('status')}
           onClick={() => handleSort('status')}
           className="h-auto w-20 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
         >
@@ -438,6 +443,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
         <Button
           variant="ghost"
           size="xs"
+          aria-label={sortLabel('priority')}
           onClick={() => handleSort('priority')}
           className="h-auto w-8 justify-end rounded-none border-0 bg-transparent px-0 py-0 text-right text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
         >

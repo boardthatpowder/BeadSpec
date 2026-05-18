@@ -13,7 +13,7 @@ export function BdHumanQueueChip() {
   if (items.length === 0) return null
 
   return (
-    <div className="relative flex-shrink-0">
+    <div className="relative flex-shrink-0" aria-live="polite" aria-label={`${items.length} issues awaiting human review`}>
       <Button
         variant="ghost"
         size="xs"

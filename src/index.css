@@ -29,6 +29,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+*:focus-visible {
+  outline: none;
+}
+
 .symbol-mention {
   border-bottom: 1px dotted rgb(96 165 250 / 0.9);
   color: rgb(147 197 253);

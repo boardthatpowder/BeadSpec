@@ -139,7 +139,7 @@ function ImpactResult({ report }: { report: GitnexusImpactReport }) {
       {report.index_status === 'Stale' && <Callout tone="warn">GitNexus index appears stale. Results may miss recent edits.</Callout>}
       <div className="flex items-center gap-2">
         <span className="font-mono text-sm text-neutral-200">{report.symbol}</span>
-        <span className={`rounded border px-2 py-0.5 text-xs ${riskClass(report.risk)}`}>
+        <span aria-label={`risk: ${report.risk}`} className={`rounded border px-2 py-0.5 text-xs ${riskClass(report.risk)}`}>
           {report.risk}
         </span>
         <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">

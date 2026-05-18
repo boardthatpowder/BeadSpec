@@ -176,8 +176,10 @@ function ProcessList({
   return (
     <aside className="min-h-0 border-r border-neutral-800 bg-neutral-950 flex flex-col">
       <div className="space-y-2 border-b border-neutral-800 p-3">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search processes" className="w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-blue-700" />
-        <select value={cluster} onChange={e => setCluster(e.target.value)} className="w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm">
+        <label className="sr-only" htmlFor="process-search">Search processes</label>
+        <input id="process-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search processes" className="w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-blue-700" />
+        <label className="sr-only" htmlFor="process-cluster">Filter by cluster</label>
+        <select id="process-cluster" aria-label="Filter by cluster" value={cluster} onChange={e => setCluster(e.target.value)} className="w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm">
           <option value="">All clusters</option>
           {clusters.map(c => <option key={c} value={c}>{c}</option>)}
         </select>

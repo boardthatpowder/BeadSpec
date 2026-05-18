@@ -61,7 +61,8 @@ export function ReviewsHealthTab({ project }: { project: string }) {
               </Button>
             )
           })}
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews" className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm" />
+          <label className="sr-only" htmlFor="reviews-search">Search reviews</label>
+          <input id="reviews-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews" className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm" />
         </div>
       </div>
       {query.isLoading ? <div className="text-sm text-neutral-600">Loading…</div> : rowsCount === 0 ? (

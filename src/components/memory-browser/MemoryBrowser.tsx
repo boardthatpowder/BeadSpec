@@ -209,8 +209,10 @@ function StoreDialog({ namespace, onClose }: { namespace: string; onClose: () =>
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>
       <Dialog.Content className="w-[520px] rounded-lg bg-neutral-950 p-4">
         <Dialog.Header className="border-0 px-0 py-0 mb-3 text-sm">Store memory</Dialog.Header>
-        <input value={key} onChange={e => setKey(e.target.value)} className="mb-2 w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 font-mono text-xs" placeholder="key" />
-        <textarea value={value} onChange={e => setValue(e.target.value)} className="h-40 w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm" placeholder="value" />
+        <label className="sr-only" htmlFor="memory-key">Key</label>
+        <input id="memory-key" value={key} onChange={e => setKey(e.target.value)} className="mb-2 w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 font-mono text-xs" placeholder="key" />
+        <label className="sr-only" htmlFor="memory-value">Value</label>
+        <textarea id="memory-value" value={value} onChange={e => setValue(e.target.value)} className="h-40 w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm" placeholder="value" />
         <div className="mt-3 flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" size="sm" onClick={() => store.mutate()} disabled={!key || !value}>Store</Button>

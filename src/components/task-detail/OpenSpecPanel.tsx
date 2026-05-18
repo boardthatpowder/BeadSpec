@@ -230,7 +230,10 @@ function ValidateSection({
             <span
               className={result.valid ? 'text-green-400' : 'text-red-400'}
             >
-              <Icon name={result.valid ? 'Check' : 'X'} size="sm" className="inline-block" /> {result.valid ? 'Valid' : 'Invalid'}
+              <span role="img" aria-label={result.valid ? 'passed' : 'failed'}>
+                <Icon name={result.valid ? 'Check' : 'X'} size="sm" className="inline-block" />
+              </span>{' '}
+              {result.valid ? 'Valid' : 'Invalid'}
             </span>
             {timestamp && (
               <span className="text-neutral-600">as of {timestamp}</span>
@@ -289,7 +292,7 @@ function ValidationHistory({ projectRoot, changeName }: { projectRoot: string; c
             })} className="block h-auto w-full rounded-none border-0 border-b border-neutral-800/40 px-2 py-2 text-left text-xs">
               <div className="flex items-center gap-2">
                 <span title={entry.ts_iso} className="text-neutral-500">{new Date(entry.ts_iso).toLocaleString()}</span>
-                <span className={entry.valid ? 'text-green-400' : 'text-red-400'}>{entry.valid ? 'pass' : 'fail'}</span>
+                <span aria-label={entry.valid ? 'passed' : 'failed'} className={entry.valid ? 'text-green-400' : 'text-red-400'}>{entry.valid ? 'pass' : 'fail'}</span>
                 <span className="truncate text-neutral-600">{entry.valid ? 'No errors' : entry.errors[0]}</span>
               </div>
               {open && !entry.valid && <ul className="mt-1 list-disc pl-4 text-red-300">{entry.errors.map(e => <li key={e}>{e}</li>)}</ul>}

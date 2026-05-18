@@ -73,6 +73,13 @@ function statusClass(status: string) {
 const STATUS_OPTIONS = ['open', 'in_progress', 'blocked', 'closed'] as const
 type Status = typeof STATUS_OPTIONS[number]
 
+const STATUS_ICONS: Record<Status, 'Circle' | 'Loader2' | 'Ban' | 'CheckCircle2'> = {
+  open: 'Circle',
+  in_progress: 'Loader2',
+  blocked: 'Ban',
+  closed: 'CheckCircle2',
+}
+
 function statusLabel(s: string) {
   return s.replace('_', ' ')
 }
@@ -118,8 +125,9 @@ export function StatusDropdown({ task, project }: Props) {
           <Button
             variant="ghost"
             size="xs"
-            className={`h-auto rounded-full border px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-80 ${colorClass}`}
+            className={`h-auto gap-1 rounded-full border px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-80 ${colorClass}`}
           >
+            <Icon name={STATUS_ICONS[task.status as Status] ?? 'Circle'} size="sm" className="h-3 w-3" />
             {statusLabel(task.status)}
           </Button>
         </Popover.Trigger>
@@ -133,7 +141,8 @@ export function StatusDropdown({ task, project }: Props) {
                 onClick={() => select(s)}
                 className={`h-auto w-full justify-start rounded-none border-0 px-3 py-1.5 text-left ${s === task.status ? 'font-semibold' : ''}`}
               >
-                <span className={`rounded-full border px-1.5 py-0.5 ${statusClass(s)}`}>
+                <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 ${statusClass(s)}`}>
+                  <Icon name={STATUS_ICONS[s]} size="sm" className="h-3 w-3" />
                   {statusLabel(s)}
                 </span>
               </Button>
