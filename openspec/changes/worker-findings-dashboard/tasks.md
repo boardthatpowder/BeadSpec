@@ -3,7 +3,7 @@
 - [x] 1.1 Create `src-tauri/src/commands/workers.rs` with `WorkerFinding { issue_id: String, title: String, worker: String, priority: i32, status: String, notes_first_line: String, created_at: String }`, deriving `serde::Serialize`, `serde::Deserialize`, and `specta::Type`.
 - [ ] 1.2 Add a private helper `parse_worker_from_notes(notes: &str) -> Option<String>` using regex `^Auto-filed by ruflo-(?P<worker>[a-z0-9-]+) on `. Reuse the existing `regex` crate (already a transitive dep via `sqlx`/`tauri`; add it explicitly to `src-tauri/Cargo.toml` if not present).
 - [ ] 1.3 Add `list_worker_findings(project_path, registry) -> Result<Vec<WorkerFinding>, String>` Tauri command that: (a) acquires the Dolt SQL pool for `project_path` via the existing `ProjectRegistry`; (b) runs `SELECT id, title, priority, status, notes, created_at FROM issues WHERE notes LIKE 'Auto-filed by ruflo-%' AND status IN ('open','in_progress') AND issue_type != 'deleted' ORDER BY created_at DESC`; (c) parses worker via the helper; (d) skips rows where the regex fails to match.
-- [ ] 1.4 Add `pub mod workers;` to `src-tauri/src/commands/mod.rs`.
+- [x] 1.4 Add `pub mod workers;` to `src-tauri/src/commands/mod.rs`.
 - [ ] 1.5 Register `commands::workers::list_worker_findings` in `src-tauri/src/lib.rs` inside both `tauri_specta::collect_commands!` and `tauri::generate_handler!`.
 
 ## 2. Backend tests
