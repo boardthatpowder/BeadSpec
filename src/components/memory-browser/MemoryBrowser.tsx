@@ -5,6 +5,8 @@ import { useAppState } from '../../contexts/HashStateContext'
 import { rufloMemoryDelete, rufloMemoryList, rufloMemoryStore } from '../../ipc'
 import type { MemoryEntry } from '../../bindings'
 import { parseMemoryKey } from './parseMemoryKey'
+import { ViewHelpHeader } from '../shared/ViewHelpHeader'
+import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
 
 export function MemoryBrowser() {
   const project = useActiveProject()
@@ -24,39 +26,47 @@ export function MemoryBrowser() {
   const entries = query.data?.entries ?? []
   const visible = useMemo(() => entries.slice().sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0)), [entries])
 
-  if (!project) return <div className="p-6 text-sm text-neutral-500">Connect a project to browse memory.</div>
+  if (!project) return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.memory} />
+      <div className="p-6 text-sm text-neutral-500">Connect a project to browse memory.</div>
+    </div>
+  )
 
   return (
-    <div className="h-full grid grid-cols-[300px_1fr] overflow-hidden">
-      <aside className="border-r border-neutral-800 bg-neutral-950 p-3">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-sm font-medium text-neutral-200">Namespaces</div>
-          <button onClick={() => setStoreOpen(true)} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">+ Store</button>
-        </div>
-        <NamespaceTree entries={entries} selected={namespace} onSelect={(ns) => { setNamespace(ns); setState({ memoryNamespace: ns || undefined }) }} />
-      </aside>
-      <main className="min-w-0 overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
-          <span className="text-sm text-neutral-300">{namespace || 'All memory'}</span>
-          <button onClick={() => query.refetch()} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">Refresh</button>
-        </div>
-        <div className="flex-1 overflow-auto">
-          {query.error ? (
-            <div className="p-4 text-sm text-red-300">Could not load memory: {String(query.error)}</div>
-          ) : query.isLoading ? (
-            <div className="p-4 text-sm text-neutral-600">Loading…</div>
-          ) : visible.length === 0 ? (
-            <div className="p-4 text-sm text-neutral-600">No memory entries.</div>
-          ) : visible.map(entry => (
-            <button key={entry.key} onClick={() => setSelected(entry)} className="grid w-full grid-cols-[1fr_80px_140px] gap-3 border-b border-neutral-900 px-4 py-2 text-left hover:bg-neutral-900/50">
-              <span className="truncate font-mono text-xs text-neutral-300">{entry.key}</span>
-              <span className="text-xs text-neutral-600">{(entry.score ?? 0).toFixed(2)}</span>
-              <span className="text-xs text-neutral-500">{entry.ts ? new Date(entry.ts * 1000).toLocaleString() : 'no ts'}</span>
-              <span className="col-span-3 truncate text-xs text-neutral-500">{entry.preview}</span>
-            </button>
-          ))}
-        </div>
-      </main>
+    <div className="h-full flex flex-col overflow-hidden">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.memory} />
+      <div className="min-h-0 flex-1 grid grid-cols-[300px_1fr] overflow-hidden">
+        <aside className="border-r border-neutral-800 bg-neutral-950 p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-medium text-neutral-200">Namespaces</div>
+            <button onClick={() => setStoreOpen(true)} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">+ Store</button>
+          </div>
+          <NamespaceTree entries={entries} selected={namespace} onSelect={(ns) => { setNamespace(ns); setState({ memoryNamespace: ns || undefined }) }} />
+        </aside>
+        <main className="min-w-0 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
+            <span className="text-sm text-neutral-300">{namespace || 'All memory'}</span>
+            <button onClick={() => query.refetch()} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">Refresh</button>
+          </div>
+          <div className="flex-1 overflow-auto">
+            {query.error ? (
+              <div className="p-4 text-sm text-red-300">Could not load memory: {String(query.error)}</div>
+            ) : query.isLoading ? (
+              <div className="p-4 text-sm text-neutral-600">Loading…</div>
+            ) : visible.length === 0 ? (
+              <div className="p-4 text-sm text-neutral-600">No memory entries.</div>
+            ) : visible.map(entry => (
+              <button key={entry.key} onClick={() => setSelected(entry)} className="grid w-full grid-cols-[1fr_80px_140px] gap-3 border-b border-neutral-900 px-4 py-2 text-left hover:bg-neutral-900/50">
+                <span className="truncate font-mono text-xs text-neutral-300">{entry.key}</span>
+                <span className="text-xs text-neutral-600">{(entry.score ?? 0).toFixed(2)}</span>
+                <span className="text-xs text-neutral-500">{entry.ts ? new Date(entry.ts * 1000).toLocaleString() : 'no ts'}</span>
+                <span className="col-span-3 truncate text-xs text-neutral-500">{entry.preview}</span>
+              </button>
+            ))}
+          </div>
+        </main>
+      </div>
       {selected && <MemoryDrawer entry={selected} onClose={() => setSelected(null)} />}
       {storeOpen && <StoreDialog namespace={namespace} onClose={() => setStoreOpen(false)} />}
     </div>

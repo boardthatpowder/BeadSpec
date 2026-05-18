@@ -7,6 +7,8 @@ import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { findIssuesTouchingProcess, getGitnexusIndexStatus, getGitnexusProcess, listGitnexusClusters, listGitnexusProcesses, triggerGitnexusReanalyze } from '../../ipc'
 import type { IssueMatch, ProcessDetail as ProcessDetailType, ProcessSummary } from '../../bindings'
+import { ViewHelpHeader } from '../shared/ViewHelpHeader'
+import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
 
 export function ProcessBrowser() {
   const project = useActiveProject()
@@ -25,11 +27,22 @@ export function ProcessBrowser() {
     retry: false,
   })
 
-  if (!project) return <div className="p-6 text-sm text-neutral-500">Connect a project to browse GitNexus processes.</div>
-  if (processes.error) return <InstallHint error={String(processes.error)} />
+  if (!project) return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.processes} />
+      <div className="p-6 text-sm text-neutral-500">Connect a project to browse GitNexus processes.</div>
+    </div>
+  )
+  if (processes.error) return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.processes} />
+      <InstallHint error={String(processes.error)} />
+    </div>
+  )
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.processes} />
       <StaleIndexBanner project={project} />
       <div className="flex-1 min-h-0 grid grid-cols-[360px_1fr]">
         <ProcessList
@@ -50,7 +63,7 @@ export function ProcessBrowser() {
 
 function InstallHint({ error }: { error: string }) {
   return (
-    <div className="h-full p-6">
+    <div className="flex-1 p-6">
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-5">
         <div className="text-sm font-medium text-neutral-200">GitNexus CLI unavailable</div>
         <div className="mt-2 text-sm text-neutral-500">Install GitNexus and run <code className="text-neutral-300">npx gitnexus analyze</code>.</div>
