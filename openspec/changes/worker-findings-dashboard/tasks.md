@@ -50,8 +50,8 @@
 ## 8. Verification
 
 - [ ] 8.1 `cargo test -p beadspec_lib workers::tests` (or whichever crate hosts `commands::workers`) passes with all four backend tests.
-- [ ] 8.2 `bun tsc --noEmit` passes after bindings regeneration.
-- [ ] 8.3 `bun test src/lib/__tests__/worker-findings.test.ts` passes.
+- [x] 8.2 `bun tsc --noEmit` passes after bindings regeneration.
+- [x] 8.3 `bun test src/lib/__tests__/worker-findings.test.ts` passes.
 - [ ] 8.4 Manual: `bun tauri dev`, trigger `/audit` (or seed a Beads issue with `bd create -t bug ... && bd update <id> --notes "Auto-filed by ruflo-security-audit on $(date -u +%FT%TZ). Branch: main"`), confirm the new chip appears on its row in the task list and the issue appears under `ruflo-security-audit` in the Worker findings tab.
 - [ ] 8.5 Manual: close the seeded issue via the task detail panel, confirm it disappears from the Worker findings tab within one task-cache refresh cycle.
 - [ ] 8.6 Manual: confirm the `Checks` tab still auto-runs on mount and the `Re-run` button is hidden on the `Worker findings` tab.
