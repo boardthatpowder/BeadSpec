@@ -1,0 +1,480 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: memory-trajectory-timeline",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "Execution tracker for openspec/changes/memory-trajectory-timeline. Adds a Trajectory sub-tab to RufloMemoryPanel showing `type:trajectory` AgentDB memory entries per issue, with outcome chips, relative timestamps, lazy IPC fetch, and strict-then-fallback filtering.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "local_key": "epic"
+      }
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Add subTab state to RufloMemoryPanel",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §1.1. Add `subTab: 'search' | 'trajectory'` state (default `'search'`) to `RufloMemoryPanel`. Reset to `'search'` in the `useEffect` that watches `taskId`.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "1.1",
+        "local_key": "task-1-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"}
+      ]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Refactor state into searchTab / trajectoryTab objects",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §1.2. Refactor existing search state into a `searchTab` object (`{ status, results, hasOpened }`); add a parallel `trajectoryTab` object with `TrajectoryLoadState`.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "1.2",
+        "local_key": "task-1-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Render 2-segment tab control in RufloMemoryPanel",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §1.3. Render a 2-segment control (`[ Search ] [ Trajectory ]`) between the collapsible header and the content area when `open` is true.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "1.3",
+        "local_key": "task-1-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Create MemoryTrajectoryTab.tsx component file",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.1. Create `src/components/task-detail/MemoryTrajectoryTab.tsx` accepting `{ taskId: string; title: string }` props.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.1",
+        "local_key": "task-2-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Implement parseTrajectoryKey()",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.2. Implement `parseTrajectoryKey(key: string)` inline — splits on `|`, extracts `type:`, `outcome:`, `ts:`, `issue:`, `openspec:` segments; returns `null` if `type:` segment is missing or is not `'trajectory'`.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.2",
+        "local_key": "task-2-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Implement outcomeChipClass()",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.3. Implement `outcomeChipClass(outcome?: string): string` — returns Tailwind class strings per the palette in Decision 5; neutral default for unknown outcomes.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.3",
+        "local_key": "task-2-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Implement lazy IPC fetch with rufloMemorySearch",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.4. Implement lazy IPC fetch: on first mount-while-active, call `commands.rufloMemorySearch(\\`${title} type:trajectory issue:${taskId}\\`)`, parse all results via `parseTrajectoryKey`, keep only `type:trajectory` entries.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.4",
+        "local_key": "task-2-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-5",
+      "title": "2.5: Apply issue-id filter with fallback",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.5. Apply optional issue-id filter (keep only `issueId === taskId`); if that produces zero entries, fall back to the broader `type:trajectory` set.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.5",
+        "local_key": "task-2-5"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-6",
+      "title": "2.6: Sort entries by ts descending",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.6. Sort entries by `ts` descending; push entries with undefined `ts` to the bottom.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.6",
+        "local_key": "task-2-6"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-7",
+      "title": "2.7: Render each trajectory row",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.7. Render each row: relative timestamp (e.g. \"2h ago\") with absolute ISO string in `title` attribute; outcome chip; short preview (first 120 chars); expand-on-click full content (same expand-in-place idiom as Search).",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.7",
+        "local_key": "task-2-7"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-3", "type": "blocks"},
+        {"key": "task-2-6", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-8",
+      "title": "2.8: Render loading, error, and empty states",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §2.8. Render loading state (\"Loading…\"), error state (\"Could not load memories\"), and empty state (instructive blurb referencing `openspec-beads-work` skill) per Decision 6.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "2.8",
+        "local_key": "task-2-8"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-4", "type": "blocks"},
+        {"key": "task-2-7", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Verify Search sub-tab spec scenarios after refactor",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §3.1. Verify all existing scenarios in `openspec/specs/ruflo-memory-panel/spec.md` are satisfied on the Search sub-tab after the sub-tab refactor. No behavioral change permitted.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "3.1",
+        "local_key": "task-3-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Confirm namespace exclusion preservation",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §3.2. Confirm the Search tab's namespace exclusion (`session`, `default`) is preserved; confirm Trajectory tab does NOT apply that exclusion.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "3.2",
+        "local_key": "task-3-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"},
+        {"key": "task-2-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Unit test for parseTrajectoryKey",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.1. Unit test for `parseTrajectoryKey`: (a) canonical key with all six segments returns all fields, (b) key missing `outcome:` segment returns `outcome: undefined`, (c) key missing `ts:` segment returns `ts: undefined`, (d) key with `type:retrospective` returns `null`, (e) malformed key with no `|` separators returns `null`.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.1",
+        "local_key": "task-4-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Unit test for outcomeChipClass",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.2. Unit test for `outcomeChipClass`: assert known outcomes return the expected Tailwind class string; assert an unrecognized string returns the neutral default class.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.2",
+        "local_key": "task-4-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-3",
+      "title": "4.3: Unit test for formatRelative",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.3. Unit test for `formatRelative`: assert \"just now\" for 0 s, \"Xm ago\" for 30 min, \"Xh ago\" for 5 h, \"Xd ago\" for 3 d, ISO date for 60 d.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.3",
+        "local_key": "task-4-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-7", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-4",
+      "title": "4.4: Component test for MemoryTrajectoryTab with mixed entries",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.4. Component test for `MemoryTrajectoryTab` with a mocked `rufloMemorySearch` returning a mix of trajectory and non-trajectory entries: assert only trajectory entries render and order is `ts`-descending.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.4",
+        "local_key": "task-4-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-8", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-5",
+      "title": "4.5: Component test for strict-then-fallback filter",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.5. Component test for the strict-then-fallback filter: mock returns two entries with `type:trajectory` but only one with the matching `issue:` segment; assert both appear when the strict filter would reduce to one and the fallback kicks in (i.e. the broader set renders when strict is empty, not when strict is non-empty).",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.5",
+        "local_key": "task-4-5"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-6",
+      "title": "4.6: Component test for empty state",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.6. Component test for empty state: mock returns zero trajectory entries — assert the instructive blurb appears.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.6",
+        "local_key": "task-4-6"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-8", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-7",
+      "title": "4.7: Component test for tab-reset behavior",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §4.7. Component test for tab-reset behavior: render `RufloMemoryPanel`, switch to Trajectory, change `taskId` prop, assert `subTab` returns to `'search'` and trajectory cache is cleared.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "4.7",
+        "local_key": "task-4-7"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: bun tsc --noEmit passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.1. `bun tsc --noEmit` passes (no new TypeScript errors).",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.1",
+        "local_key": "task-5-1"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-8", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: bun test passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.2. `bun test` passes (all new unit and component tests green).",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.2",
+        "local_key": "task-5-2"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-7", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Manual: trajectory entry visible with chip, timestamp, preview",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.3. Manual: in `bun tauri dev`, open an issue with at least one trajectory entry written by `obws_mem_write_trajectory`. Expand Related memories, switch to Trajectory tab, confirm the entry appears with outcome chip, relative timestamp, and preview. Click to expand; confirm full content visible.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.3",
+        "local_key": "task-5-3"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"},
+        {"key": "task-5-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-4",
+      "title": "5.4: Manual: empty-state blurb on fresh issue",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.4. Manual: open a fresh issue with no trajectory entries; Trajectory tab shows the instructive empty-state blurb referencing `openspec-beads-work`.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.4",
+        "local_key": "task-5-4"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-5",
+      "title": "5.5: Manual: Search tab unchanged behavior",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.5. Manual: confirm Search tab still behaves identically to today — lazy fetch on first expand, label-augmented query, expand-in-place, namespace filter active, no sub-tab control visible until panel is opened.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.5",
+        "local_key": "task-5-5"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-6",
+      "title": "5.6: Manual: sub-tab resets on issue navigation",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.6. Manual: verify that navigating from an issue with trajectory history to a fresh issue resets the sub-tab to Search and clears both caches.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.6",
+        "local_key": "task-5-6"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-7",
+      "title": "5.7: openspec validate passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:memory-trajectory-timeline"],
+      "description": "openspec/changes/memory-trajectory-timeline/tasks.md §5.7. `openspec validate memory-trajectory-timeline` passes.",
+      "metadata": {
+        "openspec_change": "memory-trajectory-timeline",
+        "task_ref": "5.7",
+        "local_key": "task-5-7"
+      },
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-6", "type": "blocks"}
+      ]
+    }
+  ]
+}

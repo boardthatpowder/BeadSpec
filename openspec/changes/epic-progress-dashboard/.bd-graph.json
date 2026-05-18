@@ -1,0 +1,568 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: epic-progress-dashboard",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "Execution tracker for openspec/changes/epic-progress-dashboard. Adds an Epic Dashboard pane that shows ready/blocked/paused task state for an imported OpenSpec change, with bd CLI + Dolt-fallback backend, TanStack Query frontend, and ChangeCard click target.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "local_key": "epic"}
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Create bd_mol.rs with EpicReadySnapshot, BlockerLink, SnapshotSource types",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §1.1. Create `src-tauri/src/commands/bd_mol.rs` with structs `EpicReadySnapshot`, `BlockerLink`, and enum `SnapshotSource`. All derive `serde::Serialize`, `serde::Deserialize`, `specta::Type`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "1.1", "local_key": "task-1-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Implement get_epic_ready_snapshot command with bd CLI + Dolt fallback",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §1.2. Implement `get_epic_ready_snapshot(project_path, epic_id, registry)` that runs `bd ready --mol <epic_id> --json`, parses result, computes paused_task_ids via SQL, and falls back to Dolt-direct query on failure.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "1.2", "local_key": "task-1-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Implement claim_task command in bd_mol.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §1.3. Implement `claim_task(project_path, task_id)` in `bd_mol.rs` that shells out `bd update <task_id> --claim` and re-reads the issue via the existing `read_task` helper.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "1.3", "local_key": "task-1-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-4",
+      "title": "1.4: Register get_epic_ready_snapshot and claim_task in lib.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §1.4. Register both new commands in `src-tauri/src/lib.rs` `tauri::generate_handler!` and `tauri_specta::collect_commands!`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "1.4", "local_key": "task-1-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-5",
+      "title": "1.5: Add mod bd_mol and re-export commands in commands/mod.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §1.5. Add `mod bd_mol;` to `src-tauri/src/commands/mod.rs` and re-export `get_epic_ready_snapshot`, `claim_task` alongside existing `openspec::*` exports.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "1.5", "local_key": "task-1-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Unit test bd ready --mol JSON parser (fixture: ready + blocked + empty)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §2.1. Unit test the JSON parser for `bd ready --mol --json` against a captured-fixture string covering ready + blocked + empty cases.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "2.1", "local_key": "task-2-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Unit test Dolt-fallback ready-derivation against seeded temp registry",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §2.2. Unit test the Dolt-fallback ready-derivation against a seeded temp registry: epic with three children where one is blocked, one is in-progress, one is open with no deps.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "2.2", "local_key": "task-2-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Unit test Paused note-prefix detection (three note variants)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §2.3. Unit test the `Paused` note-prefix detection with three notes: `Paused: foo` → match, `Paused - bar bd-99` → match + extracts `bd-99`, `Was paused yesterday` → no match.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "2.3", "local_key": "task-2-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Unit test source-fallback contract (non-zero CLI exit → SnapshotSource::Dolt)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §2.4. Unit test the source-fallback contract: when the CLI subprocess returns non-zero, `source == SnapshotSource::Dolt` and the result is non-empty for a known-seeded epic.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "2.4", "local_key": "task-2-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-5",
+      "title": "2.5: Unit test claim_task against seeded issue",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §2.5. Unit test `claim_task` against a seeded issue: claim sets `assignee` and returns the updated `Task`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "2.5", "local_key": "task-2-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Regenerate src/bindings.ts with EpicReadySnapshot, BlockerLink, SnapshotSource, new commands",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §3.1. Run `bun tauri build` (or the existing specta codegen script) to regenerate `src/bindings.ts` with `EpicReadySnapshot`, `BlockerLink`, `SnapshotSource`, and the two new commands.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "3.1", "local_key": "task-3-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-4", "type": "blocks"},
+        {"key": "task-1-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Add getEpicReadySnapshot and claimTask wrappers in src/ipc.ts",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §3.2. Add `getEpicReadySnapshot(projectPath, epicId): Promise<EpicReadySnapshot>` and `claimTask(projectPath, taskId): Promise<Task>` wrappers in `src/ipc.ts`, matching the existing style.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "3.2", "local_key": "task-3-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Add EpicTab to TabId union and epicTabId helper in paneTree.ts",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §4.1. In `src/utils/paneTree.ts`, add `EpicTab { kind: 'epic'; id: string; change: string; epicId: string }` to the `TabId` union and export an `epicTabId(change: string): string` helper returning `epic:${change}`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "4.1", "local_key": "task-4-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"}
+      ]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Add openEpicTab action to workspace.ts store",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §4.2. In `src/stores/workspace.ts`, add `openEpicTab(change: string, epicId: string)` action mirroring `openDocTab` (focus-if-open semantics, otherwise append + pin in active pane).",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "4.2", "local_key": "task-4-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-3",
+      "title": "4.3: Extend workspacePersist.ts rehydrator to round-trip epic tab variant",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §4.3. In `src/stores/workspacePersist.ts`, extend the rehydrator to round-trip the new `epic` variant. Drop unknown kinds rather than throwing.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "4.3", "local_key": "task-4-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-4",
+      "title": "4.4: Dispatch epic tab in LeafPane.tsx, extend useTabTitles",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §4.4. In `src/components/workspace/LeafPane.tsx`, dispatch on `tab.kind === 'epic'` and render `<EpicDashboard change={tab.change} epicId={tab.epicId} />`. Extend `useTabTitles` to label epic tabs as `${change} · dashboard`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "4.4", "local_key": "task-4-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-5",
+      "title": "4.5: Update paneTree.test.ts to cover epic tab in findLeaf, replaceLeaf, nextTabAfterClose",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §4.5. Update `src/utils/paneTree.test.ts` to cover an `epic` tab in `findLeaf`, `replaceLeaf`, and `nextTabAfterClose`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "4.5", "local_key": "task-4-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-6",
+      "title": "4.6: Add serialiser round-trip test for epic tab variant in workspacePersist",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §4.6. Add a serialiser round-trip test in `src/stores/workspacePersist` (or its colocated test) for the `epic` variant.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "4.6", "local_key": "task-4-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Create EpicDashboard.tsx with TanStack Query keyed on epicSnapshot",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.1. Create `src/components/epic-dashboard/EpicDashboard.tsx` exporting `EpicDashboard({ change, epicId })`. Use TanStack Query keyed `['epicSnapshot', project, epicId]` calling `getEpicReadySnapshot`. Invalidate on `allTasks` change and on manual refresh.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.1", "local_key": "task-5-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-2", "type": "blocks"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Render EpicDashboard header row (epicId, counts, source, refresh icon)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.2. Render the header row: `Epic: ${epicId}  •  ${ready} ready  •  ${inProgress} in progress  •  via ${source}` with a small caption for `source`. Right-aligned refresh icon.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.2", "local_key": "task-5-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Render validation row with EpicValidationPill and ArtifactLink buttons",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.3. Render the validation row using a new `EpicValidationPill` component (see 5.5). To the right of the pill, render three `ArtifactLink`-style buttons that call `openDocTab(change, 'proposal.md' | 'design.md' | 'tasks.md')`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.3", "local_key": "task-5-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-4",
+      "title": "5.4: Render blocker chain with View full graph link",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.4. Render the blocker chain: `Currently blocked by: ${chain.join(' → ')}  View full graph →`. The 'View full graph' link calls `setState({ view: 'all', taskId: epicId, taskTab: 'deps' })`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.4", "local_key": "task-5-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-5",
+      "title": "5.5: Create EpicValidationPill.tsx (idle/running/pass/fail, age via relativeTime)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.5. Create `src/components/epic-dashboard/EpicValidationPill.tsx` that wraps `runOpenspecValidate`, holds `idle | running | pass | fail` + `lastRunTs`, renders age via the existing `relativeTime` helper, and expands raw output on fail.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.5", "local_key": "task-5-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-6",
+      "title": "5.6: Create EpicTaskRow.tsx (status pill, label chips, Claim button, Paused chip)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.6. Create `src/components/epic-dashboard/EpicTaskRow.tsx` rendering one task: status pill, title, label chips reusing `LABEL_CHIP_COLORS`. When open+unclaimed render Claim button; when in `paused_task_ids` render amber 'Paused' chip linking to the bd issue.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.6", "local_key": "task-5-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-2", "type": "blocks"},
+        {"key": "task-5-7", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-7",
+      "title": "5.7: Group child issues into Ready/In progress/Blocked/Open/Closed sections in EpicDashboard",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.7. In `EpicDashboard.tsx`, group child issues (filtered from `allTasks` by `parent_children`) into `Ready`, `In progress`, `Blocked`, `Open (not ready)`, `Closed`. Render each group with a header showing the count; hide empty groups.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.7", "local_key": "task-5-7"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-8",
+      "title": "5.8: Render empty state when epic has no children",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.8. Empty state: when `epicId` resolves but the epic has no children, render 'No tasks imported yet. Run `openspec-beads-import`.' with a copy-to-clipboard button.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.8", "local_key": "task-5-8"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-9",
+      "title": "5.9: Render error state with Retry button when getEpicReadySnapshot rejects",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §5.9. Error state: when `getEpicReadySnapshot` rejects, render an inline error row with a 'Retry' button; the per-task list still renders from `allTasks`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "5.9", "local_key": "task-5-9"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Wrap ChangeCard body in clickable element calling openEpicTab",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §6.1. In `src/components/changes-browser/ChangeCard.tsx`, wrap the existing card body in a `<button>` (or `div role=\"button\"`) whose `onClick` calls `openEpicTab(change.name, beadsProgress.epic_id)` only when `beadsProgress.epic_id` is non-null.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "6.1", "local_key": "task-6-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Add cursor-pointer styling, aria-label, and disabled tooltip to ChangeCard",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §6.2. Add `cursor-pointer` styling and an `aria-label=\"Open ${change.name} dashboard\"` only when click is enabled. When disabled, set a tooltip via the existing `<Tooltip>` wrapper: 'Import to Beads to enable dashboard'.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "6.2", "local_key": "task-6-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-3",
+      "title": "6.3: Add e.stopPropagation() to all inner click handlers in ChangeCard",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §6.3. Add `e.stopPropagation()` to every existing inner click handler in the card: `ArtifactLink.handleClick`, the `imported → EPIC-ID` pill, the status pill (if interactive), and the dependency chips added by `changes-browser-dep-chips`.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "6.3", "local_key": "task-6-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-4",
+      "title": "6.4: Add wrapper unit test in ChangesBrowser confirming inner click does not trigger dashboard open",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §6.4. In `src/components/changes-browser/ChangesBrowser.tsx`, add a wrapper unit test confirming a click on a stub `<ArtifactLink>` inside a `ChangeCard` does not trigger the open-dashboard handler.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "6.4", "local_key": "task-6-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-1",
+      "title": "7.1: cargo test -p beadspec_lib commands::bd_mol passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.1. `cargo test -p beadspec_lib commands::bd_mol` passes.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.1", "local_key": "task-7-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"},
+        {"key": "task-2-2", "type": "blocks"},
+        {"key": "task-2-3", "type": "blocks"},
+        {"key": "task-2-4", "type": "blocks"},
+        {"key": "task-2-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-2",
+      "title": "7.2: bun tsc --noEmit passes after bindings regeneration",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.2. `bun tsc --noEmit` passes after bindings regeneration.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.2", "local_key": "task-7-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-3",
+      "title": "7.3: bun test epic-dashboard paneTree workspacePersist passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.3. `bun test src/components/epic-dashboard src/utils/paneTree.test.ts src/stores/workspacePersist` passes.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.3", "local_key": "task-7-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-5", "type": "blocks"},
+        {"key": "task-4-6", "type": "blocks"},
+        {"key": "task-5-2", "type": "blocks"},
+        {"key": "task-5-3", "type": "blocks"},
+        {"key": "task-5-4", "type": "blocks"},
+        {"key": "task-5-5", "type": "blocks"},
+        {"key": "task-5-6", "type": "blocks"},
+        {"key": "task-5-7", "type": "blocks"},
+        {"key": "task-5-8", "type": "blocks"},
+        {"key": "task-5-9", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-4",
+      "title": "7.4: Manual: ChangeCard click opens Epic Dashboard pane with via bd caption",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.4. Manual: `bun tauri dev`, click a `ChangeCard` whose change has an imported epic — Epic Dashboard pane opens in the active pane with `via bd` caption, ready count matches `bd ready --mol <epic> --json` output run from terminal.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.4", "local_key": "task-7-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-7-3", "type": "blocks"},
+        {"key": "task-6-4", "type": "blocks"},
+        {"key": "task-4-4", "type": "blocks"},
+        {"key": "task-4-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-5",
+      "title": "7.5: Manual: bd binary hidden → dashboard shows via dolt caption",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.5. Manual: rename or PATH-hide the `bd` binary, refresh dashboard — pane re-renders with `via dolt` caption and identical ready set.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.5", "local_key": "task-7-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-6",
+      "title": "7.6: Manual: paused task shows amber Paused chip",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.6. Manual: pause a child task via `openspec-beads-scope-change`; refresh dashboard — that task shows the amber 'Paused' chip linking to the scope-change child issue.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.6", "local_key": "task-7-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-7",
+      "title": "7.7: Manual: Claim button runs bd update --claim and task moves to In progress",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.7. Manual: click a ready task's 'Claim' button — `bd update <id> --claim` runs, the task moves to 'In progress' within one `allTasks` tick, no console errors.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.7", "local_key": "task-7-7"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-8",
+      "title": "7.8: Manual: workspace persistence restores dashboard tab after reload",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.8. Manual: split the pane horizontally, drag the dashboard tab into the new leaf, reload the app — workspace persistence restores the dashboard tab in the same leaf.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.8", "local_key": "task-7-8"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-9",
+      "title": "7.9: Manual: validation pill runs openspec validate and shows pass/fail age",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.9. Manual: click the validation pill — runs `openspec validate <change-slug>`, shows pass/fail and the last-run age.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.9", "local_key": "task-7-9"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-10",
+      "title": "7.10: openspec validate epic-progress-dashboard passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:epic-progress-dashboard"],
+      "description": "openspec/changes/epic-progress-dashboard/tasks.md §7.10. `openspec validate epic-progress-dashboard` passes.",
+      "metadata": {"openspec_change": "epic-progress-dashboard", "task_ref": "7.10", "local_key": "task-7-10"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-5", "type": "blocks"},
+        {"key": "task-7-6", "type": "blocks"},
+        {"key": "task-7-7", "type": "blocks"},
+        {"key": "task-7-8", "type": "blocks"},
+        {"key": "task-7-9", "type": "blocks"}
+      ]
+    }
+  ]
+}

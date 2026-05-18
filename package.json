@@ -31,7 +31,8 @@
     "tauri": "tauri",
     "gen-bindings": "cd src-tauri && cargo test --test bindings",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ --max-warnings 0"
+    "lint": "eslint src/ --max-warnings 0",
+    "test:unit": "bun test"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,7 +1,16 @@
 pub mod app;
+pub mod bd_mol;
 pub mod external;
+pub mod gitnexus;
+pub mod gitnexus_processes;
+pub mod gitnexus_status;
+pub mod gitnexus_symbols;
 pub mod openspec;
+pub mod openspec_validate_history;
 pub mod project;
 pub mod read;
 pub mod recovery;
+pub mod reviews;
+pub mod ruflo_memory;
+pub mod ruflo_sessions;
 pub mod write;

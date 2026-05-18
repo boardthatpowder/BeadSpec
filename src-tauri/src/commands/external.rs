@@ -44,6 +44,7 @@ pub struct CommitRef {
 pub struct GitRefs {
     pub commits: Vec<CommitRef>,
     pub branches: Vec<String>,
+    pub diff: String,
 }
 
 /// A single row from `dolt_diff` for the issues table.
@@ -61,7 +62,7 @@ pub struct DoltRevision {
 // ── Path helpers ──────────────────────────────────────────────────────────────
 
 /// Locate `ruflo` — check settings override first, then nvm dirs, then PATH.
-fn find_ruflo_with_override(settings_path: &str) -> Option<std::path::PathBuf> {
+pub(crate) fn find_ruflo_with_override(settings_path: &str) -> Option<std::path::PathBuf> {
     // Section 5.2: settings override takes priority
     if !settings_path.is_empty() {
         let p = std::path::PathBuf::from(settings_path);
@@ -178,7 +179,7 @@ fn bd_invocation_args(
 }
 
 /// Helper: run a ruflo sub-command via spawn_managed and return stdout on success.
-async fn run_ruflo_managed(
+pub(crate) async fn run_ruflo_managed(
     ruflo_path: std::path::PathBuf,
     args: &[&str],
     timeout: Duration,
@@ -488,9 +489,7 @@ pub async fn ruflo_version_probe(
 /// Derive workspace labels from `git rev-parse --abbrev-ref HEAD` in the
 /// given project root. Returns unknown/fallback values gracefully if not a
 /// git repo.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_workspace_context(project_path: String) -> Result<WorkspaceContext, String> {
+pub(crate) async fn derive_workspace_context(project_path: &str) -> Result<WorkspaceContext, String> {
     let cwd = std::path::Path::new(&project_path);
     let args = ["-C", &project_path, "rev-parse", "--abbrev-ref", "HEAD"];
     let out = spawn_managed("git", &args, cwd, Duration::from_secs(10), &[]).await;
@@ -516,6 +515,12 @@ pub async fn get_workspace_context(project_path: String) -> Result<WorkspaceCont
         label_repo: format!("repo:{repo}"),
         branch,
     })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_workspace_context(project_path: String) -> Result<WorkspaceContext, String> {
+    derive_workspace_context(&project_path).await
 }
 
 /// Find git commits and branches that mention a given issue ID.
@@ -577,7 +582,25 @@ pub async fn get_git_refs_for_issue(
         _ => vec![],
     };
 
-    Ok(GitRefs { commits, branches })
+    let diff = if commits.is_empty() {
+        String::new()
+    } else {
+        let mut collected = String::new();
+        for commit in commits.iter().take(20) {
+            let show_args = ["-C", &project_path, "show", "--format=", "--unified=0", &commit.hash];
+            if let Ok(o) =
+                spawn_managed("git", &show_args, cwd, Duration::from_secs(10), &[]).await
+            {
+                if o.exit_code == Some(0) {
+                    collected.push_str(&String::from_utf8_lossy(&o.stdout));
+                    collected.push('\n');
+                }
+            }
+        }
+        collected
+    };
+
+    Ok(GitRefs { commits, branches, diff })
 }
 
 // ── Validation helpers (exported for tests) ───────────────────────────────────

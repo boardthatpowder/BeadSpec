@@ -1,15 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useShallow } from 'zustand/react/shallow'
 import { Tooltip } from '../ui/Tooltip'
+import { useAppState } from '../../contexts/HashStateContext'
+import { parsePausedNote } from '../../lib/parsePausedNote'
 import {
   listChanges,
   readChangeArtifact,
   getChangeProgress,
   runOpenspecValidate,
+  recordOpenspecValidation,
+  listOpenspecValidations,
 } from '../../ipc'
-import type { ChangeInfo, ValidationResult } from '../../bindings'
+import { commands, unwrap } from '../../ipc'
+import type { ChangeInfo, ValidationHistoryEntry, ValidationResult } from '../../bindings'
 
 type ContainerMode = 'section' | 'tab'
 
@@ -19,6 +24,9 @@ interface OpenSpecPanelProps {
   projectRoot: string
   taskTitle: string
   taskStatus: string
+  taskLabels?: string[]
+  taskNotes?: string | null
+  scopeChangeChild?: { id: string; title: string } | null
   paneId?: string
   taskId?: string
 }
@@ -163,6 +171,7 @@ function ValidateSection({
   const [timestamp, setTimestamp] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   async function handleValidate() {
     setLoading(true)
@@ -171,8 +180,14 @@ function ValidateSection({
       const r = await runOpenspecValidate(projectRoot, changeName)
       setResult(r)
       setTimestamp(new Date().toLocaleTimeString())
+      recordOpenspecValidation(projectRoot, changeName, JSON.stringify(r))
+        .then(() => queryClient.invalidateQueries({ queryKey: ['validation-history', projectRoot, changeName] }))
+        .catch(e => console.warn('[openspec] validation history record failed', e))
     } catch (e) {
       setErr(String(e))
+      recordOpenspecValidation(projectRoot, changeName, JSON.stringify({ valid: false, errors: [String(e)] }))
+        .then(() => queryClient.invalidateQueries({ queryKey: ['validation-history', projectRoot, changeName] }))
+        .catch(err => console.warn('[openspec] validation history record failed', err))
     } finally {
       setLoading(false)
     }
@@ -230,6 +245,80 @@ function ValidateSection({
   )
 }
 
+function ValidationHistory({ projectRoot, changeName }: { projectRoot: string; changeName: string }) {
+  const [showAll, setShowAll] = useState(false)
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const { data: rufloAvailable = false } = useQuery({
+    queryKey: ['ruflo-version'],
+    queryFn: async () => { await unwrap(commands.rufloVersionProbe()); return true },
+    staleTime: Infinity,
+    retry: false,
+  })
+  const history = useQuery<ValidationHistoryEntry[]>({
+    queryKey: ['validation-history', projectRoot, changeName],
+    queryFn: () => listOpenspecValidations(projectRoot, changeName),
+    enabled: rufloAvailable,
+    staleTime: 30_000,
+    retry: false,
+  })
+  if (!rufloAvailable) {
+    return <div className="text-xs text-neutral-600">Validation history requires the ruflo CLI.</div>
+  }
+  const entries = history.data ?? []
+  const visible = showAll ? entries : entries.slice(0, 5)
+  return (
+    <details className="rounded border border-neutral-800/60 bg-neutral-950/30">
+      <summary className="cursor-pointer px-2 py-1.5 text-xs text-neutral-400">Validation history ({entries.length})</summary>
+      <div className="border-t border-neutral-800/60">
+        {entries.length === 0 ? (
+          <div className="px-2 py-2 text-xs text-neutral-600">No validations recorded yet — click Re-validate above.</div>
+        ) : visible.map((entry, idx) => {
+          const open = expanded.has(idx)
+          return (
+            <button key={`${entry.ts_epoch}-${idx}`} onClick={() => setExpanded(prev => {
+              const next = new Set(prev)
+              if (next.has(idx)) next.delete(idx)
+              else next.add(idx)
+              return next
+            })} className="block w-full border-b border-neutral-800/40 px-2 py-2 text-left text-xs">
+              <div className="flex items-center gap-2">
+                <span title={entry.ts_iso} className="text-neutral-500">{new Date(entry.ts_iso).toLocaleString()}</span>
+                <span className={entry.valid ? 'text-green-400' : 'text-red-400'}>{entry.valid ? 'pass' : 'fail'}</span>
+                <span className="truncate text-neutral-600">{entry.valid ? 'No errors' : entry.errors[0]}</span>
+              </div>
+              {open && !entry.valid && <ul className="mt-1 list-disc pl-4 text-red-300">{entry.errors.map(e => <li key={e}>{e}</li>)}</ul>}
+            </button>
+          )
+        })}
+        {entries.length > 5 && (
+          <button onClick={() => setShowAll(v => !v)} className="px-2 py-2 text-xs text-blue-400">{showAll ? 'Show fewer' : `Showing 5 of ${entries.length} · Show all`}</button>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function PausedBanner({ labels, notes, scopeChangeChild }: { labels: string[]; notes?: string | null; scopeChangeChild?: { id: string; title: string } | null }) {
+  const { setState } = useAppState()
+  if (!labels.includes('openspec:paused')) return null
+  const reason = parsePausedNote(notes) ?? '(no reason recorded)'
+  return (
+    <div className="rounded border border-violet-800/40 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-300">
+      <div>Paused: {reason}</div>
+      {scopeChangeChild ? (
+        <button
+          onClick={() => setState({ view: 'all', taskId: scopeChangeChild.id })}
+          className="mt-1 text-left text-violet-200 underline decoration-violet-600 underline-offset-2"
+        >
+          Resolves: {scopeChangeChild.id} — {scopeChangeChild.title}
+        </button>
+      ) : (
+        <div className="mt-1 text-violet-400/60">No scope-change child detected yet</div>
+      )}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Drift warning
 // ---------------------------------------------------------------------------
@@ -257,11 +346,17 @@ function OpenSpecPanelBody({
   projectRoot,
   taskTitle,
   taskStatus,
+  taskLabels = [],
+  taskNotes,
+  scopeChangeChild,
 }: {
   changeName: string
   projectRoot: string
   taskTitle: string
   taskStatus: string
+  taskLabels?: string[]
+  taskNotes?: string | null
+  scopeChangeChild?: { id: string; title: string } | null
 }) {
   const openDocTab = useWorkspaceStore((s) => s.openDocTab)
 
@@ -307,6 +402,7 @@ function OpenSpecPanelBody({
       </div>
 
       {/* Drift warning */}
+      <PausedBanner labels={taskLabels} notes={taskNotes} scopeChangeChild={scopeChangeChild} />
       <DriftWarning drift={drift} />
 
       {/* Progress */}
@@ -354,6 +450,7 @@ function OpenSpecPanelBody({
         changeName={changeName}
         archived={archived}
       />
+      <ValidationHistory projectRoot={projectRoot} changeName={changeName} />
     </div>
   )
 }
@@ -367,6 +464,9 @@ export function OpenSpecPanel({
   projectRoot,
   taskTitle,
   taskStatus,
+  taskLabels,
+  taskNotes,
+  scopeChangeChild,
   paneId,
   taskId,
 }: OpenSpecPanelProps) {
@@ -393,6 +493,9 @@ export function OpenSpecPanel({
           projectRoot={projectRoot}
           taskTitle={taskTitle}
           taskStatus={taskStatus}
+          taskLabels={taskLabels}
+          taskNotes={taskNotes}
+          scopeChangeChild={scopeChangeChild}
         />
       </div>
     )
@@ -420,6 +523,9 @@ export function OpenSpecPanel({
           projectRoot={projectRoot}
           taskTitle={taskTitle}
           taskStatus={taskStatus}
+          taskLabels={taskLabels}
+          taskNotes={taskNotes}
+          scopeChangeChild={scopeChangeChild}
         />
       </div>
     </details>

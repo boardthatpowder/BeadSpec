@@ -1,0 +1,380 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: gitnexus-index-freshness-badge",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "Execution tracker for openspec/changes/gitnexus-index-freshness-badge. Adds a GitNexus index-freshness badge to the BeadSpec top bar: a colored chip showing index age with a popover for re-analysis.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "local_key": "epic"}
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Create gitnexus_status.rs with GitnexusStatus type",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §1.1. Create `src-tauri/src/commands/gitnexus_status.rs`. Define `GitnexusStatus { last_analyzed_ts: Option<i64>, symbols: u64, relationships: u64, processes: u64, is_running: bool }` deriving `Serialize`, `Deserialize`, and `specta::Type`. Add a `GitnexusStatus::unknown()` constructor returning zeroed fields with `last_analyzed_ts: None, is_running: false`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "1.1", "local_key": "task-1-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Implement get_gitnexus_status command",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §1.2. Implement `get_gitnexus_status(project_path: String) -> Result<GitnexusStatus, String>`: shell out to `npx gitnexus status --json` (cwd = project_path); on non-zero exit or JSON parse failure, fall back to reading the mtime of `<project_path>/.gitnexus/` as `last_analyzed_ts`; counts default to 0 on fallback. Set `is_running` from the module-level process registry.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "1.2", "local_key": "task-1-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Add RUNNING_TASKS OnceCell<Mutex<HashMap>> registry",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §1.3. Add a module-level `OnceCell<Mutex<HashMap<String, JoinHandle<()>>>>` (`RUNNING_TASKS`) tracking one `JoinHandle` per `project_path`. `is_running` in the status response derives from `registry.contains_key(&project_path)`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "1.3", "local_key": "task-1-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-4",
+      "title": "1.4: Cache last gitnexus status result per project path",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §1.4. Cache the last `npx gitnexus status` result in a `Mutex<Option<(Instant, GitnexusStatus)>>` per project path; skip the shellout when the cached value is ≤55 s old and no analyze is running.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "1.4", "local_key": "task-1-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Implement run_gitnexus_analyze command with tokio::spawn",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §2.1. Implement `run_gitnexus_analyze(project_path: String, app: AppHandle) -> Result<(), String>`: return `Err(\"already_running\")` if the registry already has a handle for `project_path`; otherwise `tokio::spawn` a task that runs `npx gitnexus analyze` (cwd = project_path), piping stdout + stderr line-by-line via `app.emit(\"gitnexus_analyze_progress\", line)`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "2.1", "local_key": "task-2-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Emit gitnexus_analyze_complete and invalidate cache on completion",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §2.2. On task completion, emit `app.emit(\"gitnexus_analyze_complete\", AnalyzeComplete { ok: bool, error: Option<String> })` and remove the registry entry. Invalidate the per-project status cache so the next `get_gitnexus_status` call re-shells.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "2.2", "local_key": "task-2-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Add mod gitnexus_status to commands/mod.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §2.3. Add `mod gitnexus_status;` to `src-tauri/src/commands/mod.rs`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "2.3", "local_key": "task-2-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Register commands in lib.rs generate_handler and collect_commands",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §2.4. Register `get_gitnexus_status` and `run_gitnexus_analyze` in `src-tauri/src/lib.rs` in both `tauri::generate_handler!` and `tauri_specta::collect_commands!`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "2.4", "local_key": "task-2-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-3", "type": "blocks"},
+        {"key": "task-2-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Unit test humanize_age helper (tier boundaries)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §3.1. Unit test `humanize_age(ts)` helper: assert ≤30 min → green tier, 30 min–4 h → amber tier, >4 h → red tier, and boundary values (exactly 30 min, exactly 4 h).",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "3.1", "local_key": "task-3-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Unit test JSON-parse fallback returns GitnexusStatus::unknown()",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §3.2. Unit test JSON-parse fallback: given malformed `npx gitnexus status --json` output (empty string, invalid JSON, missing fields), assert the returned `GitnexusStatus` equals `GitnexusStatus::unknown()` with no panic.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "3.2", "local_key": "task-3-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-3",
+      "title": "3.3: Integration test mtime fallback in temp dir",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §3.3. Integration test in a temp dir: create `.gitnexus/` with a known mtime, assert `get_gitnexus_status` returns `last_analyzed_ts` matching that mtime when the JSON path fails.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "3.3", "local_key": "task-3-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-4",
+      "title": "3.4: Concurrency guard test for run_gitnexus_analyze double-call",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §3.4. Concurrency guard test: two back-to-back `run_gitnexus_analyze` calls on the same project_path — the second must return `Err(\"already_running\")`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "3.4", "local_key": "task-3-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Regenerate src/bindings.ts via specta codegen",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §4.1. Regenerate `src/bindings.ts` via `bun tauri build` (or the specta codegen script) so `GitnexusStatus`, `AnalyzeComplete`, `getGitnexusStatus`, and `runGitnexusAnalyze` are present in the auto-generated file.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "4.1", "local_key": "task-4-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Add getGitnexusStatus and runGitnexusAnalyze wrappers in ipc.ts",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §4.2. Add `getGitnexusStatus(projectPath: string): Promise<GitnexusStatus>` and `runGitnexusAnalyze(projectPath: string): Promise<void>` wrappers in `src/ipc.ts`, matching the style of `getChangeBeadsProgress`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "4.2", "local_key": "task-4-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Create GitnexusBadge.tsx with useQuery polling",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §5.1. Create `src/components/layout/GitnexusBadge.tsx`. Obtain the active `projectPath` from the same context already consumed by other top-bar hooks (confirm the exact context/selector during implementation). Use `useQuery({ queryKey: ['gitnexus-status', projectPath], queryFn: () => getGitnexusStatus(projectPath), refetchInterval: 60_000 })`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "5.1", "local_key": "task-5-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Implement humanizeAge and ageColor helpers",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §5.2. Implement `humanizeAge(tsSeconds: number): string` (e.g., `\"12m\"`, `\"2h\"`, `\"1d 3h\"`) and `ageColor(tsSeconds: number | null): 'green' | 'amber' | 'red' | 'grey'` (null → grey; ≤1800 s → green; ≤14400 s → amber; else red).",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "5.2", "local_key": "task-5-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Render closed chip with colored dot and age label",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §5.3. Render the closed chip: colored 6 px dot + `\"Index: <age>\"` label (or `\"Index: unknown\"` when `last_analyzed_ts` is null). Use a neutral-800 border, ~22 px height, matching `BdHumanQueueChip` geometry.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "5.3", "local_key": "task-5-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-4",
+      "title": "5.4: Add popover toggled on chip click with click-outside handler",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §5.4. On chip click, toggle a popover anchored to the chip. Survey `src/components/` for an existing popover primitive; if one exists, reuse it. Otherwise implement with a local `open` boolean + click-outside handler (`useRef` + `useEffect`).",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "5.4", "local_key": "task-5-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-5",
+      "title": "5.5: Popover body with timestamp, counts row, and Re-analyze button",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §5.5. Popover body: formatted last-analyzed ISO timestamp (e.g., `\"2026-05-17 09:42 (14m ago)\"`), counts row (`\"5,545 symbols · 8,288 relationships · 277 processes\"`), and a \"Re-analyze\" button. When `last_analyzed_ts` is null and symbols/relationships/processes are all 0, show the install hint instead of the counts row.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "5.5", "local_key": "task-5-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-6",
+      "title": "5.6: Wire Re-analyze button to runGitnexusAnalyze with progress streaming",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §5.6. Wire \"Re-analyze\" to `runGitnexusAnalyze(projectPath)`. Disable the button while `data?.is_running` is true. While running, subscribe to `gitnexus_analyze_progress` via Tauri `listen()` and render the last log line + elapsed seconds. On `gitnexus_analyze_complete`, call `queryClient.invalidateQueries(['gitnexus-status', projectPath])` and unsubscribe. Unsubscribe also on popover close.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "5.6", "local_key": "task-5-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Import GitnexusBadge in layout/index.tsx",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §6.1. Import `GitnexusBadge` in `src/components/layout/index.tsx`.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "6.1", "local_key": "task-6-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Insert <GitnexusBadge /> in TopBar JSX between BdHumanQueueChip and RefreshButton",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §6.2. Insert `<GitnexusBadge />` in the `TopBar` JSX between `<BdHumanQueueChip />` and `<RefreshButton />`. Do not render the badge when `projectPath` is null / no project is selected.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "6.2", "local_key": "task-6-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"},
+        {"key": "task-5-6", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-1",
+      "title": "7.1: cargo test gitnexus_status::tests passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §7.1. `cargo test -p beadspec_lib gitnexus_status::tests` passes (all unit + integration tests from section 3).",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "7.1", "local_key": "task-7-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"},
+        {"key": "task-3-3", "type": "blocks"},
+        {"key": "task-3-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-2",
+      "title": "7.2: bun tsc --noEmit passes after bindings regen",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §7.2. `bun tsc --noEmit` passes after bindings regen.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "7.2", "local_key": "task-7-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"},
+        {"key": "task-6-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-3",
+      "title": "7.3: Manual — green chip with age ≤30 min on this repo",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §7.3. Manual: open BeadSpec on this repo (5,545 symbols); confirm badge shows green chip with age ≤30 min. Back-date `.gitnexus/` mtime by 2 h and confirm amber; by 5 h and confirm red.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "7.3", "local_key": "task-7-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-4",
+      "title": "7.4: Manual — Re-analyze streams progress and badge refreshes green",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §7.4. Manual: click \"Re-analyze\", verify progress log chunks stream into the popover, badge refreshes to green after completion.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "7.4", "local_key": "task-7-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-5",
+      "title": "7.5: Manual — grey chip and install hint when gitnexus unavailable",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §7.5. Manual: rename `npx` temporarily or point `project_path` at a non-gitnexus directory; confirm grey \"Index: unknown\" chip and install-hint in popover.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "7.5", "local_key": "task-7-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-6",
+      "title": "7.6: openspec validate returns zero errors",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:gitnexus-index-freshness-badge"],
+      "description": "openspec/changes/gitnexus-index-freshness-badge/tasks.md §7.6. `openspec validate gitnexus-index-freshness-badge` returns zero errors.",
+      "metadata": {"openspec_change": "gitnexus-index-freshness-badge", "task_ref": "7.6", "local_key": "task-7-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-5", "type": "blocks"}
+      ]
+    }
+  ]
+}

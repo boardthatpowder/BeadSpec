@@ -8,20 +8,21 @@ import {
   collapseEmptyParents,
   nextTabAfterClose,
   docTabId,
+  epicTabId,
 } from '../utils/paneTree'
-import type { LeafPane, PaneNode, TabId, DocTab } from '../utils/paneTree'
+import type { LeafPane, PaneNode, TabId, DocTab, EpicTab } from '../utils/paneTree'
 
 export type { LeafPane, SplitPane, PaneNode } from '../utils/paneTree'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type RecentlyClosed = { taskId: string; paneId: string; index: number; pinned: boolean }
+export type RecentlyClosed = { taskId: string; tab: TabId; paneId: string; index: number; pinned: boolean }
 
 export interface WorkspaceState {
   root: PaneNode
   activePaneId: string
   recentlyClosed: RecentlyClosed[]
-  innerSubTab: Record<string, 'details' | 'dependencies' | 'activity'> // key: `${paneId}:${taskId}`
+  innerSubTab: Record<string, 'details' | 'dependencies' | 'activity' | 'impact'> // key: `${paneId}:${taskId}`
   dirtyTabs: Record<string, boolean> // key: `${paneId}:${taskId}` → isDirty
   openspecExpanded: Record<string, boolean> // key: `${paneId}:${taskId}` → is expanded
 }
@@ -32,6 +33,7 @@ export interface WorkspaceActions {
   openPinned:  (taskId: string) => void
   promoteToPinned: (taskId: string) => void
   openDocTab:  (change: string, artifact: string) => void
+  openEpicTab: (change: string, epicId: string) => void
   // Tab close
   closeTab:    (paneId: string, taskId: string) => void
   closeOthers: (paneId: string, taskId: string) => void
@@ -53,7 +55,7 @@ export interface WorkspaceActions {
   // Splits
   updateSplitSizes: (splitId: string, sizes: number[]) => void
   // Inner sub-tab
-  setInnerSubTab: (paneId: string, taskId: string, tab: 'details' | 'dependencies' | 'activity') => void
+  setInnerSubTab: (paneId: string, taskId: string, tab: 'details' | 'dependencies' | 'activity' | 'impact') => void
   // Dirty-tab registry (task 10.1)
   setTabDirty: (paneId: string, taskId: string, dirty: boolean) => void
   isTabDirty: (paneId: string, taskId: string) => boolean
@@ -162,6 +164,28 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
       })
     },
 
+    openEpicTab(change, epicId) {
+      set((s) => {
+        const id = epicTabId(change)
+        const epicTab: EpicTab = { kind: 'epic', id, change, epicId }
+        const existing = findTabInTree(s.root, id)
+        if (existing) {
+          return {
+            root: replaceLeaf(s.root, existing.paneId, (l) => ({ ...l, activeTabId: id })),
+            activePaneId: existing.paneId,
+          }
+        }
+        return {
+          root: replaceLeaf(s.root, s.activePaneId, (l) => ({
+            ...l,
+            tabs: [...l.tabs, epicTab],
+            pinned: { ...l.pinned, [id]: true },
+            activeTabId: id,
+          })),
+        }
+      })
+    },
+
     // ── Close ───────────────────────────────────────────────────────────────
 
     closeTab(paneId, taskId) {
@@ -177,7 +201,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
 
         const newLeaf: LeafPane = { ...leaf, tabs, pinned, activeTabId: nextActive }
         const recentlyClosed = [
-          { taskId, paneId, index, pinned: !!leaf.pinned[taskId] },
+          { taskId, tab: leaf.tabs[index], paneId, index, pinned: !!leaf.pinned[taskId] },
           ...s.recentlyClosed,
         ].slice(0, RECENTLY_CLOSED_LIMIT)
 
@@ -192,14 +216,15 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
 
         const closing = leaf.tabs.filter((t) => t.id !== taskId)
         const recentlyClosed = [
-          ...closing.map((t, i) => ({ taskId: t.id, paneId, index: i, pinned: !!leaf.pinned[t.id] })),
+          ...closing.map((t, i) => ({ taskId: t.id, tab: t, paneId, index: i, pinned: !!leaf.pinned[t.id] })),
           ...s.recentlyClosed,
         ].slice(0, RECENTLY_CLOSED_LIMIT)
 
         const newPinned = taskId in leaf.pinned ? { [taskId]: leaf.pinned[taskId] } : {}
+        const keep = leaf.tabs.find((t) => t.id === taskId) ?? { kind: 'task', id: taskId } as TabId
         const newLeaf: LeafPane = {
           ...leaf,
-          tabs: [{ kind: 'task', id: taskId }],
+          tabs: [keep],
           pinned: newPinned,
           activeTabId: taskId,
         }
@@ -222,7 +247,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
         const closing = leaf.tabs.slice(idx + 1)
         const tabs = leaf.tabs.slice(0, idx + 1)
         const recentlyClosed = [
-          ...closing.map((t, i) => ({ taskId: t.id, paneId, index: idx + 1 + i, pinned: !!leaf.pinned[t.id] })),
+          ...closing.map((t, i) => ({ taskId: t.id, tab: t, paneId, index: idx + 1 + i, pinned: !!leaf.pinned[t.id] })),
           ...s.recentlyClosed,
         ].slice(0, RECENTLY_CLOSED_LIMIT)
 
@@ -248,7 +273,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
         if (!leaf) return s
 
         const recentlyClosed = [
-          ...leaf.tabs.map((t, i) => ({ taskId: t.id, paneId, index: i, pinned: !!leaf.pinned[t.id] })),
+          ...leaf.tabs.map((t, i) => ({ taskId: t.id, tab: t, paneId, index: i, pinned: !!leaf.pinned[t.id] })),
           ...s.recentlyClosed,
         ].slice(0, RECENTLY_CLOSED_LIMIT)
 
@@ -301,7 +326,8 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
 
         const destTabs = [...currentDest.tabs]
         const insertAt = destIndex !== undefined ? Math.min(destIndex, destTabs.length) : destTabs.length
-        destTabs.splice(insertAt, 0, { kind: 'task', id: taskId })
+        const moving = srcLeaf.tabs.find((t) => t.id === taskId) ?? { kind: 'task', id: taskId } as TabId
+        destTabs.splice(insertAt, 0, moving)
 
         newRoot = replaceLeaf(newRoot, destPaneId, (l) => ({
           ...l,
@@ -347,7 +373,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
         newRoot = splitLeaf(newRoot, destLeafId, direction, newPaneId, position)
         newRoot = replaceLeaf(newRoot, newPaneId, (l) => ({
           ...l,
-          tabs: [{ kind: 'task', id: taskId }],
+          tabs: [srcLeaf.tabs.find((t) => t.id === taskId) ?? { kind: 'task', id: taskId } as TabId],
           pinned: { [taskId]: true },
           activeTabId: taskId,
         }))
@@ -395,14 +421,14 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>((set,
     reopenLast() {
       set((s) => {
         if (s.recentlyClosed.length === 0) return s
-        const [{ taskId, paneId, index, pinned }, ...rest] = s.recentlyClosed
+        const [{ taskId, tab, paneId, index, pinned }, ...rest] = s.recentlyClosed
 
         // Target the original pane if still alive, else the active pane.
         const targetId = findLeaf(s.root, paneId) ? paneId : s.activePaneId
 
         const root = replaceLeaf(s.root, targetId, (l) => {
           const tabs = [...l.tabs]
-          tabs.splice(Math.min(index, tabs.length), 0, { kind: 'task', id: taskId })
+          tabs.splice(Math.min(index, tabs.length), 0, tab)
           return { ...l, tabs, pinned: { ...l.pinned, ...(pinned ? { [taskId]: true } : {}) }, activeTabId: taskId }
         })
 

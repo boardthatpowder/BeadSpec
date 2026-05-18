@@ -106,13 +106,12 @@ export const commands = {
 	 *  `query` is passed as a single argument.  Empty queries are rejected.
 	 */
 	rufloMemorySearch: (query: string) => typedError<string, string>(__TAURI_INVOKE("ruflo_memory_search", { query })),
+	rufloMemoryList: (namespacePrefix: string | null, limit: number | null) => typedError<MemoryListResponse, string>(__TAURI_INVOKE("ruflo_memory_list", { namespacePrefix, limit })),
+	rufloMemoryStore: (key: string, value: string) => typedError<null, string>(__TAURI_INVOKE("ruflo_memory_store", { key, value })),
+	rufloMemoryDelete: (key: string) => typedError<null, string>(__TAURI_INVOKE("ruflo_memory_delete", { key })),
 	/**  Run `ruflo --version` to probe whether ruflo is available. Read op — 10s timeout. */
 	rufloVersionProbe: () => typedError<string, string>(__TAURI_INVOKE("ruflo_version_probe")),
-	/**
-	 *  Derive workspace labels from `git rev-parse --abbrev-ref HEAD` in the
-	 *  given project root. Returns unknown/fallback values gracefully if not a
-	 *  git repo.
-	 */
+	listSessionSnapshots: (projectPath: string) => typedError<SessionSnapshot[], string>(__TAURI_INVOKE("list_session_snapshots", { projectPath })),
 	getWorkspaceContext: (projectPath: string) => typedError<WorkspaceContext, string>(__TAURI_INVOKE("get_workspace_context", { projectPath })),
 	/**  Find git commits and branches that mention a given issue ID. */
 	getGitRefsForIssue: (projectPath: string, issueId: string) => typedError<GitRefs, string>(__TAURI_INVOKE("get_git_refs_for_issue", { projectPath, issueId })),
@@ -121,6 +120,17 @@ export const commands = {
 	 *  issue_id. Returns an empty vec on any error (graceful degradation).
 	 */
 	getDoltHistoryForIssue: (projectPath: string, issueId: string) => typedError<DoltRevision[], string>(__TAURI_INVOKE("get_dolt_history_for_issue", { projectPath, issueId })),
+	runGitnexusImpact: (projectPath: string, symbol: string) => typedError<GitnexusImpactReport, string>(__TAURI_INVOKE("run_gitnexus_impact", { projectPath, symbol })),
+	lookupSymbols: (projectPath: string, names: string[]) => typedError<(SymbolHit | null)[], string>(__TAURI_INVOKE("lookup_symbols", { projectPath, names })),
+	getGitnexusStatus: (projectPath: string) => typedError<GitnexusStatus, string>(__TAURI_INVOKE("get_gitnexus_status", { projectPath })),
+	runGitnexusAnalyze: (projectPath: string) => typedError<GitnexusAnalyzeHandle, string>(__TAURI_INVOKE("run_gitnexus_analyze", { projectPath })),
+	listGitnexusProcesses: (projectPath: string) => typedError<ProcessSummary[], string>(__TAURI_INVOKE("list_gitnexus_processes", { projectPath })),
+	getGitnexusProcess: (projectPath: string, name: string) => typedError<ProcessDetail, string>(__TAURI_INVOKE("get_gitnexus_process", { projectPath, name })),
+	listGitnexusClusters: (projectPath: string) => typedError<Cluster[], string>(__TAURI_INVOKE("list_gitnexus_clusters", { projectPath })),
+	findIssuesTouchingProcess: (projectPath: string, processName: string) => typedError<IssueMatch[], string>(__TAURI_INVOKE("find_issues_touching_process", { projectPath, processName })),
+	getGitnexusIndexStatus: (projectPath: string) => typedError<IndexStatus, string>(__TAURI_INVOKE("get_gitnexus_index_status", { projectPath })),
+	triggerGitnexusReanalyze: (projectPath: string) => typedError<ReanalyzeHandle, string>(__TAURI_INVOKE("trigger_gitnexus_reanalyze", { projectPath })),
+	listRecentEvents: (projectPath: string, limit: number, sinceTs: string | null) => typedError<ActivityEvent[], string>(__TAURI_INVOKE("list_recent_events", { projectPath, limit, sinceTs })),
 	/**  List all OpenSpec changes (active and archived) for the given project. */
 	listChanges: (projectPath: string) => typedError<ChangeInfo[], string>(__TAURI_INVOKE("list_changes", { projectPath })),
 	/**
@@ -153,6 +163,12 @@ export const commands = {
 	importChangeToBeads: (projectPath: string, change: string) => typedError<CommandOutput, string>(__TAURI_INVOKE("import_change_to_beads", { projectPath, change })),
 	/**  Manually trigger `tasks.md` checkbox reconciliation for all active OpenSpec changes. */
 	reconcileOpenspecCheckboxes: (projectPath: string) => typedError<SyncReport, string>(__TAURI_INVOKE("reconcile_openspec_checkboxes", { projectPath })),
+	recordOpenspecValidation: (projectPath: string, changeSlug: string, resultJson: string) => typedError<null, string>(__TAURI_INVOKE("record_openspec_validation", { projectPath, changeSlug, resultJson })),
+	listOpenspecValidations: (projectPath: string, changeSlug: string) => typedError<ValidationHistoryEntry[], string>(__TAURI_INVOKE("list_openspec_validations", { projectPath, changeSlug })),
+	listReviews: (projectPath: string, scope: ReviewScope) => typedError<ReviewEntry[], string>(__TAURI_INVOKE("list_reviews", { projectPath, scope })),
+	getReview: (key: string) => typedError<ReviewEntry, string>(__TAURI_INVOKE("get_review", { key })),
+	getEpicReadySnapshot: (projectPath: string, epicId: string) => typedError<EpicReadySnapshot, string>(__TAURI_INVOKE("get_epic_ready_snapshot", { projectPath, epicId })),
+	claimTask: (projectPath: string, taskId: string) => typedError<Task, string>(__TAURI_INVOKE("claim_task", { projectPath, taskId })),
 	/**  Return the current quick-capture shortcut and whether it's available. */
 	getShortcutStatus: () => __TAURI_INVOKE<ShortcutStatus>("get_shortcut_status"),
 	/**
@@ -173,6 +189,27 @@ export const commands = {
 };
 
 /* Types */
+export type ActivityEvent = {
+	id: string,
+	ts: string,
+	kind: string,
+	source: string,
+	summary: string,
+	detail: string,
+	correlation_id: string | null,
+};
+
+export type BlockerLink = {
+	blocker_id: string,
+	blocker_title: string,
+	blocker_status: string,
+};
+
+export type CallerRef = {
+	name: string,
+	qualified_path: string,
+};
+
 /**
  *  Beads-import progress for a change. Counts non-feature/non-epic Beads
  *  issues carrying the `openspec:<slug>` label across **all** statuses
@@ -227,6 +264,11 @@ export type ChangeProgress = {
 	total: number,
 };
 
+export type Cluster = {
+	name: string,
+	process_count: number,
+};
+
 /**  Generic output from a shelled-out CLI command. */
 export type CommandOutput = {
 	stdout: string,
@@ -255,10 +297,55 @@ export type DoltRevision = {
 	to_status: string | null,
 };
 
+export type EpicReadySnapshot = {
+	ready: string[],
+	blocked: BlockerLink[],
+	paused_task_ids: string[],
+	total_open: number,
+	total_in_progress: number,
+	source: SnapshotSource,
+};
+
 /**  Git refs (commits + branches) that mention a given issue ID. */
 export type GitRefs = {
 	commits: CommitRef[],
 	branches: string[],
+	diff: string,
+};
+
+export type GitnexusAnalyzeHandle = {
+	started: boolean,
+};
+
+export type GitnexusCaller = {
+	name: string,
+	location: string,
+};
+
+export type GitnexusImpactReport = {
+	symbol: string,
+	risk: GitnexusRisk,
+	upstream_by_process: GitnexusProcessGroup[],
+	downstream: GitnexusCaller[],
+	affected_processes: string[],
+	index_status: GitnexusIndexStatus,
+};
+
+export type GitnexusIndexStatus = "Fresh" | "Stale" | "Unknown";
+
+export type GitnexusProcessGroup = {
+	process: string,
+	callers: GitnexusCaller[],
+};
+
+export type GitnexusRisk = "Low" | "Medium" | "High" | "Critical" | "Unknown";
+
+export type GitnexusStatus = {
+	available: boolean,
+	last_indexed_at: string | null,
+	age_seconds: number,
+	stale: boolean,
+	message: string,
 };
 
 /**  Full diagnostic report returned to the frontend on project open. */
@@ -280,12 +367,57 @@ export type HistoryEntry = {
 	body: string | null,
 };
 
+export type IndexStatus = {
+	last_indexed_at: string | null,
+	age_seconds: number,
+	stale: boolean,
+};
+
+export type IssueMatch = {
+	id: string,
+	title: string,
+	overlap_count: number,
+};
+
+export type MemoryEntry = {
+	key: string,
+	score: number | null,
+	namespace: string,
+	preview: string,
+	body: string,
+	ts: number | null,
+};
+
+export type MemoryListResponse = {
+	entries: MemoryEntry[],
+	total: number,
+};
+
 /**  A dolt sql-server process that is running but should not be. */
 export type OrphanInfo = {
 	pid: number,
 	port: number | null,
 	data_dir: string,
 	safety: SafetyDecision,
+};
+
+export type ProcessDetail = {
+	name: string,
+	cluster: string,
+	steps: ProcessStep[],
+};
+
+export type ProcessStep = {
+	symbol: string,
+	file: string,
+	line: number,
+	snippet: string | null,
+};
+
+export type ProcessSummary = {
+	name: string,
+	cluster: string,
+	step_count: number,
 };
 
 export type ProjectMeta = {
@@ -302,8 +434,30 @@ export type ProjectMeta = {
 	schema_message: string,
 };
 
+export type ReanalyzeHandle = {
+	started: boolean,
+};
+
 /**  Result of an attempted recovery operation. */
 export type RecoveryResult = { outcome: "success"; port: number } | { outcome: "still_unsafe"; reason: string } | { outcome: "error"; message: string };
+
+export type ReviewEntry = {
+	key: string,
+	kind: ReviewKind,
+	kind_raw: string,
+	branch: string | null,
+	pr: string | null,
+	task_id: string | null,
+	title: string,
+	ts_epoch: number | null,
+	body: string,
+};
+
+export type ReviewKind = "PrReview" | "CodeReview" | "SecurityReview" | "Unknown";
+
+export type ReviewScope = { scope: "Branch"; value: string } | { scope: "Pr"; value: string } | { scope: "TaskId"; value: string } | { scope: "All" };
+
+export type RiskLevel = "Low" | "Medium" | "High" | "Critical" | "Unknown";
 
 /**  Whether it is safe to automatically kill an orphan. */
 export type SafetyDecision = { decision: "allowed" } | { decision: "escalate"; reason: string };
@@ -315,10 +469,29 @@ export type SearchResult = {
 	score: number,
 };
 
+export type SessionSnapshot = {
+	id: string,
+	name: string,
+	created_at: string,
+	is_auto: boolean,
+	metadata: string | null,
+};
+
 /**  Status of the quick-capture shortcut — exposed to the frontend. */
 export type ShortcutStatus = {
 	shortcut: string,
 	available: boolean,
+};
+
+export type SnapshotSource = "BdCli" | "Dolt";
+
+export type SymbolHit = {
+	name: string,
+	qualified_path: string,
+	kind: string,
+	one_line_description: string,
+	risk_level: RiskLevel,
+	top_upstream_callers: CallerRef[],
 };
 
 /**  Report returned by `reconcile_openspec_checkboxes`. */
@@ -367,6 +540,14 @@ export type TaskFilters = {
 export type TasksResponse = {
 	tasks: Task[],
 	total_count: number,
+};
+
+export type ValidationHistoryEntry = {
+	change_slug: string,
+	valid: boolean,
+	errors: string[],
+	ts_epoch: number,
+	ts_iso: string,
 };
 
 /**  Result from running `openspec validate` against a change. */

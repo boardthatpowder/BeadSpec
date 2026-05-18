@@ -1,4 +1,5 @@
 import type { Task } from '../../bindings'
+import { parsePausedNote } from '../../lib/parsePausedNote'
 
 export const STATUS_DOT: Record<string, string> = {
   open:        'bg-neutral-500',
@@ -13,6 +14,8 @@ export const STATUS_BADGE: Record<string, string> = {
   blocked:     'bg-amber-900/50 text-amber-300',
   closed:      'bg-green-900/50 text-green-300',
 }
+
+export const STATUS_BADGE_PAUSED = 'bg-violet-900/40 text-violet-300 border border-violet-800/40'
 
 export const PRIORITY_STYLE: Record<number, string> = {
   1: 'text-red-400 font-bold',
@@ -48,7 +51,7 @@ export function labelChipClass(label: string): string {
 }
 
 interface TaskListItemProps {
-  task: Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'labels'>
+  task: Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'labels'> & { notes?: string | null; description?: string | null }
   isActive?: boolean
   isFocused?: boolean
   isSelected?: boolean
@@ -58,6 +61,8 @@ interface TaskListItemProps {
 
 export function TaskListItem({ task, isActive, isFocused, isSelected, onClick, onDoubleClick }: TaskListItemProps) {
   const visibleLabels = task.labels.slice(0, 2)
+  const isPaused = task.labels.includes('openspec:paused')
+  const pauseReason = parsePausedNote(task.notes ?? task.description ?? null) ?? undefined
 
   return (
     <button
@@ -84,8 +89,8 @@ export function TaskListItem({ task, isActive, isFocused, isSelected, onClick, o
           <span className={`text-xs truncate flex-1 ${isActive ? 'text-neutral-100' : 'text-neutral-300'}`}>
             {task.title}
           </span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>
-            {task.status.replace('_', ' ')}
+          <span title={pauseReason} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? STATUS_BADGE_PAUSED : STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>
+            {isPaused ? '⏸ paused' : task.status.replace('_', ' ')}
           </span>
         </div>
         {visibleLabels.length > 0 && (
