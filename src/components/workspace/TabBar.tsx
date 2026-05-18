@@ -1,6 +1,6 @@
 // Horizontal tab bar with dnd-kit drag-to-reorder.
 // DndContext lives in WorkspaceDndProvider (parent); SortableContext is per-pane.
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import {
   SortableContext,
   horizontalListSortingStrategy,
@@ -64,7 +64,7 @@ export function TabBar({ paneId, tasks }: TabBarProps) {
         {leaf.tabs.map((tab, index) => {
           const tabId = tab.id
           return (
-            <>
+            <Fragment key={`tab-${tabId}`}>
               <TabSlotDropzone key={`slot-${index}`} paneId={paneId} index={index} />
               <SortableTab
                 key={tabId}
@@ -75,7 +75,7 @@ export function TabBar({ paneId, tasks }: TabBarProps) {
                 isActive={leaf.activeTabId === tabId && activePaneId === paneId}
                 onContextMenu={(e) => handleContextMenu(e, tabId)}
               />
-            </>
+            </Fragment>
           )
         })}
         <TabSlotDropzone paneId={paneId} index={leaf.tabs.length} />
@@ -104,6 +104,9 @@ function getTabLabel(taskId: string, tasks: { taskId: string; title: string }[])
       const basename = artifact.split('/').pop()?.replace('.md', '') ?? artifact
       return `${change}/${basename}`
     }
+  }
+  if (taskId.startsWith('epic:')) {
+    return `${taskId.slice(5)} dashboard`
   }
   return tasks.find((t) => t.taskId === taskId)?.title ?? taskId
 }

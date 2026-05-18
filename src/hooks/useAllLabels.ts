@@ -8,7 +8,7 @@ export function useAllLabels(): string[] {
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ['tasks', project],
     queryFn: async () => {
-      const response = await unwrap(commands.listTasks(project!, null, null, null, null, null, null, null))
+      const response = await unwrap(commands.listTasks(project!, null, null, null, null, null))
       return response.tasks
     },
     enabled: !!project,

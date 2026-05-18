@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { commands, unwrap } from '../../ipc'
+import { useAppState } from '../../contexts/HashStateContext'
+import { MemoryTrajectoryTab } from './MemoryTrajectoryTab'
 
 interface Props {
   taskId: string
@@ -37,13 +39,16 @@ function excerpt(body: string, max = 120): string {
 export function RufloMemoryPanel({ taskId, title, labels }: Props) {
   const [open, setOpen] = useState(false)
   const [hasOpened, setHasOpened] = useState(false)
+  const [subTab, setSubTab] = useState<'search' | 'trajectory'>('search')
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' })
   const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set())
+  const { setState } = useAppState()
 
   // Reset when task changes
   useEffect(() => {
     setOpen(false)
     setHasOpened(false)
+    setSubTab('search')
     setLoadState({ status: 'idle' })
     setExpandedSet(new Set())
   }, [taskId])
@@ -112,6 +117,23 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
 
       {open && (
         <div className="border-t border-neutral-800/60">
+          <div className="flex items-center justify-between border-b border-neutral-800/40 px-4 py-2">
+            <div className="flex rounded border border-neutral-800 p-0.5">
+              {(['search', 'trajectory'] as const).map(tab => (
+                <button key={tab} onClick={() => setSubTab(tab)} className={`px-2 py-0.5 text-[10px] capitalize ${subTab === tab ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500'}`}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setState({ view: 'memory', memoryNamespace: `issue:${taskId}` })} className="text-[10px] text-blue-400 hover:text-blue-300">
+              Open in Memory browser
+            </button>
+          </div>
+
+          {subTab === 'trajectory' ? (
+            <MemoryTrajectoryTab taskId={taskId} title={title} />
+          ) : (
+            <>
           {loadState.status === 'loading' && (
             <div className="px-4 py-3 text-xs text-neutral-600">Loading…</div>
           )}
@@ -146,6 +168,8 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
                 )
               })}
             </div>
+          )}
+            </>
           )}
         </div>
       )}

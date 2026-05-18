@@ -16,10 +16,17 @@ import { BdHealthPanel } from '../health/BdHealthPanel'
 import { FormulasBrowser } from '../bd-formulas/FormulasBrowser'
 import { BdHumanQueueChip } from '../notifications/BdHumanQueue'
 import { ChangesBrowser } from '../changes-browser/ChangesBrowser'
+import { ActivityFeed } from '../activity-feed/ActivityFeed'
+import { ProcessBrowser } from '../process-browser/ProcessBrowser'
+import { MemoryBrowser } from '../memory-browser/MemoryBrowser'
+import { GitnexusBadge } from '../gitnexus/GitnexusBadge'
+import { SessionsTab } from '../health/SessionsTab'
+import { ReviewsHealthTab } from '../health/ReviewsHealthTab'
 import { RefreshButton } from './RefreshButton'
 import { SettingsButton } from './SettingsButton'
 import { HelpButton } from './HelpButton'
 import { useFeatureFlag, useSettings } from '../../contexts/SettingsContext'
+import { useActiveProject } from '../../hooks/useProject'
 import type { Task } from '../../bindings'
 
 export function AppLayout() {
@@ -65,11 +72,14 @@ export function AppLayout() {
   }, [saveWidth])
   const onMouseUp = useCallback(() => { dragging.current = false }, [])
 
-  if (!isLoaded) return <div className="h-screen w-screen bg-neutral-950" />
-
   const openspecEnabled = useFeatureFlag('openspec')
   const isHealthView = state.view === 'health'
   const isChangesView = state.view === 'changes'
+  const isActivityView = state.view === 'activity'
+  const isProcessesView = state.view === 'processes'
+  const isMemoryView = state.view === 'memory'
+
+  if (!isLoaded) return <div className="h-screen w-screen bg-neutral-950" />
 
   return (
     <div
@@ -85,6 +95,18 @@ export function AppLayout() {
         ) : isChangesView && openspecEnabled ? (
           <div className="flex-1 overflow-hidden">
             <ChangesBrowser />
+          </div>
+        ) : isActivityView ? (
+          <div className="flex-1 overflow-hidden">
+            <ActivityFeed />
+          </div>
+        ) : isProcessesView ? (
+          <div className="flex-1 overflow-hidden">
+            <ProcessBrowser />
+          </div>
+        ) : isMemoryView ? (
+          <div className="flex-1 overflow-hidden">
+            <MemoryBrowser />
           </div>
         ) : (
           <div className="flex flex-1 overflow-hidden">
@@ -140,6 +162,7 @@ function TopBar() {
       {/* View switcher + human queue chip + refresh + settings */}
       <ViewSwitcher />
       <BdHumanQueueChip />
+      <GitnexusBadge />
       <RefreshButton />
       <HelpButton />
       <SettingsButton />
@@ -148,7 +171,7 @@ function TopBar() {
 }
 
 function TaskListPanel() {
-  const { allTasks, filteredTasks, isLoading, nextCursor, loadMore } = useTasks()
+  const { allTasks, filteredTasks, isLoading } = useTasks()
   const { state } = useAppState()
   const { settings } = useSettings()
 
@@ -171,17 +194,6 @@ function TaskListPanel() {
         isLoading={isLoading}
         showLineage={state.view === 'ready'}
       />
-      {nextCursor && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-neutral-800/60">
-          <button
-            onClick={loadMore}
-            disabled={isLoading}
-            className="w-full text-xs text-neutral-500 hover:text-neutral-300 py-1.5 rounded-lg hover:bg-neutral-800/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Loading...' : 'Load more'}
-          </button>
-        </div>
-      )}
     </div>
   )
 }
@@ -222,15 +234,18 @@ function ResizableDivider({ onMouseDown }: { onMouseDown: () => void }) {
   )
 }
 
-type HealthTab = 'checks' | 'formulas'
+type HealthTab = 'checks' | 'formulas' | 'sessions' | 'reviews'
 
 const HEALTH_TABS: { id: HealthTab; label: string }[] = [
   { id: 'checks',   label: 'Checks' },
   { id: 'formulas', label: 'Formulas' },
+  { id: 'sessions', label: 'Sessions' },
+  { id: 'reviews',  label: 'Reviews' },
 ]
 
 function HealthPanel() {
   const { state, setState } = useAppState()
+  const project = useActiveProject()
   const activeTab = (state.healthTab ?? 'checks') as HealthTab
 
   return (
@@ -257,6 +272,8 @@ function HealthPanel() {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'checks'   && <BdHealthPanel />}
         {activeTab === 'formulas' && <FormulasBrowser />}
+        {activeTab === 'sessions' && project && <SessionsTab project={project} />}
+        {activeTab === 'reviews' && project && <ReviewsHealthTab project={project} />}
       </div>
     </div>
   )

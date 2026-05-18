@@ -36,10 +36,19 @@ async function persistNow(): Promise<void> {
 
 function migrateTabIds(node: PaneNode): PaneNode {
   if (node.kind === 'leaf') {
-    const tabs = (node.tabs as unknown[]).map((t): TabId =>
-      typeof t === 'string' ? { kind: 'task', id: t } : (t as TabId)
-    )
-    return { ...node, tabs }
+    const tabs = (node.tabs as unknown[])
+      .map((t): TabId | null => {
+        if (typeof t === 'string') return { kind: 'task', id: t }
+        if (t && typeof t === 'object' && 'kind' in t && 'id' in t) {
+          const tab = t as TabId
+          if (tab.kind === 'task' || tab.kind === 'doc' || tab.kind === 'epic') return tab
+        }
+        return null
+      })
+      .filter((t): t is TabId => t !== null)
+    const pinned = Object.fromEntries(Object.entries(node.pinned ?? {}).filter(([id]) => tabs.some(t => t.id === id)))
+    const activeTabId = node.activeTabId && tabs.some(t => t.id === node.activeTabId) ? node.activeTabId : tabs[0]?.id ?? null
+    return { ...node, tabs, pinned, activeTabId }
   }
   return { ...node, children: node.children.map(migrateTabIds) }
 }
@@ -54,7 +63,10 @@ export async function loadWorkspace(): Promise<void> {
       useWorkspaceStore.setState({
         root: migrateTabIds(persisted.root as PaneNode),
         activePaneId: persisted.activePaneId,
-        recentlyClosed: persisted.recentlyClosed ?? [],
+        recentlyClosed: (persisted.recentlyClosed ?? []).map((r) => ({
+          ...r,
+          tab: r.tab ?? { kind: 'task' as const, id: r.taskId },
+        })),
       })
     }
   } catch (e) {
