@@ -8,6 +8,7 @@ export interface Toast {
   message: string
   undoFn?: () => void
   duration?: number
+  dismissing?: boolean
 }
 
 interface ToastStore {
@@ -16,6 +17,9 @@ interface ToastStore {
   remove: (id: string) => void
 }
 
+const TOAST_EXIT_MS = 150
+const toastRemovalTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
 let _counter = 0
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
@@ -23,10 +27,20 @@ export const useToastStore = create<ToastStore>((set) => ({
     const id = `toast-${++_counter}`
     set(s => ({ toasts: [...s.toasts, { ...t, id }] }))
     const duration = t.duration ?? 5000
-    setTimeout(() => set(s => ({ toasts: s.toasts.filter(x => x.id !== id) })), duration)
+    setTimeout(() => useToastStore.getState().remove(id), duration)
     return id
   },
-  remove: (id) => set(s => ({ toasts: s.toasts.filter(x => x.id !== id) })),
+  remove: (id) => {
+    set(s => ({
+      toasts: s.toasts.map(x => x.id === id ? { ...x, dismissing: true } : x),
+    }))
+    if (toastRemovalTimers.has(id)) return
+    const timer = setTimeout(() => {
+      toastRemovalTimers.delete(id)
+      set(s => ({ toasts: s.toasts.filter(x => x.id !== id) }))
+    }, TOAST_EXIT_MS)
+    toastRemovalTimers.set(id, timer)
+  },
 }))
 
 /** Convenience hook */
@@ -52,7 +66,11 @@ export function ToastContainer() {
           className={clsx(
             'pointer-events-auto flex items-center gap-3',
             'bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm',
-            'px-4 py-2.5 rounded-lg shadow-xl transition-all'
+            'px-4 py-2.5 rounded-lg shadow-xl transition-all',
+            'motion-reduce:animate-none motion-reduce:transition-none',
+            t.dismissing
+              ? 'animate-out slide-out-to-bottom-2 fade-out-0 duration-150'
+              : 'animate-in slide-in-from-bottom-2 fade-in-0 duration-200',
           )}
         >
           <span className="flex-1">{t.message}</span>

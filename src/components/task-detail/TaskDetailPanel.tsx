@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { commands, unwrap } from "../../ipc";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { claimTask, commands, unwrap } from "../../ipc";
 import type { TaskDetail, GitRefs } from "../../bindings";
 import { useActiveProject } from "../../hooks/useProject";
 import { useWorkspaceStore } from "../../stores/workspace";
@@ -30,8 +30,10 @@ import { useAppState } from "../../contexts/HashStateContext";
 import { useTasks } from "../../hooks/useTasks";
 import { findScopeChangeChild } from "../../lib/findScopeChangeChild";
 import { formatAbsolute } from "../../lib/format/date";
+import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tabs } from "../ui/Tabs";
+import { useToast } from "../ui/Toast";
 
 type TabId = "details" | "dependencies" | "activity" | "impact";
 
@@ -152,6 +154,7 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
             <span className="text-[11px] text-neutral-600 font-mono select-all">
               {task.id}
             </span>
+            <TaskHeaderActions task={task} project={project ?? ""} />
           </div>
         </div>
 
@@ -245,6 +248,80 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
         </Tabs.Content>
       </Tabs.Root>
     </div>
+  );
+}
+
+function TaskHeaderActions({ task, project }: { task: TaskDetail; project: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const taskKey = ["task", project, task.id] as const;
+
+  const rollback = (previous: TaskDetail | undefined) => {
+    if (previous) queryClient.setQueryData(taskKey, previous);
+  };
+
+  const invalidateTask = () => {
+    queryClient.invalidateQueries({ queryKey: taskKey });
+    queryClient.invalidateQueries({ queryKey: ["tasks", project] });
+  };
+
+  const claim = useMutation({
+    mutationFn: () => claimTask(project, task.id),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: taskKey });
+      const previous = queryClient.getQueryData<TaskDetail>(taskKey);
+      queryClient.setQueryData<TaskDetail>(taskKey, (old) =>
+        old ? { ...old, status: 'in_progress' } : old,
+      );
+      return { previous };
+    },
+    onError: (error, _variables, context) => {
+      rollback(context?.previous);
+      toast(`Claim failed: ${messageFromError(error, "Could not claim task.")}`);
+    },
+    onSettled: invalidateTask,
+  });
+
+  const close = useMutation({
+    mutationFn: () => unwrap(commands.changeTaskStatus(project, task.id, 'closed', false)),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: taskKey });
+      const previous = queryClient.getQueryData<TaskDetail>(taskKey);
+      queryClient.setQueryData<TaskDetail>(taskKey, (old) =>
+        old ? { ...old, status: 'closed' } : old,
+      );
+      return { previous };
+    },
+    onError: (error, _variables, context) => {
+      rollback(context?.previous);
+      toast(`Close failed: ${messageFromError(error, "Could not close task.")}`);
+    },
+    onSettled: invalidateTask,
+  });
+
+  if (!project || task.status === "closed") return null;
+
+  return (
+    <>
+      {task.status === "open" && !task.assignee && (
+        <Button
+          variant="primary"
+          size="xs"
+          onClick={() => claim.mutate()}
+          disabled={claim.isPending}
+        >
+          Claim
+        </Button>
+      )}
+      <Button
+        variant="secondary"
+        size="xs"
+        onClick={() => close.mutate()}
+        disabled={close.isPending}
+      >
+        Close
+      </Button>
+    </>
   );
 }
 
@@ -350,4 +427,10 @@ function DependenciesTab({
 function formatDate(iso: string): string {
   if (!iso) return "—";
   return formatAbsolute(iso) || iso;
+}
+
+function messageFromError(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
 }

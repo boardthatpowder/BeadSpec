@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { rufloMemoryDelete, rufloMemoryList, rufloMemoryStore } from '../../ipc'
-import type { MemoryEntry } from '../../bindings'
+import type { MemoryEntry, MemoryListResponse } from '../../bindings'
 import { formatAbsolute } from '../../lib/format/date'
 import { parseMemoryKey } from './parseMemoryKey'
 import { PanelHeader } from '../shared/PanelHeader'
@@ -116,7 +116,7 @@ export function MemoryBrowser() {
           </div>
         </main>
       </div>
-      {selected && <MemoryDrawer entry={selected} onClose={() => setSelected(null)} />}
+      {selected && <MemoryDrawer entry={selected} namespace={namespace} onClose={() => setSelected(null)} />}
       {storeOpen && <StoreDialog namespace={namespace} onClose={() => setStoreOpen(false)} />}
     </div>
   )
@@ -149,19 +149,39 @@ function NamespaceTree({ entries, selected, onSelect }: { entries: MemoryEntry[]
   )
 }
 
-function MemoryDrawer({ entry, onClose }: { entry: MemoryEntry; onClose: () => void }) {
+function MemoryDrawer({ entry, namespace, onClose }: { entry: MemoryEntry; namespace: string; onClose: () => void }) {
   const { setState } = useAppState()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const facets = parseMemoryKey(entry.key)
+  const listKey = ['ruflo-memory', 'list', namespace] as const
   const remove = useMutation({
     mutationFn: () => rufloMemoryDelete(entry.key),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ruflo-memory'] })
-      toast('Entry deleted')
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: listKey })
+      const previous = queryClient.getQueryData<MemoryListResponse>(listKey)
+      queryClient.setQueryData<MemoryListResponse>(listKey, (old) =>
+        old
+          ? {
+              ...old,
+              entries: old.entries.filter((item) => item.key !== entry.key),
+              total: Math.max(0, old.total - 1),
+            }
+          : old,
+      )
       onClose()
+      return { previous }
     },
-    onError: (error) => toast(`Delete failed: ${messageFromError(error, 'Could not delete memory entry.')}`),
+    onSuccess: () => {
+      toast('Entry deleted')
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(listKey, context.previous)
+      toast(`Delete failed: ${messageFromError(error, 'Could not delete memory entry.')}`)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['ruflo-memory'] })
+    },
   })
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>
