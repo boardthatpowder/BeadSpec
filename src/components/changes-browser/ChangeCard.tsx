@@ -3,6 +3,8 @@ import { getChangeProgress, getChangeBeadsProgress, getChangeDependencies } from
 import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { formatRelative } from '../../lib/format/date'
+import { STATUS_PALETTE } from '../../lib/palettes'
 import { Tooltip } from '../ui/Tooltip'
 import { ImportModal } from './ImportModal'
 import type { ChangeBeadsProgress, ChangeDependencies, ChangeDepLink, ChangeInfo, ChangeProgress, Task } from '../../bindings'
@@ -10,12 +12,20 @@ import { Button } from '../ui/Button'
 
 type ChangeStatus = 'draft' | 'not_started' | 'in_progress' | 'complete' | 'archived'
 
-const STATUS_CONFIG: Record<ChangeStatus, { label: string; className: string }> = {
-  draft:       { label: 'Draft',       className: 'bg-neutral-800/60 text-neutral-500' },
-  not_started: { label: 'Not started', className: 'bg-neutral-800/60 text-neutral-400' },
-  in_progress: { label: 'In progress', className: 'bg-amber-900/30 text-amber-400 border border-amber-900/50' },
-  complete:    { label: 'Complete',    className: 'bg-green-900/30 text-green-400 border border-green-900/50' },
-  archived:    { label: 'Archived',    className: 'bg-neutral-800/60 text-neutral-500' },
+const CHANGE_STATUS_LABELS: Record<ChangeStatus, string> = {
+  draft: 'Draft',
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  complete: 'Complete',
+  archived: 'Archived',
+}
+
+const CHANGE_STATUS_PALETTE_KEY: Record<ChangeStatus, string> = {
+  draft: 'open',
+  not_started: 'open',
+  in_progress: 'in_progress',
+  complete: 'closed',
+  archived: 'open',
 }
 
 interface ChangeCardProps {
@@ -25,20 +35,16 @@ interface ChangeCardProps {
   allChanges: ChangeInfo[]
 }
 
+function changeStatusClass(status: ChangeStatus) {
+  const palette = STATUS_PALETTE[CHANGE_STATUS_PALETTE_KEY[status]] ?? STATUS_PALETTE.open
+  return `${palette.bg} ${palette.text} ${palette.border}`
+}
+
 function relativeTime(lastModified: string | null): string {
   if (!lastModified) return 'unknown'
   const secs = parseInt(lastModified, 10)
   if (isNaN(secs)) return 'unknown'
-  const ms = secs * 1000
-  const diff = Date.now() - ms
-  const minutes = Math.floor(diff / 60_000)
-  const hours = Math.floor(diff / 3_600_000)
-  const days = Math.floor(diff / 86_400_000)
-  if (minutes < 2) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  if (days < 30) return `${days}d ago`
-  return `${Math.floor(days / 30)}mo ago`
+  return formatRelative(secs * 1000) || 'unknown'
 }
 
 function ProgressBar({ done, total, color = 'blue', label }: { done: number; total: number; color?: 'blue' | 'green'; label?: string }) {
@@ -193,8 +199,8 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
           <span className="text-sm font-medium text-neutral-200 truncate font-mono">
             {change.name}
           </span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${STATUS_CONFIG[changeStatus].className}`}>
-            {STATUS_CONFIG[changeStatus].label}
+          <span className={`flex-shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${changeStatusClass(changeStatus)}`}>
+            {CHANGE_STATUS_LABELS[changeStatus]}
           </span>
           {importedEpicId ? (
             <Button

@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useActiveProject } from '../../hooks/useProject'
 import { useWorkspaceStore } from '../../stores/workspace'
-import { TaskListItem, STATUS_BADGE } from './TaskListItem'
+import { TaskListItem, statusBadgeClass } from './TaskListItem'
 import { useAppState } from '../../contexts/HashStateContext'
 import { groupTasks, deserializeGroupConfig, type GroupedSection } from '../../lib/filterParser'
 import { readGroupBy, writeGroupBy } from '../../stores/layoutStore'
@@ -17,6 +17,7 @@ import { useDensity } from '../../contexts/DensityContext'
 import type { Density } from '../../contexts/DensityContext'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
+import { IconButton } from '../ui/IconButton'
 
 const DENSITY_ROW_HEIGHT: Record<Density, number> = {
   compact:     42,
@@ -404,11 +405,9 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
       {/* Sort header */}
       <div className="flex items-center px-3 py-2 border-b border-neutral-800/60 bg-neutral-900/40 flex-shrink-0">
         {groupConfig !== null ? (
-          <Button
-            variant="ghost"
-            size="xs"
+          <IconButton
+            label={hasCollapsed ? 'Expand all' : 'Collapse all'}
             onClick={toggleExpandCollapseAll}
-            title={hasCollapsed ? 'Expand all' : 'Collapse all'}
             className="mr-2 h-auto w-4 flex-shrink-0 border-0 bg-transparent px-0 py-0 text-neutral-600 hover:bg-transparent hover:text-neutral-400"
           >
             <Icon
@@ -416,7 +415,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
               size="sm"
               className="h-3.5 w-3.5"
             />
-          </Button>
+          </IconButton>
         ) : (
           <div className="w-4 mr-2 flex-shrink-0" />
         )}
@@ -510,7 +509,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                               }
                               setQuickStatusFlatIdx(null)
                             }}
-                            className={`h-auto rounded-md border-0 px-2 py-1 text-xs ${STATUS_BADGE[s]} hover:opacity-90`}
+                            className={`h-auto rounded-md px-2 py-1 text-xs ${statusBadgeClass(s)} hover:opacity-90`}
                           >
                             {s.replace('_', ' ')}
                           </Button>

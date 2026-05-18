@@ -177,7 +177,7 @@ Stack-specific hooks (`no-any.sh`, `no-mock-module.sh`, `tdd-nudge.sh`, `typeche
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **BeadSpec** (5545 symbols, 8288 relationships, 277 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BeadSpec** (7854 symbols, 11941 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

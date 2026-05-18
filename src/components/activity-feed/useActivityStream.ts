@@ -18,7 +18,7 @@ export function useActivityStream(project: string | null | undefined) {
     let unlisten: (() => void) | null = null
     listen<ActivityEvent>('workflow:activity', event => {
       queryClient.setQueryData<ActivityEvent[]>(['activity-feed', project], old => [event.payload, ...(old ?? [])])
-    }).then(fn => { unlisten = fn }).catch(() => {})
+    }).then(fn => { unlisten = fn }).catch(() => { /* intentionally silent: live activity events are best-effort */ })
     return () => unlisten?.()
   }, [project, queryClient])
 

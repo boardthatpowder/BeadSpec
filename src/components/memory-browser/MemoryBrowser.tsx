@@ -4,11 +4,25 @@ import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { rufloMemoryDelete, rufloMemoryList, rufloMemoryStore } from '../../ipc'
 import type { MemoryEntry } from '../../bindings'
+import { formatAbsolute } from '../../lib/format/date'
 import { parseMemoryKey } from './parseMemoryKey'
-import { ViewHelpHeader } from '../shared/ViewHelpHeader'
-import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
+import { PanelHeader } from '../shared/PanelHeader'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorState } from '../ui/ErrorState'
+import { Icon } from '../ui/Icon'
+import { IconButton } from '../ui/IconButton'
+import { TaskRowSkeleton } from '../ui/Skeleton'
+import { useToast } from '../ui/Toast'
+
+const iconButtonClass = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-[--color-border] bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-neutral-700 hover:text-[--color-fg]'
+
+function messageFromError(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  return fallback
+}
 
 export function MemoryBrowser() {
   const project = useActiveProject()
@@ -30,39 +44,72 @@ export function MemoryBrowser() {
 
   if (!project) return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.memory} />
-      <div className="p-6 text-sm text-neutral-500">Connect a project to browse memory.</div>
+      <PanelHeader title="Memory" description="Browse Ruflo memory entries by namespace" />
+      <EmptyState
+        icon={<Icon name="FolderOpen" size="lg" />}
+        title="No project connected"
+        description="Connect a project to browse memory."
+      />
     </div>
   )
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.memory} />
+      <PanelHeader
+        title="Memory"
+        description="Browse Ruflo memory entries by namespace"
+        actions={(
+          <>
+            <IconButton label="Refresh memory" onClick={() => query.refetch()} className={iconButtonClass}>
+              <Icon name="RefreshCw" size="sm" />
+            </IconButton>
+            <IconButton label="Store memory entry" onClick={() => setStoreOpen(true)} className={iconButtonClass}>
+              <Icon name="Plus" size="sm" />
+            </IconButton>
+          </>
+        )}
+      />
       <div className="min-h-0 flex-1 grid grid-cols-[300px_1fr] overflow-hidden">
         <aside className="border-r border-neutral-800 bg-neutral-950 p-3">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-medium text-neutral-200">Namespaces</div>
-            <Button variant="secondary" size="xs" onClick={() => setStoreOpen(true)}>+ Store</Button>
           </div>
           <NamespaceTree entries={entries} selected={namespace} onSelect={(ns) => { setNamespace(ns); setState({ memoryNamespace: ns || undefined }) }} />
         </aside>
         <main className="min-w-0 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
             <span className="text-sm text-neutral-300">{namespace || 'All memory'}</span>
-            <Button variant="secondary" size="xs" onClick={() => query.refetch()}>Refresh</Button>
           </div>
           <div className="flex-1 overflow-auto">
             {query.error ? (
-              <div className="p-4 text-sm text-red-300">Could not load memory: {String(query.error)}</div>
+              <ErrorState
+                title="Could not load memory"
+                description={messageFromError(query.error, 'Memory entries could not be loaded.')}
+                retry={() => query.refetch()}
+              />
             ) : query.isLoading ? (
-              <div className="p-4 text-sm text-neutral-600">Loading…</div>
+              <div className="divide-y divide-neutral-800/50">
+                <TaskRowSkeleton />
+                <TaskRowSkeleton />
+                <TaskRowSkeleton />
+              </div>
+            ) : !namespace ? (
+              <EmptyState
+                icon={<Icon name="Database" size="lg" />}
+                title="Select a namespace"
+                description="Choose a namespace from the sidebar to browse entries."
+              />
             ) : visible.length === 0 ? (
-              <div className="p-4 text-sm text-neutral-600">No memory entries.</div>
+              <EmptyState
+                icon={<Icon name="Inbox" size="lg" />}
+                title="No entries"
+                description="This namespace has no memory entries yet."
+              />
             ) : visible.map(entry => (
               <Button key={entry.key} variant="ghost" size="sm" onClick={() => setSelected(entry)} className="grid h-auto w-full grid-cols-[1fr_80px_140px] gap-3 rounded-none border-0 border-b border-neutral-900 px-4 py-2 text-left hover:bg-neutral-900/50">
                 <span className="truncate font-mono text-xs text-neutral-300">{entry.key}</span>
                 <span className="text-xs text-neutral-600">{(entry.score ?? 0).toFixed(2)}</span>
-                <span className="text-xs text-neutral-500">{entry.ts ? new Date(entry.ts * 1000).toLocaleString() : 'no ts'}</span>
+                <span className="text-xs text-neutral-500">{entry.ts ? formatAbsolute(entry.ts * 1000, { includeTime: true }) : 'no ts'}</span>
                 <span className="col-span-3 truncate text-xs text-neutral-500">{entry.preview}</span>
               </Button>
             ))}
@@ -105,13 +152,16 @@ function NamespaceTree({ entries, selected, onSelect }: { entries: MemoryEntry[]
 function MemoryDrawer({ entry, onClose }: { entry: MemoryEntry; onClose: () => void }) {
   const { setState } = useAppState()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const facets = parseMemoryKey(entry.key)
   const remove = useMutation({
     mutationFn: () => rufloMemoryDelete(entry.key),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ruflo-memory'] })
+      toast('Entry deleted')
       onClose()
     },
+    onError: (error) => toast(`Delete failed: ${messageFromError(error, 'Could not delete memory entry.')}`),
   })
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>
@@ -127,7 +177,14 @@ function MemoryDrawer({ entry, onClose }: { entry: MemoryEntry; onClose: () => v
         <pre className="mt-4 whitespace-pre-wrap text-sm text-neutral-300 select-text">{entry.body}</pre>
         <div className="mt-4 flex gap-2">
           {facets.issue && <Button variant="primary" size="xs" onClick={() => setState({ view: 'all', taskId: facets.issue })}>Open issue</Button>}
-          <Button variant="danger" size="xs" onClick={() => remove.mutate()} className="border-red-900/60 text-red-100">Delete</Button>
+          <IconButton
+            label="Delete entry"
+            onClick={() => remove.mutate()}
+            disabled={remove.isPending}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-red-900/60 bg-red-950/50 text-red-100 hover:bg-red-900/60"
+          >
+            <Icon name="Trash2" size="sm" />
+          </IconButton>
         </div>
       </Dialog.Content>
     </Dialog.Root>
@@ -136,14 +193,17 @@ function MemoryDrawer({ entry, onClose }: { entry: MemoryEntry; onClose: () => v
 
 function StoreDialog({ namespace, onClose }: { namespace: string; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [key, setKey] = useState(namespace ? `${namespace}|` : '')
   const [value, setValue] = useState('')
   const store = useMutation({
     mutationFn: () => rufloMemoryStore(key, value),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ruflo-memory'] })
+      toast('Entry stored')
       onClose()
     },
+    onError: (error) => toast(`Store failed: ${messageFromError(error, 'Could not store memory entry.')}`),
   })
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>

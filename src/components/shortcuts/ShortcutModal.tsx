@@ -47,7 +47,7 @@ export function ShortcutModal() {
     if (!open) return
     commands.getShortcutStatus().then(status => {
       setQuickCaptureStatus(status)
-    }).catch(() => {/* ignore */})
+    }).catch(() => { /* intentionally silent: shortcut status is supplemental */ })
   }, [open])
 
   const groups = Array.from(new Set(SHORTCUTS.map(s => s.group)))

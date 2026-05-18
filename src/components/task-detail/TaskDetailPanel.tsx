@@ -29,6 +29,7 @@ import { useFeatureFlag } from "../../contexts/SettingsContext";
 import { useAppState } from "../../contexts/HashStateContext";
 import { useTasks } from "../../hooks/useTasks";
 import { findScopeChangeChild } from "../../lib/findScopeChangeChild";
+import { formatAbsolute } from "../../lib/format/date";
 import { Icon } from "../ui/Icon";
 import { Tabs } from "../ui/Tabs";
 
@@ -348,13 +349,5 @@ function DependenciesTab({
 
 function formatDate(iso: string): string {
   if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
+  return formatAbsolute(iso) || iso;
 }

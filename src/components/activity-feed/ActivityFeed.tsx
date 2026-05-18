@@ -7,9 +7,12 @@ import { useActivityStream } from './useActivityStream'
 import { useAutoFollow } from './useAutoFollow'
 import { ActivityFilters } from './ActivityFilters'
 import { ActivityRow } from './ActivityRow'
-import { ViewHelpHeader } from '../shared/ViewHelpHeader'
-import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
+import { PanelHeader } from '../shared/PanelHeader'
 import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorState } from '../ui/ErrorState'
+import { Icon } from '../ui/Icon'
+import { TaskRowSkeleton } from '../ui/Skeleton'
 
 export function ActivityFeed() {
   const project = useActiveProject()
@@ -31,19 +34,28 @@ export function ActivityFeed() {
 
   if (!project) return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.activity} />
-      <div className="p-6 text-sm text-neutral-500">Connect a project to see workflow activity.</div>
+      <PanelHeader title="Activity Feed" description="Recent workflow events" />
+      <EmptyState
+        icon={<Icon name="FolderOpen" size="lg" />}
+        title="No project connected"
+        description="Connect a project to see workflow activity."
+      />
     </div>
   )
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.activity} />
-      <ActivityFilters
-        activeKinds={activeKinds}
-        range={range}
-        onKindsChange={next => setState({ activityKinds: next.join(',') })}
-        onRangeChange={next => setState({ activityRange: next })}
+      <PanelHeader
+        title="Activity Feed"
+        description="Recent workflow events"
+        filters={(
+          <ActivityFilters
+            activeKinds={activeKinds}
+            range={range}
+            onKindsChange={next => setState({ activityKinds: next.join(',') })}
+            onRangeChange={next => setState({ activityRange: next })}
+          />
+        )}
       />
       <div
         ref={scrollRef}
@@ -51,11 +63,23 @@ export function ActivityFeed() {
         className="relative flex-1 overflow-auto p-4"
       >
         {query.error ? (
-          <div className="rounded border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">Could not load activity: {String(query.error)}</div>
+          <ErrorState
+            title="Could not load activity"
+            description={query.error instanceof Error ? query.error.message : 'The activity feed could not be loaded.'}
+            retry={() => query.refetch()}
+          />
         ) : query.isLoading ? (
-          <div className="text-sm text-neutral-600">Loading…</div>
+          <div className="overflow-hidden rounded border border-neutral-800/60">
+            <TaskRowSkeleton />
+            <TaskRowSkeleton />
+            <TaskRowSkeleton />
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="text-sm text-neutral-600">No activity yet</div>
+          <EmptyState
+            icon={<Icon name={query.data?.length ? 'Filter' : 'Activity'} size="lg" />}
+            title={query.data?.length ? 'No matching events' : 'No activity yet'}
+            description={query.data?.length ? 'Try adjusting your filters.' : 'Events appear here as your team works.'}
+          />
         ) : (
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualizer.getVirtualItems().map(item => (

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { commands, unwrap } from '../../ipc'
 import type { TaskDetail } from '../../bindings'
 import { useQueryClient } from '@tanstack/react-query'
+import { STATUS_PALETTE } from '../../lib/palettes'
 import { useToast } from '../ui/Toast'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
@@ -64,11 +65,9 @@ interface Props {
   project: string
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  open:        'bg-neutral-700 text-neutral-300',
-  in_progress: 'bg-blue-900/60 text-blue-300',
-  blocked:     'bg-amber-900/60 text-amber-300',
-  closed:      'bg-green-900/60 text-green-300',
+function statusClass(status: string) {
+  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
+  return `${palette.bg} ${palette.text} ${palette.border}`
 }
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'blocked', 'closed'] as const
@@ -110,7 +109,7 @@ export function StatusDropdown({ task, project }: Props) {
     doChange(status, false)
   }
 
-  const colorClass = STATUS_COLORS[task.status] ?? STATUS_COLORS.open
+  const colorClass = statusClass(task.status)
 
   return (
     <>
@@ -119,7 +118,7 @@ export function StatusDropdown({ task, project }: Props) {
           <Button
             variant="ghost"
             size="xs"
-            className={`h-auto rounded-full border-0 px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-80 ${colorClass}`}
+            className={`h-auto rounded-full border px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-80 ${colorClass}`}
           >
             {statusLabel(task.status)}
           </Button>
@@ -134,7 +133,7 @@ export function StatusDropdown({ task, project }: Props) {
                 onClick={() => select(s)}
                 className={`h-auto w-full justify-start rounded-none border-0 px-3 py-1.5 text-left ${s === task.status ? 'font-semibold' : ''}`}
               >
-                <span className={`px-1.5 py-0.5 rounded-full ${STATUS_COLORS[s] ?? ''}`}>
+                <span className={`rounded-full border px-1.5 py-0.5 ${statusClass(s)}`}>
                   {statusLabel(s)}
                 </span>
               </Button>
