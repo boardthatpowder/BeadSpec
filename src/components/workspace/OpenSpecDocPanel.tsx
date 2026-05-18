@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import { Markdown } from 'tiptap-markdown'
-import { readChangeArtifact } from '../../ipc'
+import { useCallback, useState } from 'react'
+import type { PointerEvent } from 'react'
+import { commands, readChangeArtifact, unwrap } from '../../ipc'
 import { useActiveProject } from '../../hooks/useProject'
 import { EDITOR_CLASSES } from '../shared/proseMirrorClasses'
+import { createOpenSpecDocExtensions } from './openSpecDocExtensions'
+import { SymbolMentionPopover } from '../task-detail/SymbolMentionPopover'
+import type { SymbolHit } from '../../bindings'
 
 interface OpenSpecDocPanelProps {
   change: string
@@ -13,6 +16,7 @@ interface OpenSpecDocPanelProps {
 
 export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
   const projectPath = useActiveProject()
+  const [symbolPopover, setSymbolPopover] = useState<{ hit: SymbolHit; x: number; y: number } | null>(null)
 
   const { data: content, isLoading, isError } = useQuery({
     queryKey: ['openspec-doc', projectPath, change, artifact],
@@ -21,10 +25,26 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
   })
 
   const editor = useEditor({
-    extensions: [StarterKit, Markdown.configure({ html: false })],
+    extensions: createOpenSpecDocExtensions(projectPath ?? ''),
     content: content ?? '',
     editable: false,
-  }, [content])
+  }, [content, projectPath])
+
+  const handlePointerEnter = useCallback(async (e: PointerEvent<HTMLDivElement>) => {
+    if (!projectPath) return
+    const target = e.target as HTMLElement
+    const mention = target.closest<HTMLElement>('.symbol-mention')
+    const symbol = mention?.dataset.symbol
+    if (!symbol) return
+    try {
+      const [hit] = await unwrap(commands.lookupSymbols(projectPath, [symbol]))
+      if (!hit) return
+      const rect = mention.getBoundingClientRect()
+      setSymbolPopover({ hit, x: rect.left, y: rect.bottom + 6 })
+    } catch {
+      setSymbolPopover(null)
+    }
+  }, [projectPath])
 
   if (isLoading) return <LoadingSkeleton />
   if (isError || !content) return (
@@ -32,9 +52,23 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
   )
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div
+      className="h-full overflow-y-auto p-6"
+      onPointerOver={handlePointerEnter}
+      onPointerLeave={() => setSymbolPopover(null)}
+    >
       <div className="text-xs text-neutral-600 mb-4 font-mono">{change}/{artifact}</div>
       <EditorContent editor={editor} className={EDITOR_CLASSES} />
+      {symbolPopover && (
+        <div
+          className="fixed z-50"
+          style={{ left: symbolPopover.x, top: symbolPopover.y }}
+          onPointerEnter={() => setSymbolPopover(symbolPopover)}
+          onPointerLeave={() => setSymbolPopover(null)}
+        >
+          <SymbolMentionPopover hit={symbolPopover.hit} onOpenImpact={() => {}} />
+        </div>
+      )}
     </div>
   )
 }

@@ -13,4 +13,12 @@ describe('extractCandidateSymbols', () => {
   it('ignores plain words and all caps', () => {
     expect(extractCandidateSymbols('plain FOO bar')).toEqual([])
   })
+
+  it('extracts lower camel case after markdown code marks are parsed', () => {
+    expect(extractCandidateSymbols('runGitNexusStatus lookupSymbols parse_session_snapshots')).toEqual([
+      'runGitNexusStatus',
+      'lookupSymbols',
+      'parse_session_snapshots',
+    ])
+  })
 })
