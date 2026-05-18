@@ -47,7 +47,7 @@ export function AppLayout() {
     load('layout.json')
       .then(store => store.get<number>('pane-left-width'))
       .then(val => { if (val != null) setLeftWidth(val) })
-      .catch(() => {})
+      .catch(() => { /* intentionally silent: default layout width is acceptable */ })
       .finally(() => setIsLoaded(true))
   }, [])
 

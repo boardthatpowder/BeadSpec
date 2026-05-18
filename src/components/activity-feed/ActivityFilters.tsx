@@ -14,7 +14,7 @@ export function ActivityFilters({
   onRangeChange: (next: 'hour' | 'today' | 'week') => void
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-5 py-3">
+    <div className="flex flex-wrap items-center justify-end gap-3">
       <div className="flex items-center gap-2">
         {SOURCES.map(source => {
           const active = activeKinds.includes(source)

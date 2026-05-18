@@ -7,11 +7,23 @@ import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
 import { findIssuesTouchingProcess, getGitnexusIndexStatus, getGitnexusProcess, listGitnexusClusters, listGitnexusProcesses, triggerGitnexusReanalyze } from '../../ipc'
 import type { IssueMatch, ProcessDetail as ProcessDetailType, ProcessSummary } from '../../bindings'
-import { ViewHelpHeader } from '../shared/ViewHelpHeader'
-import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
+import { PanelHeader } from '../shared/PanelHeader'
 import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorState } from '../ui/ErrorState'
 import { Icon } from '../ui/Icon'
+import { IconButton } from '../ui/IconButton'
 import { Popover } from '../ui/Popover'
+import { TaskRowSkeleton } from '../ui/Skeleton'
+import { useToast } from '../ui/Toast'
+
+const iconButtonClass = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-[--color-border] bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-neutral-700 hover:text-[--color-fg] disabled:opacity-50'
+
+function messageFromError(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  return fallback
+}
 
 export function ProcessBrowser() {
   const project = useActiveProject()
@@ -32,20 +44,28 @@ export function ProcessBrowser() {
 
   if (!project) return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.processes} />
-      <div className="p-6 text-sm text-neutral-500">Connect a project to browse GitNexus processes.</div>
+      <PanelHeader title="Processes" description="Browse GitNexus execution flows" />
+      <EmptyState
+        icon={<Icon name="FolderOpen" size="lg" />}
+        title="No project connected"
+        description="Connect a project to browse GitNexus processes."
+      />
     </div>
   )
   if (processes.error) return (
     <div className="h-full flex flex-col overflow-hidden">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.processes} />
-      <InstallHint error={String(processes.error)} />
+      <PanelHeader title="Processes" description="Browse GitNexus execution flows" />
+      <InstallHint error={messageFromError(processes.error, 'GitNexus process data could not be loaded.')} />
     </div>
   )
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
-      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.processes} />
+      <PanelHeader
+        title="Processes"
+        description="Browse GitNexus execution flows"
+        actions={<ReanalyzeButton project={project} />}
+      />
       <StaleIndexBanner project={project} />
       <div className="flex-1 min-h-0 grid grid-cols-[360px_1fr]">
         <ProcessList
@@ -66,13 +86,29 @@ export function ProcessBrowser() {
 
 function InstallHint({ error }: { error: string }) {
   return (
-    <div className="flex-1 p-6">
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-5">
-        <div className="text-sm font-medium text-neutral-200">GitNexus CLI unavailable</div>
-        <div className="mt-2 text-sm text-neutral-500">Install GitNexus and run <code className="text-neutral-300">npx gitnexus analyze</code>.</div>
-        <pre className="mt-3 whitespace-pre-wrap text-xs text-red-300">{error}</pre>
-      </div>
+    <div className="flex-1">
+      <ErrorState
+        title="GitNexus CLI unavailable"
+        description={`Install GitNexus and run npx gitnexus analyze. ${error}`}
+      />
     </div>
+  )
+}
+
+function ReanalyzeButton({ project, className = iconButtonClass }: { project: string; className?: string }) {
+  const { toast } = useToast()
+  return (
+    <IconButton
+      label="Re-analyze index"
+      onClick={() => {
+        toast('Re-analysis started')
+        triggerGitnexusReanalyze(project)
+          .catch(error => toast(`Re-analysis failed: ${messageFromError(error, 'Could not start GitNexus re-analysis.')}`))
+      }}
+      className={className}
+    >
+      <Icon name="RefreshCw" size="sm" />
+    </IconButton>
   )
 }
 
@@ -93,7 +129,7 @@ function StaleIndexBanner({ project }: { project: string }) {
         queryClient.invalidateQueries({ queryKey: ['gitnexus-processes', project] })
         queryClient.invalidateQueries({ queryKey: ['gitnexus-index-status', project] })
       }
-    }).then(fn => { unlisten = fn }).catch(() => {})
+    }).then(fn => { unlisten = fn }).catch(() => { /* intentionally silent: progress events are best-effort */ })
     return () => unlisten?.()
   }, [project, queryClient])
 
@@ -101,15 +137,10 @@ function StaleIndexBanner({ project }: { project: string }) {
   return (
     <div className="flex items-center justify-between border-b border-amber-900/50 bg-amber-950/30 px-4 py-2 text-xs text-amber-300">
       <span>GitNexus index is stale{message ? ` · ${message}` : ''}</span>
-      <Button
-        variant="secondary"
-        size="xs"
-        onClick={() => triggerGitnexusReanalyze(project)}
-        leadingIcon={<Icon name="RefreshCw" size="sm" className="h-3 w-3" />}
-        className="border-amber-800 bg-transparent text-amber-300 hover:bg-amber-900/30"
-      >
-        Re-analyze
-      </Button>
+      <ReanalyzeButton
+        project={project}
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-800 bg-transparent text-amber-300 hover:bg-amber-900/30"
+      />
     </div>
   )
 }
@@ -152,7 +183,19 @@ function ProcessList({
         </select>
       </div>
       <div ref={parentRef[1]} className="flex-1 overflow-auto">
-        {loading ? <div className="p-4 text-sm text-neutral-600">Loading…</div> : rows.length === 0 ? <div className="p-4 text-sm text-neutral-600">No processes</div> : (
+        {loading ? (
+          <div className="divide-y divide-neutral-800/50">
+            <TaskRowSkeleton />
+            <TaskRowSkeleton />
+            <TaskRowSkeleton />
+          </div>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={<Icon name={processes.length === 0 ? 'GitBranch' : 'Search'} size="lg" />}
+            title={processes.length === 0 ? 'No processes indexed' : 'No matching processes'}
+            description={processes.length === 0 ? 'Run /gitnexus-cli to index the codebase.' : 'Try adjusting your process filters.'}
+          />
+        ) : (
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualizer.getVirtualItems().map(item => {
               const row = rows[item.index]
@@ -185,9 +228,25 @@ function ProcessDetail({ project, name }: { project: string; name: string | null
     enabled: !!project && !!name,
     retry: false,
   })
-  if (!name) return <div className="p-6 text-sm text-neutral-600">Select a process.</div>
-  if (detail.isLoading) return <div className="p-6 text-sm text-neutral-600">Loading process…</div>
-  if (detail.error || !detail.data) return <div className="p-6 text-sm text-red-300">Could not load process: {String(detail.error)}</div>
+  if (!name) return (
+    <EmptyState
+      icon={<Icon name="GitBranch" size="lg" />}
+      title="Select a process"
+      description="Choose a process from the list to inspect its steps."
+    />
+  )
+  if (detail.isLoading) return (
+    <div className="flex min-h-48 items-center justify-center">
+      <Icon name="Loader2" size="lg" className="animate-spin text-neutral-500" />
+    </div>
+  )
+  if (detail.error || !detail.data) return (
+    <ErrorState
+      title="Could not load process"
+      description={messageFromError(detail.error, 'The selected process could not be loaded.')}
+      retry={() => detail.refetch()}
+    />
+  )
   return <ProcessDetailBody project={project} detail={detail.data} focused={focused} setFocused={setFocused} />
 }
 
@@ -202,6 +261,7 @@ function ProcessDetailBody({
   focused: number | null
   setFocused: (i: number | null) => void
 }) {
+  const { toast } = useToast()
   const parentRef = useState<HTMLDivElement | null>(null)
   const virtualizer = useVirtualizer({
     count: detail.steps.length,
@@ -218,15 +278,18 @@ function ProcessDetailBody({
         </div>
         <div className="flex gap-2">
           <IssueMatchesPopover project={project} processName={detail.name} />
-          <Button
-            variant="secondary"
-            size="xs"
+          <IconButton
+            label="Open in editor"
             disabled={!step}
-            onClick={() => step && openPath(`${step.file}:${step.line}:0`).catch(() => {})}
-            leadingIcon={<Icon name="ExternalLink" size="sm" className="h-3 w-3" />}
+            onClick={() => {
+              if (!step) return
+              openPath(`${step.file}:${step.line}:0`)
+                .catch(error => toast(`Open failed: ${messageFromError(error, 'Could not open this process step.')}`))
+            }}
+            className={iconButtonClass}
           >
-            Open in editor
-          </Button>
+            <Icon name="ExternalLink" size="sm" />
+          </IconButton>
         </div>
       </div>
       <div ref={parentRef[1]} role="listbox" className="flex-1 overflow-auto">
@@ -270,17 +333,21 @@ function IssueMatchesPopover({ project, processName }: { project: string; proces
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button
-          variant="secondary"
-          size="xs"
-          leadingIcon={<Icon name="Search" size="sm" className="h-3 w-3" />}
-        >
-          Find issues
-        </Button>
+        <IconButton label="Find issues" className={iconButtonClass}>
+          <Icon name="Search" size="sm" />
+        </IconButton>
       </Popover.Trigger>
       <Popover.Content align="end" className="w-80 bg-neutral-950 p-2">
-        {query.isLoading ? <div className="p-2 text-xs text-neutral-500">Loading…</div> : (query.data?.length ?? 0) === 0 ? (
-          <div className="p-2 text-xs text-neutral-500">No matching issues.</div>
+        {query.isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Icon name="Loader2" size="md" className="animate-spin text-neutral-500" />
+          </div>
+        ) : (query.data?.length ?? 0) === 0 ? (
+          <EmptyState
+            icon={<Icon name="Search" size="lg" />}
+            title="No matching issues"
+            description="No issues reference this process step."
+          />
         ) : query.data!.map(match => (
           <Button
             key={match.id}

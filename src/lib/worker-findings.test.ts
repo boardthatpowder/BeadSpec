@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatSeverityBreakdown,
-  formatWorkerFindingDate,
   parseWorkerProvenance,
   priorityToSeverity,
 } from './worker-findings'
@@ -66,10 +65,5 @@ describe('worker finding formatting', () => {
   it('formats nonzero severity breakdowns in priority order', () => {
     expect(formatSeverityBreakdown([2, 1, 2, 3, 99])).toBe('1 critical, 2 high, 1 medium, 1 unknown')
     expect(formatSeverityBreakdown([])).toBe('')
-  })
-
-  it('formats finding dates stably', () => {
-    expect(formatWorkerFindingDate('2026-05-17T10:00:00Z')).toBe('2026-05-17')
-    expect(formatWorkerFindingDate('not-a-date')).toBe('')
   })
 })

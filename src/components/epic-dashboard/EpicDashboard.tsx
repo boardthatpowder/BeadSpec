@@ -6,8 +6,26 @@ import { useAppState } from '../../contexts/HashStateContext'
 import { commands, unwrap } from '../../ipc'
 import { claimTask, getEpicReadySnapshot, runOpenspecValidate } from '../../ipc'
 import type { Task } from '../../bindings'
-import { labelChipClass, formatLabel, STATUS_BADGE } from '../task-list/TaskListItem'
+import { STATUS_PALETTE } from '../../lib/palettes'
+import { labelChipClass, formatLabel } from '../task-list/TaskListItem'
+import { PanelHeader } from '../shared/PanelHeader'
 import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorState } from '../ui/ErrorState'
+import { Icon } from '../ui/Icon'
+import { Tooltip } from '../ui/Tooltip'
+import { useToast } from '../ui/Toast'
+
+function paletteClass(status: string) {
+  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
+  return `${palette.bg} ${palette.text} ${palette.border}`
+}
+
+function messageFromError(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  return fallback
+}
 
 export function EpicDashboard({ change, epicId }: { change: string; epicId: string }) {
   const project = useActiveProject()
@@ -30,10 +48,21 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
   const children = useMemo(() => (childQuery.data ?? []).filter(t => t.id !== epicId), [childQuery.data, epicId])
   const grouped = groupChildren(children, snapshot.data?.ready ?? [])
 
-  if (!project) return <div className="p-6 text-sm text-neutral-500">Connect a project.</div>
+  if (!project) return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <PanelHeader title="Epic Progress" />
+      <EmptyState
+        icon={<Icon name="FolderOpen" size="lg" />}
+        title="No project connected"
+        description="Connect a project to track epic progress."
+      />
+    </div>
+  )
 
   return (
-    <div className="h-full overflow-auto p-5 space-y-4">
+    <div className="h-full flex flex-col overflow-hidden">
+      <PanelHeader title="Epic Progress" />
+      <div className="flex-1 overflow-auto p-5 space-y-4">
       <header className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -70,9 +99,24 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
         </div>
       ) : null}
 
-      {snapshot.error && <div className="rounded border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">Snapshot error: {String(snapshot.error)}</div>}
-      {children.length === 0 ? (
-        <div className="rounded border border-neutral-800 bg-neutral-900/40 p-4 text-sm text-neutral-500">No tasks imported yet. Run `openspec-beads-import`.</div>
+      {snapshot.error ? (
+        <ErrorState
+          title="Could not load epic progress"
+          description={messageFromError(snapshot.error, 'The epic snapshot could not be loaded.')}
+          retry={() => snapshot.refetch()}
+        />
+      ) : childQuery.error ? (
+        <ErrorState
+          title="Could not load epic tasks"
+          description={messageFromError(childQuery.error, 'The epic task list could not be loaded.')}
+          retry={() => childQuery.refetch()}
+        />
+      ) : children.length === 0 ? (
+        <EmptyState
+          icon={<Icon name="Inbox" size="lg" />}
+          title="No tasks imported"
+          description="Run openspec-beads-import to populate this epic dashboard."
+        />
       ) : (
         Object.entries(grouped).map(([name, tasks]) => tasks.length > 0 && (
           <section key={name} className="rounded-lg border border-neutral-800/60 bg-neutral-900/30">
@@ -87,6 +131,7 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
           </section>
         ))
       )}
+      </div>
     </div>
   )
 }
@@ -104,9 +149,14 @@ function groupChildren(tasks: Task[], readyIds: string[]) {
 
 function EpicTaskRow({ task, paused, project, onClaimed }: { task: Task; paused: boolean; project: string; onClaimed: () => void }) {
   const { setState } = useAppState()
+  const { toast } = useToast()
   const claim = useMutation({
     mutationFn: () => claimTask(project, task.id),
-    onSuccess: onClaimed,
+    onSuccess: () => {
+      toast('Task claimed')
+      onClaimed()
+    },
+    onError: (error) => toast(`Claim failed: ${messageFromError(error, 'Could not claim task.')}`),
   })
   return (
     <div className="flex items-center gap-3 px-4 py-2">
@@ -117,7 +167,7 @@ function EpicTaskRow({ task, paused, project, onClaimed }: { task: Task; paused:
         className="h-auto min-w-0 flex-1 justify-start border-0 bg-transparent p-0 text-left font-normal hover:bg-transparent"
       >
         <div className="flex items-center gap-2">
-          <span className={`rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>{task.status.replace('_', ' ')}</span>
+          <span className={`rounded border px-1.5 py-0.5 text-[10px] ${paletteClass(task.status)}`}>{task.status.replace('_', ' ')}</span>
           {paused && <span className="rounded bg-violet-950/40 px-1.5 py-0.5 text-[10px] text-violet-300">Paused</span>}
           <span className="truncate text-sm text-neutral-200">{task.title}</span>
         </div>
@@ -143,13 +193,15 @@ function EpicValidationPill({ project, change }: { project: string; change: stri
   const validate = useMutation({ mutationFn: () => runOpenspecValidate(project, change) })
   const result = validate.data
   return (
-    <Button
-      variant="secondary"
-      size="xs"
-      onClick={() => validate.mutate()}
-      className={!result ? 'border-neutral-700 text-neutral-400' : result.valid ? 'border-green-800 bg-green-950/30 text-green-300' : 'border-red-800 bg-red-950/30 text-red-300'}
-    >
-      {validate.isPending ? 'validating…' : !result ? 'Validate' : result.valid ? 'Validation: pass' : `Validation: fail (${result.errors.length})`}
-    </Button>
+    <Tooltip label="Validation state" description="Runs OpenSpec validation and shows whether the current change artifacts pass.">
+      <Button
+        variant="secondary"
+        size="xs"
+        onClick={() => validate.mutate()}
+        className={!result ? 'border-neutral-700 text-neutral-400' : result.valid ? 'border-green-800 bg-green-950/30 text-green-300' : 'border-red-800 bg-red-950/30 text-red-300'}
+      >
+        {validate.isPending ? 'validating…' : !result ? 'Validate' : result.valid ? 'Validation: pass' : `Validation: fail (${result.errors.length})`}
+      </Button>
+    </Tooltip>
   )
 }

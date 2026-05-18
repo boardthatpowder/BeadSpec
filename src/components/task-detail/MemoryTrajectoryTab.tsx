@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { commands, unwrap } from '../../ipc'
+import { formatRelative } from '../../lib/format/date'
+import { OUTCOME_PALETTE } from '../../lib/palettes'
 import { Button } from '../ui/Button'
 
 interface Memory {
@@ -23,20 +25,8 @@ export function parseTrajectoryKey(key: string) {
 }
 
 export function outcomeChipClass(outcome?: string) {
-  if (outcome === 'complete' || outcome === 'done') return 'bg-green-950/40 text-green-300 border-green-800/50'
-  if (outcome === 'paused') return 'bg-violet-950/40 text-violet-300 border-violet-800/50'
-  if (outcome === 'blocked' || outcome === 'failed') return 'bg-red-950/40 text-red-300 border-red-800/50'
-  return 'bg-neutral-800 text-neutral-400 border-neutral-700'
-}
-
-function relative(ts?: number) {
-  if (!ts) return 'unknown'
-  const diff = Date.now() / 1000 - ts
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  if (diff < 60 * 86400) return `${Math.floor(diff / 86400)}d ago`
-  return new Date(ts * 1000).toISOString().slice(0, 10)
+  const palette = OUTCOME_PALETTE[outcome ?? 'unknown'] ?? OUTCOME_PALETTE.unknown
+  return `${palette.bg} ${palette.text} ${palette.border}`
 }
 
 export function MemoryTrajectoryTab({ taskId, title }: { taskId: string; title: string }) {
@@ -84,7 +74,7 @@ export function MemoryTrajectoryTab({ taskId, title }: { taskId: string; title: 
             className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/20"
           >
             <div className="flex items-center gap-2">
-              <span title={parsed.ts ? new Date(parsed.ts * 1000).toISOString() : undefined} className="text-xs text-neutral-500">{relative(parsed.ts)}</span>
+              <span title={parsed.ts ? new Date(parsed.ts * 1000).toISOString() : undefined} className="text-xs text-neutral-500">{parsed.ts ? formatRelative(parsed.ts * 1000) : 'unknown'}</span>
               <span className={`rounded border px-1.5 py-0.5 text-[10px] ${outcomeChipClass(parsed.outcome)}`}>{parsed.outcome ?? 'unknown'}</span>
             </div>
             <div className="mt-1 whitespace-pre-wrap text-xs text-neutral-400">{open ? entry.preview : entry.preview.slice(0, 120)}</div>

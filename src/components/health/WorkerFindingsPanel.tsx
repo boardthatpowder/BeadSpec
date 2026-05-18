@@ -1,10 +1,18 @@
+import type { ReactNode } from 'react'
 import type { WorkerFinding } from '../../bindings'
 import { useActiveProject } from '../../hooks/useProject'
 import { useWorkerFindings } from '../../hooks/useWorkerFindings'
-import { formatSeverityBreakdown, formatWorkerFindingDate } from '../../lib/worker-findings'
+import { formatAbsolute } from '../../lib/format/date'
+import { PRIORITY_PALETTE } from '../../lib/palettes'
+import { formatSeverityBreakdown } from '../../lib/worker-findings'
 import { useWorkspaceStore } from '../../stores/workspace'
-import { formatLabel, labelChipClass, PRIORITY_STYLE } from '../task-list/TaskListItem'
+import { formatLabel, labelChipClass } from '../task-list/TaskListItem'
+import { PanelHeader } from '../shared/PanelHeader'
 import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorState } from '../ui/ErrorState'
+import { Icon } from '../ui/Icon'
+import { Tooltip } from '../ui/Tooltip'
 
 type WorkerGroup = {
   worker: string
@@ -39,6 +47,22 @@ function errorMessage(error: unknown): string {
   return 'Failed to load worker findings.'
 }
 
+function priorityClass(priority: number) {
+  const palette = PRIORITY_PALETTE[String(priority)] ?? PRIORITY_PALETTE.low
+  return `${palette.text} ${priority <= 2 ? 'font-semibold' : ''}`
+}
+
+function WorkerFindingsFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <PanelHeader title="Worker Findings" />
+      <div className="flex-1 overflow-auto px-5 py-4">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function WorkerFindingsPanel() {
   const project = useActiveProject()
   const openPinned = useWorkspaceStore(state => state.openPinned)
@@ -47,33 +71,36 @@ export function WorkerFindingsPanel() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <span className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin block" />
-      </div>
+      <WorkerFindingsFrame>
+        <div className="flex items-center justify-center py-16">
+          <Icon name="Loader2" size="lg" className="animate-spin text-neutral-500" />
+        </div>
+      </WorkerFindingsFrame>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <span className="max-w-md rounded border border-red-800/40 bg-red-950/30 px-3 py-2 text-xs text-red-300">
-          {errorMessage(error)}
-        </span>
-      </div>
+      <WorkerFindingsFrame>
+        <ErrorState title="Could not load worker findings" description={errorMessage(error)} />
+      </WorkerFindingsFrame>
     )
   }
 
   if (findings.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-neutral-600 text-sm text-center">
-          No worker findings. Run /audit, /ruflo-loop testgaps, or /ruflo-cost to generate some.
-        </p>
-      </div>
+      <WorkerFindingsFrame>
+        <EmptyState
+          icon={<Icon name="CheckCircle" size="lg" />}
+          title="No findings"
+          description="Run /audit, /ruflo-loop testgaps, or /ruflo-cost to generate findings."
+        />
+      </WorkerFindingsFrame>
     )
   }
 
   return (
+    <WorkerFindingsFrame>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-xs text-neutral-500">Total worker findings</span>
@@ -86,12 +113,13 @@ export function WorkerFindingsPanel() {
         return (
           <section key={group.worker} className="space-y-2">
             <div className="flex items-center gap-2">
-              <span
-                className={`text-[10px] px-1.5 py-0 rounded font-mono leading-4 max-w-48 truncate ${labelChipClass(`worker:${group.worker}`)}`}
-                title={`worker:${group.worker}`}
-              >
-                {formatLabel(`worker:${group.worker}`)}
-              </span>
+              <Tooltip label={`worker:${group.worker}`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0 rounded font-mono leading-4 max-w-48 truncate ${labelChipClass(`worker:${group.worker}`)}`}
+                >
+                  {formatLabel(`worker:${group.worker}`)}
+                </span>
+              </Tooltip>
               <span className="text-[10px] text-neutral-500 tabular-nums">
                 {group.findings.length} total
               </span>
@@ -114,14 +142,14 @@ export function WorkerFindingsPanel() {
                   <span className="w-24 text-[10px] font-mono text-neutral-500 truncate">
                     {finding.issue_id}
                   </span>
-                  <span className={`w-7 text-[10px] tabular-nums ${PRIORITY_STYLE[finding.priority] ?? 'text-neutral-600'}`}>
+                  <span className={`w-7 text-[10px] tabular-nums ${priorityClass(finding.priority)}`}>
                     P{finding.priority}
                   </span>
                   <span className="flex-1 min-w-0 text-xs text-neutral-300 truncate">
                     {finding.title}
                   </span>
                   <span className="text-[10px] text-neutral-600 tabular-nums flex-shrink-0">
-                    {formatWorkerFindingDate(finding.created_at)}
+                    {formatAbsolute(finding.created_at, { includeTime: true })}
                   </span>
                 </Button>
               ))}
@@ -130,5 +158,6 @@ export function WorkerFindingsPanel() {
         )
       })}
     </div>
+    </WorkerFindingsFrame>
   )
 }

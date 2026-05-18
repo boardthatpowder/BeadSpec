@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { commands, unwrap } from '../../ipc'
 import type { HistoryEntry } from '../../bindings'
+import { formatAbsolute } from '../../lib/format/date'
 import { useToast } from '../ui/Toast'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -65,7 +66,7 @@ export function CommentsSection({ taskId, project }: Props) {
             <div className="flex items-baseline gap-2 mb-1">
               <span className="text-xs font-medium text-neutral-300">{c.actor}</span>
               <span className="text-xs text-neutral-600">
-                {new Date(c.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {formatAbsolute(c.timestamp)}
               </span>
             </div>
             <div className="text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed bg-neutral-800/50 rounded-lg px-3 py-2">

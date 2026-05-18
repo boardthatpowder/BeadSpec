@@ -4,14 +4,12 @@ import { commands, unwrap } from '../../ipc'
 import type { GitRefs, GitnexusImpactReport, TaskDetail } from '../../bindings'
 import { extractDiffSymbols } from './extractDiffSymbols'
 import { useAppState } from '../../contexts/HashStateContext'
+import { RISK_PALETTE } from '../../lib/palettes'
 import { Button } from '../ui/Button'
 
-const RISK_CLASS: Record<string, string> = {
-  Low: 'bg-neutral-800 text-neutral-300 border-neutral-700',
-  Medium: 'bg-amber-950/40 text-amber-300 border-amber-800/50',
-  High: 'bg-orange-950/50 text-orange-300 border-orange-800/50',
-  Critical: 'bg-red-950/60 text-red-300 border-red-800/50',
-  Unknown: 'bg-neutral-900 text-neutral-500 border-neutral-800',
+function riskClass(risk: string) {
+  const palette = RISK_PALETTE[risk] ?? RISK_PALETTE.Unknown
+  return `${palette.bg} ${palette.text} ${palette.border}`
 }
 
 export function ImpactPanel({ task, project }: { task: TaskDetail; project: string; paneId: string }) {
@@ -141,7 +139,7 @@ function ImpactResult({ report }: { report: GitnexusImpactReport }) {
       {report.index_status === 'Stale' && <Callout tone="warn">GitNexus index appears stale. Results may miss recent edits.</Callout>}
       <div className="flex items-center gap-2">
         <span className="font-mono text-sm text-neutral-200">{report.symbol}</span>
-        <span className={`rounded border px-2 py-0.5 text-xs ${RISK_CLASS[report.risk] ?? RISK_CLASS.Unknown}`}>
+        <span className={`rounded border px-2 py-0.5 text-xs ${riskClass(report.risk)}`}>
           {report.risk}
         </span>
         <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">

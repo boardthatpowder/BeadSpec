@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { ActivityEvent } from '../../bindings'
+import { formatRelative } from '../../lib/format/date'
 import { Button } from '../ui/Button'
+import { Tooltip } from '../ui/Tooltip'
 
 export function ActivityRow({ event }: { event: ActivityEvent }) {
   const [open, setOpen] = useState(false)
@@ -15,10 +17,12 @@ export function ActivityRow({ event }: { event: ActivityEvent }) {
         onClick={() => setOpen(v => !v)}
         className="h-auto w-full justify-start gap-3 rounded-none border-0 px-3 py-2 text-left"
       >
-        <span className="w-20 font-mono text-xs text-neutral-600">{new Date(event.ts).toLocaleTimeString()}</span>
+        <span className="w-24 font-mono text-xs text-neutral-600">{formatRelative(event.ts) || 'unknown'}</span>
         <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">{event.source}</span>
         <span className="rounded bg-neutral-950 px-1.5 py-0.5 text-[10px] text-neutral-500">{event.kind}</span>
-        <span className="min-w-0 truncate text-sm text-neutral-300" title={event.summary}>{event.summary}</span>
+        <Tooltip label={event.summary}>
+          <span className="min-w-0 truncate text-sm text-neutral-300">{event.summary}</span>
+        </Tooltip>
       </Button>
       {open && <pre className="max-h-72 overflow-auto border-t border-neutral-800 p-3 text-xs text-neutral-400 select-text">{detail}</pre>}
     </div>

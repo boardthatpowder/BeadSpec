@@ -1,30 +1,27 @@
 import type { Task } from '../../bindings'
 import type { WorkerProvenance } from '../../lib/worker-findings'
 import { parsePausedNote } from '../../lib/parsePausedNote'
+import { PRIORITY_PALETTE, STATUS_PALETTE } from '../../lib/palettes'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 
-export const STATUS_DOT: Record<string, string> = {
-  open:        'bg-neutral-500',
-  in_progress: 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.6)]',
-  blocked:     'bg-amber-500',
-  closed:      'bg-green-500',
+function classSet(...classes: Array<string | undefined>) {
+  return classes.filter(Boolean).join(' ')
 }
 
-export const STATUS_BADGE: Record<string, string> = {
-  open:        'bg-neutral-800/80 text-neutral-400',
-  in_progress: 'bg-blue-900/50 text-blue-300',
-  blocked:     'bg-amber-900/50 text-amber-300',
-  closed:      'bg-green-900/50 text-green-300',
+export function statusDotClass(status: string) {
+  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
+  return classSet(palette.bg, status === 'in_progress' ? 'shadow-[0_0_6px_rgba(59,130,246,0.45)]' : undefined)
 }
 
-export const STATUS_BADGE_PAUSED = 'bg-violet-900/40 text-violet-300 border border-violet-800/40'
+export function statusBadgeClass(status: string) {
+  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
+  return classSet(palette.bg, palette.text, palette.border)
+}
 
-export const PRIORITY_STYLE: Record<number, string> = {
-  1: 'text-red-400 font-bold',
-  2: 'text-orange-400 font-semibold',
-  3: 'text-yellow-500/80',
-  4: 'text-neutral-600',
+export function priorityTextClass(priority: number) {
+  const palette = PRIORITY_PALETTE[String(priority)] ?? PRIORITY_PALETTE.low
+  return classSet(palette.text, priority <= 2 ? 'font-semibold' : undefined)
 }
 
 const COMPACT_PREFIXES = new Set(['branch', 'repo', 'worktree', 'worker'])
@@ -88,7 +85,7 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
       ].join(' ')}
     >
       {/* Status dot */}
-      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[task.status] ?? 'bg-neutral-600'}`} />
+      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDotClass(task.status)}`} />
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
@@ -96,7 +93,7 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
           <span className={`text-xs truncate flex-1 ${isActive ? 'text-neutral-100' : 'text-neutral-300'}`}>
             {task.title}
           </span>
-          <span title={pauseReason} className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? STATUS_BADGE_PAUSED : STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>
+          <span title={pauseReason} className={`inline-flex items-center gap-1 border text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? statusBadgeClass('paused') : statusBadgeClass(task.status)}`}>
             {isPaused ? (
               <>
                 <Icon name="Pause" size="sm" className="h-2.5 w-2.5" />
@@ -139,7 +136,7 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
       </div>
 
       {/* Priority */}
-      <span className={`text-xs flex-shrink-0 tabular-nums ${PRIORITY_STYLE[task.priority] ?? 'text-neutral-600'}`}>
+      <span className={`text-xs flex-shrink-0 tabular-nums ${priorityTextClass(task.priority)}`}>
         P{task.priority}
       </span>
     </Button>

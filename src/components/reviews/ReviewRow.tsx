@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReviewEntry } from '../../bindings'
+import { formatAbsolute } from '../../lib/format/date'
 import { Button } from '../ui/Button'
 import { ReviewMarkdownViewer } from './ReviewMarkdownViewer'
 
@@ -11,7 +12,7 @@ const KIND_CLASSES: Record<string, string> = {
 
 function timestamp(epoch?: number | null) {
   if (!epoch) return ''
-  return new Date(epoch * 1000).toLocaleString()
+  return formatAbsolute(epoch * 1000, { includeTime: true })
 }
 
 export function ReviewRow({ review }: { review: ReviewEntry }) {
