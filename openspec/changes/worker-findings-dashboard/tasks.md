@@ -33,11 +33,11 @@
 
 ## 6. WorkerFindingsPanel
 
-- [ ] 6.1 Create `src/components/health/WorkerFindingsPanel.tsx` that uses `useQuery(['worker-findings', projectPath], () => listWorkerFindings(projectPath))` to fetch findings, groups them by `worker` (preserve insertion order from the DESC-ordered fetch), and renders one section per worker.
-- [ ] 6.2 Each section header shows: worker name (with the same teal chip styling as the inline chip), total count, and a severity breakdown line `(1 critical, 4 high, 2 medium)` computed from `priority` via `priorityToSeverity()` in the helper. Hide severity counts of 0.
-- [ ] 6.3 Each finding row shows: issue ID (using the existing `renderWithChips`-equivalent rendering or a plain navigation button), `P{priority}` styled via `PRIORITY_STYLE`, title (truncate), and `created_at` short-date. Clicking the row calls the existing workspace `openPinned(issue_id)` (see `task-workspace` spec) — match the keyboard/Enter contract used by `TaskListItem`.
-- [ ] 6.4 Empty state: when `findings.length === 0`, render `"No worker findings. Run /audit, /ruflo-loop testgaps, or /ruflo-cost to generate some."` centred with the same neutral-600 chrome as the existing `"Click Re-run to start checks."` empty state.
-- [ ] 6.5 Loading state: spinner matching the existing `CheckSection` spinner. Error state: red error pill with the error string.
+- [x] 6.1 Create `src/components/health/WorkerFindingsPanel.tsx` that uses `useQuery(['worker-findings', projectPath], () => listWorkerFindings(projectPath))` to fetch findings, groups them by `worker` (preserve insertion order from the DESC-ordered fetch), and renders one section per worker.
+- [x] 6.2 Each section header shows: worker name (with the same teal chip styling as the inline chip), total count, and a severity breakdown line `(1 critical, 4 high, 2 medium)` computed from `priority` via `priorityToSeverity()` in the helper. Hide severity counts of 0.
+- [x] 6.3 Each finding row shows: issue ID (using the existing `renderWithChips`-equivalent rendering or a plain navigation button), `P{priority}` styled via `PRIORITY_STYLE`, title (truncate), and `created_at` short-date. Clicking the row calls the existing workspace `openPinned(issue_id)` (see `task-workspace` spec) — match the keyboard/Enter contract used by `TaskListItem`.
+- [x] 6.4 Empty state: when `findings.length === 0`, render `"No worker findings. Run /audit, /ruflo-loop testgaps, or /ruflo-cost to generate some."` centred with the same neutral-600 chrome as the existing `"Click Re-run to start checks."` empty state.
+- [x] 6.5 Loading state: spinner matching the existing `CheckSection` spinner. Error state: red error pill with the error string.
 
 ## 7. BdHealthPanel tab strip
 
