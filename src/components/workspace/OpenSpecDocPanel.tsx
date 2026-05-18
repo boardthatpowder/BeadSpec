@@ -2,12 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { useCallback, useState } from 'react'
 import type { PointerEvent } from 'react'
-import { commands, readChangeArtifact, unwrap } from '../../ipc'
+import { commands, listChanges, readChangeArtifact, unwrap } from '../../ipc'
 import { useActiveProject } from '../../hooks/useProject'
+import { useWorkspaceStore } from '../../stores/workspace'
 import { EDITOR_CLASSES } from '../shared/proseMirrorClasses'
 import { createOpenSpecDocExtensions } from './openSpecDocExtensions'
+import { buildOpenSpecDocReferences } from './openSpecDocReferences'
 import { SymbolMentionPopover } from '../task-detail/SymbolMentionPopover'
-import type { SymbolHit } from '../../bindings'
+import type { ChangeInfo, SymbolHit } from '../../bindings'
+import type { OpenSpecDocReference } from './openSpecDocReferences'
 
 interface OpenSpecDocPanelProps {
   change: string
@@ -16,6 +19,7 @@ interface OpenSpecDocPanelProps {
 
 export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
   const projectPath = useActiveProject()
+  const openDocTab = useWorkspaceStore((s) => s.openDocTab)
   const [symbolPopover, setSymbolPopover] = useState<{ hit: SymbolHit; x: number; y: number } | null>(null)
 
   const { data: content, isLoading, isError } = useQuery({
@@ -23,6 +27,16 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
     queryFn: () => readChangeArtifact(projectPath ?? '', change, artifact),
     enabled: !!projectPath,
   })
+  const { data: changes } = useQuery<ChangeInfo[]>({
+    queryKey: ['openspec-changes', projectPath],
+    queryFn: () => listChanges(projectPath ?? ''),
+    enabled: !!projectPath,
+    staleTime: 60_000,
+  })
+  const changeInfo = changes?.find((candidate) => (
+    candidate.name === change || candidate.slug === change
+  ))
+  const docReferences = buildOpenSpecDocReferences(changeInfo, artifact)
 
   const editor = useEditor({
     extensions: createOpenSpecDocExtensions(projectPath ?? ''),
@@ -58,6 +72,10 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
       onPointerLeave={() => setSymbolPopover(null)}
     >
       <div className="text-xs text-neutral-600 mb-4 font-mono">{change}/{artifact}</div>
+      <OpenSpecDocReferenceNav
+        references={docReferences}
+        onOpen={(nextArtifact) => openDocTab(change, nextArtifact)}
+      />
       <EditorContent editor={editor} className={EDITOR_CLASSES} />
       {symbolPopover && (
         <div
@@ -69,6 +87,53 @@ export function OpenSpecDocPanel({ change, artifact }: OpenSpecDocPanelProps) {
           <SymbolMentionPopover hit={symbolPopover.hit} onOpenImpact={() => {}} />
         </div>
       )}
+    </div>
+  )
+}
+
+function OpenSpecDocReferenceNav({
+  references,
+  onOpen,
+}: {
+  references: OpenSpecDocReference[]
+  onOpen: (artifact: string) => void
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-1.5 border-b border-neutral-800/70 pb-3">
+      <span className="mr-1 text-xs text-neutral-600">Docs</span>
+      {references.map((reference) => {
+        const baseClass = [
+          'rounded border px-2 py-1 text-xs transition-colors',
+          reference.current
+            ? 'border-blue-500/50 bg-blue-500/10 text-blue-200'
+            : reference.present
+              ? 'border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800/60 hover:text-neutral-100'
+              : 'cursor-not-allowed border-neutral-800 text-neutral-600 opacity-60',
+        ].join(' ')
+
+        if (reference.current || !reference.present) {
+          return (
+            <span
+              key={reference.artifact}
+              aria-current={reference.current ? 'page' : undefined}
+              className={baseClass}
+            >
+              {reference.label}
+            </span>
+          )
+        }
+
+        return (
+          <button
+            key={reference.artifact}
+            type="button"
+            onClick={() => onOpen(reference.artifact)}
+            className={baseClass}
+          >
+            {reference.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
