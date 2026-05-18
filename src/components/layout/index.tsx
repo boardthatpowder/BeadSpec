@@ -136,36 +136,42 @@ export function AppLayout() {
 
 function TopBar() {
   return (
-    <div className="h-16 flex items-center px-4 gap-4 border-b border-neutral-800/80 bg-neutral-950 flex-shrink-0">
-      {/* Brand + project */}
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 14 14" fill="currentColor">
-              <circle cx="4" cy="4" r="2" />
-              <circle cx="10" cy="4" r="2" />
-              <circle cx="4" cy="10" r="2" />
-              <circle cx="10" cy="10" r="2" />
-            </svg>
+    <div className="flex-shrink-0 border-b border-neutral-800/80 bg-neutral-950">
+      <div className="flex min-h-12 items-center gap-3 px-4 py-2">
+        {/* Brand + project */}
+        <div className="flex min-w-0 items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 14 14" fill="currentColor">
+                <circle cx="4" cy="4" r="2" />
+                <circle cx="10" cy="4" r="2" />
+                <circle cx="4" cy="10" r="2" />
+                <circle cx="10" cy="10" r="2" />
+              </svg>
+            </div>
+            <span className="text-sm font-semibold text-white tracking-tight">BeadSpec</span>
           </div>
-          <span className="text-sm font-semibold text-white tracking-tight">BeadSpec</span>
+          <div className="w-px h-5 bg-neutral-800" />
+          <ProjectSwitcher />
         </div>
-        <div className="w-px h-5 bg-neutral-800" />
-        <ProjectSwitcher />
-      </div>
 
-      {/* KpiBar — fills middle */}
-      <div className="flex-1 flex justify-center">
-        <KpiBar />
-      </div>
+        {/* KpiBar — fills middle */}
+        <div className="min-w-0 flex-1">
+          <KpiBar />
+        </div>
 
-      {/* View switcher + human queue chip + refresh + settings */}
-      <ViewSwitcher />
-      <BdHumanQueueChip />
-      <GitnexusBadge />
-      <RefreshButton />
-      <HelpButton />
-      <SettingsButton />
+        {/* Human queue chip + refresh + settings */}
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <BdHumanQueueChip />
+          <GitnexusBadge />
+          <RefreshButton />
+          <HelpButton />
+          <SettingsButton />
+        </div>
+      </div>
+      <div className="border-t border-neutral-900 px-4 py-1.5">
+        <ViewSwitcher />
+      </div>
     </div>
   )
 }

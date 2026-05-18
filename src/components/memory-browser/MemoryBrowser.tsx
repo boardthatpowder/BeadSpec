@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
@@ -12,6 +12,9 @@ export function MemoryBrowser() {
   const [namespace, setNamespace] = useState(state.memoryNamespace ?? '')
   const [selected, setSelected] = useState<MemoryEntry | null>(null)
   const [storeOpen, setStoreOpen] = useState(false)
+  useEffect(() => {
+    setNamespace(state.memoryNamespace ?? '')
+  }, [state.memoryNamespace])
   const query = useQuery({
     queryKey: ['ruflo-memory', 'list', namespace],
     queryFn: () => rufloMemoryList(namespace || undefined, 500),

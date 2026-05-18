@@ -4,10 +4,9 @@ import { useFeatureFlag } from '../../contexts/SettingsContext'
 import { Tooltip } from '../ui/Tooltip'
 import { useActiveProject } from '../../hooks/useProject'
 import { useRufloAvailable } from '../memory-browser/useRufloAvailable'
+import { type TopLevelView, viewSelectionState } from './viewSelection'
 
-type View = 'all' | 'focus' | 'ready' | 'health' | 'changes' | 'activity' | 'processes' | 'memory'
-
-const ALL_VIEWS: { id: View; label: string; description: string; feature?: 'openspec' | 'ruflo' }[] = [
+const ALL_VIEWS: { id: TopLevelView; label: string; description: string; feature?: 'openspec' | 'ruflo' }[] = [
   { id: 'all',     label: 'All',     description: 'All tasks across the project' },
   { id: 'focus',   label: 'Focus',   description: 'Tasks assigned to you' },
   { id: 'ready',   label: 'Ready',   description: 'Tasks with no blockers' },
@@ -23,7 +22,7 @@ export function ViewSwitcher() {
   const project = useActiveProject()
   const openspecEnabled = useFeatureFlag('openspec')
   const ruflo = useRufloAvailable()
-  const activeView = (state.view ?? 'all') as View
+  const activeView = (state.view ?? 'all') as TopLevelView
 
   const views = ALL_VIEWS.filter(v => {
     if (!project && (v.id === 'activity' || v.id === 'processes' || v.id === 'memory')) return false
@@ -39,13 +38,14 @@ export function ViewSwitcher() {
   }, [openspecEnabled, ruflo.available, activeView, setState])
 
   return (
-    <div className="flex items-center gap-0.5 bg-neutral-800/60 rounded-lg p-0.5">
+    <nav aria-label="Main views" className="min-w-0 overflow-x-auto">
+      <div className="flex w-max items-center gap-1 rounded-lg bg-neutral-900/70 p-0.5">
       {views.map(v => (
         <Tooltip key={v.id} label={v.label} description={v.description}>
           <button
-            onClick={() => setState({ view: v.id })}
+            onClick={() => setState(viewSelectionState(v.id))}
             className={[
-              'px-2.5 py-1 text-xs rounded-md transition-colors font-medium',
+              'whitespace-nowrap px-2.5 py-1 text-xs rounded-md transition-colors font-medium',
               activeView === v.id
                 ? 'bg-neutral-700 text-neutral-100'
                 : 'text-neutral-500 hover:text-neutral-300',
@@ -55,6 +55,7 @@ export function ViewSwitcher() {
           </button>
         </Tooltip>
       ))}
-    </div>
+      </div>
+    </nav>
   )
 }
