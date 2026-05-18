@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::time;
 
 use super::pool::DoltPool;
+use crate::events::activity::{emit_event, ActivityEvent};
 
 /// Emitted when specific tasks change. Payload: list of changed task IDs.
 #[derive(Clone, serde::Serialize)]
@@ -72,16 +73,32 @@ impl DoltPoller {
                                             },
                                         )
                                         .ok();
+                                        emit_workflow_event(
+                                            &app,
+                                            "bd.update",
+                                            "bd",
+                                            "Beads task list changed",
+                                            None,
+                                        );
                                     }
                                     Ok(ids) => {
                                         app.emit(
                                             "tasks_changed",
                                             TasksChangedPayload {
                                                 project: project.clone(),
-                                                task_ids: ids,
+                                                task_ids: ids.clone(),
                                             },
                                         )
                                         .ok();
+                                        for id in ids {
+                                            emit_workflow_event(
+                                                &app,
+                                                "bd.update",
+                                                "bd",
+                                                &format!("Issue {id} changed"),
+                                                Some(id),
+                                            );
+                                        }
                                     }
                                     Err(_) => {
                                         // On diff error, emit full refresh
@@ -92,6 +109,13 @@ impl DoltPoller {
                                             },
                                         )
                                         .ok();
+                                        emit_workflow_event(
+                                            &app,
+                                            "bd.update",
+                                            "bd",
+                                            "Beads task list changed",
+                                            None,
+                                        );
                                     }
                                 }
                                 last_hash = Some(hash);
@@ -108,6 +132,28 @@ impl DoltPoller {
 
         PollHandle { running, paused }
     }
+}
+
+fn emit_workflow_event(
+    app: &AppHandle,
+    kind: &str,
+    source: &str,
+    summary: &str,
+    correlation_id: Option<String>,
+) {
+    let ts = sqlx::types::chrono::Utc::now().to_rfc3339();
+    emit_event(
+        app,
+        ActivityEvent {
+            id: format!("{kind}:{summary}:{ts}"),
+            ts,
+            kind: kind.to_string(),
+            source: source.to_string(),
+            summary: summary.to_string(),
+            detail: serde_json::json!({}).to_string(),
+            correlation_id,
+        },
+    );
 }
 
 pub struct PollHandle {

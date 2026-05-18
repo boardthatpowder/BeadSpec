@@ -13,11 +13,15 @@ import { usePendingEdits } from '../../hooks/usePendingEdits'
 import { SlashMenu } from './SlashMenu'
 import { TaskPickerModal } from './TaskPickerModal'
 import { EDITOR_CLASSES } from '../shared/proseMirrorClasses'
+import { SymbolMentionMark } from './SymbolMentionMark'
+import { SymbolMentionPopover } from './SymbolMentionPopover'
+import type { SymbolHit } from '../../bindings'
 
 interface Props {
   taskId: string
   project: string
   initialContent: string | null
+  onOpenImpact?: (symbol: string) => void
 }
 
 // tiptap-markdown doesn't augment Tiptap v3's Storage type — cast required.
@@ -39,7 +43,7 @@ function createSlashDetector(onSlash: () => void) {
   })
 }
 
-export function DescriptionEditor({ taskId, project, initialContent }: Props) {
+export function DescriptionEditor({ taskId, project, initialContent, onOpenImpact }: Props) {
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(initialContent ?? '')
   const savedRef = useRef(saved)
@@ -47,6 +51,7 @@ export function DescriptionEditor({ taskId, project, initialContent }: Props) {
   const [isDirty, setIsDirty] = useState(false)
   const [slashOpen, setSlashOpen] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
+  const [symbolPopover, setSymbolPopover] = useState<{ hit: SymbolHit; x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const queryClient = useQueryClient()
@@ -62,6 +67,10 @@ export function DescriptionEditor({ taskId, project, initialContent }: Props) {
       Markdown.configure({ html: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      SymbolMentionMark.configure({
+        projectPath: project,
+        lookupSymbols: names => unwrap(commands.lookupSymbols(project, names)),
+      }),
       createSlashDetector(() => {
         // Small delay so the '/' character is inserted before we open the menu
         setTimeout(() => setSlashOpen(true), 0)
@@ -96,7 +105,7 @@ export function DescriptionEditor({ taskId, project, initialContent }: Props) {
       setIsDirty(dirty)
       setHasPendingEdits(dirty)
     },
-  }, [editing, taskId])
+  }, [editing, taskId, project])
 
   const handleSave = useCallback(async () => {
     if (!editor) return
@@ -164,6 +173,21 @@ export function DescriptionEditor({ taskId, project, initialContent }: Props) {
     }
   }, [editor])
 
+  const handlePointerEnter = useCallback(async (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    const mention = target.closest<HTMLElement>('.symbol-mention')
+    const symbol = mention?.dataset.symbol
+    if (!symbol) return
+    try {
+      const [hit] = await unwrap(commands.lookupSymbols(project, [symbol]))
+      if (!hit) return
+      const rect = mention.getBoundingClientRect()
+      setSymbolPopover({ hit, x: rect.left, y: rect.bottom + 6 })
+    } catch {
+      setSymbolPopover(null)
+    }
+  }, [project])
+
   const ringClass = editing && isDirty
     ? 'ring-amber-500/30 ring-1'
     : editing
@@ -175,6 +199,8 @@ export function DescriptionEditor({ taskId, project, initialContent }: Props) {
       ref={containerRef}
       onClick={() => !editing && setEditing(true)}
       onKeyDown={handleKeyDown}
+      onPointerOver={handlePointerEnter}
+      onPointerLeave={() => setSymbolPopover(null)}
       className={[
         'min-h-16 rounded-lg p-3 transition-colors cursor-text relative',
         editing
@@ -210,6 +236,22 @@ export function DescriptionEditor({ taskId, project, initialContent }: Props) {
             setShowTaskPicker(false)
           }}
         />
+      )}
+      {symbolPopover && (
+        <div
+          className="fixed z-50"
+          style={{ left: symbolPopover.x, top: symbolPopover.y }}
+          onPointerEnter={() => setSymbolPopover(symbolPopover)}
+          onPointerLeave={() => setSymbolPopover(null)}
+        >
+          <SymbolMentionPopover
+            hit={symbolPopover.hit}
+            onOpenImpact={(symbol) => {
+              onOpenImpact?.(symbol)
+              setSymbolPopover(null)
+            }}
+          />
+        </div>
       )}
     </div>
   )

@@ -26,6 +26,9 @@ export function KpiBar() {
   // Use totalCount from server response when available; fall back to local array length
   const total = totalCount ?? filteredTasks.length
   const activeStatusList: string[] = Array.isArray(activeFilters.status) ? activeFilters.status : []
+  const activeOpenSpecList: string[] = Array.isArray(activeFilters.openspec) ? activeFilters.openspec : []
+  const pausedCount = allTasks.filter(t => t.labels.includes('openspec:paused')).length
+  const pausedActive = activeOpenSpecList.includes('paused')
 
   const toggleStatus = (status: string) => {
     const raw = activeFilters.status
@@ -36,6 +39,16 @@ export function KpiBar() {
     const updated = { ...activeFilters }
     if (next.length) updated.status = next
     else delete updated.status
+    setState({ filters: updated })
+  }
+
+  const togglePaused = () => {
+    const next = pausedActive
+      ? activeOpenSpecList.filter(v => v !== 'paused')
+      : [...activeOpenSpecList, 'paused']
+    const updated = { ...activeFilters }
+    if (next.length) updated.openspec = next
+    else delete updated.openspec
     setState({ filters: updated })
   }
 
@@ -79,6 +92,20 @@ export function KpiBar() {
           </button>
         )
       })}
+
+      {(pausedCount > 0 || pausedActive) && (
+        <button
+          onClick={togglePaused}
+          className={[
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
+            pausedActive ? 'bg-violet-950/60 ring-1 ring-violet-800/60' : 'hover:bg-neutral-800/40',
+          ].join(' ')}
+        >
+          <span className="text-xs text-violet-300">⏸</span>
+          <span className="text-sm font-semibold tabular-nums text-violet-300">{pausedCount}</span>
+          <span className="text-xs text-violet-400/80">Paused</span>
+        </button>
+      )}
     </div>
   )
 }

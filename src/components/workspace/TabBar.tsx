@@ -105,6 +105,9 @@ function getTabLabel(taskId: string, tasks: { taskId: string; title: string }[])
       return `${change}/${basename}`
     }
   }
+  if (taskId.startsWith('epic:')) {
+    return `${taskId.slice(5)} dashboard`
+  }
   return tasks.find((t) => t.taskId === taskId)?.title ?? taskId
 }
 

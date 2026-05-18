@@ -6,10 +6,15 @@
 // Discriminated tab identifier — task tabs or OpenSpec doc tabs.
 export type TaskTab = { kind: 'task'; id: string }
 export type DocTab  = { kind: 'doc';  id: string; change: string; artifact: string }
-export type TabId   = TaskTab | DocTab
+export type EpicTab = { kind: 'epic'; id: string; change: string; epicId: string }
+export type TabId   = TaskTab | DocTab | EpicTab
 
 export function docTabId(change: string, artifact: string): string {
   return `doc:${change}:${artifact}`
+}
+
+export function epicTabId(change: string): string {
+  return `epic:${change}`
 }
 
 export type LeafPane = {

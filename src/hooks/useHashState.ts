@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 
 export interface AppHashState {
-  view?: 'all' | 'focus' | 'ready' | 'health' | 'changes'
+  view?: 'all' | 'focus' | 'ready' | 'health' | 'changes' | 'activity' | 'processes' | 'memory'
   taskId?: string
+  processId?: string
+  activityKinds?: string
+  activityRange?: 'hour' | 'today' | 'week'
+  memoryNamespace?: string
+  impactSymbol?: string
   filters?: Record<string, string[] | string>  // e.g. { branch: ['main', 'fix'], search: 'foo' }
   groupBy?: string | null   // serialized GroupConfig, e.g. "field:status", "label:openspec", null
-  healthTab?: 'checks' | 'formulas'  // sub-tab within health view
+  healthTab?: 'checks' | 'formulas' | 'sessions' | 'reviews'  // sub-tab within health view
   workspaceScope?: 'off'  // omit from hash when 'on' (default); include as 'off' when disabled
 }
 

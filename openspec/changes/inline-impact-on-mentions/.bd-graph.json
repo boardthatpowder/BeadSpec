@@ -1,0 +1,371 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: inline-impact-on-mentions",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "Execution tracker for openspec/changes/inline-impact-on-mentions. Inline symbol decoration in DescriptionEditor: backtick/CamelCase/snake_case detection → Tiptap DecorationSet → hover popover with risk badge and callers.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "local_key": "epic"}
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Create gitnexus_symbols.rs with RiskLevel, CallerRef, SymbolHit types",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §1.1. Create `src-tauri/src/commands/gitnexus_symbols.rs` with types `RiskLevel` (enum: Low, Medium, High, Critical), `CallerRef { name: String, qualified_path: String }`, and `SymbolHit { name: String, qualified_path: String, kind: String, one_line_description: String, risk_level: RiskLevel, top_upstream_callers: Vec<CallerRef> }` — all deriving `serde::Serialize`, `serde::Deserialize`, and `specta::Type`.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "1.1", "local_key": "task-1-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Implement lookup_symbols command (shell to npx gitnexus)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §1.2. Implement `lookup_symbols(project_path: String, names: Vec<String>, registry: State<ProjectRegistry>) -> Result<Vec<Option<SymbolHit>>, String>` that, for each name, shells out to `npx gitnexus context --json <name>` (or delegates to the client module introduced by `gitnexus-impact-panel` if already landed) and calls `npx gitnexus impact --direction upstream --limit 3 --json <name>` for callers. Parse errors and missing names map to `None` in the output vec.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "1.2", "local_key": "task-1-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Register lookup_symbols in lib.rs (generate_handler + collect_commands)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §1.3. Register `lookup_symbols` in `src-tauri/src/lib.rs` in both `tauri::generate_handler!` and `tauri_specta::collect_commands!` alongside the other commands.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "1.3", "local_key": "task-1-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-1-4",
+      "title": "1.4: Add SYMBOL_STOPLIST constant in gitnexus_symbols.rs",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §1.4. Add a `SYMBOL_STOPLIST` constant in `gitnexus_symbols.rs` (a `&[&str]` of common tokens to never decorate: `useEffect`, `useState`, `onClick`, `className`, `undefined`, `boolean`, `string`, `number`, `return`, `import`, `export`, `default`, `const`, `async`, `await`, etc.) with a comment noting the matching frontend stoplist in `SymbolMentionMark.ts`.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "1.4", "local_key": "task-1-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Unit test — lookup_symbols with empty names returns empty Vec",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §2.1. Unit test: `lookup_symbols` with an empty `names` vec returns an empty `Vec` without shelling out.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "2.1", "local_key": "task-2-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Unit test — npx gitnexus not on PATH yields all None, no panic",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §2.2. Unit test: when `npx gitnexus` is not on PATH (or exits non-zero), all entries in the result are `None` and no panic occurs.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "2.2", "local_key": "task-2-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Integration test — fixture-flag mock JSON for Some/None result shape",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §2.3. Integration test (gated behind a fixture flag): provide a mock JSON response for two names — one with a real `SymbolHit` shape, one with an empty response — and assert the returned vec has `Some(SymbolHit)` and `None` respectively.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "2.3", "local_key": "task-2-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Regenerate bindings.ts and verify SymbolHit/CallerRef/RiskLevel/lookupSymbols present",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §3.1. Regenerate `src/bindings.ts` (run the existing `specta` codegen step) and verify `SymbolHit`, `CallerRef`, `RiskLevel`, and `lookupSymbols` appear in the output.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "3.1", "local_key": "task-3-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Add lookupSymbols wrapper in ipc.ts",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §3.2. Add `lookupSymbols(projectPath: string, names: string[]): Promise<(SymbolHit | null)[]>` wrapper in `src/ipc.ts`, matching the style of existing IPC wrappers in that file.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "3.2", "local_key": "task-3-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Create SymbolMentionMark.ts — Tiptap Extension with ProseMirror plugin skeleton",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §4.1. Create `src/components/task-detail/SymbolMentionMark.ts` exporting a Tiptap `Extension` that registers a ProseMirror plugin with a `DecorationSet`. The plugin state is `{ decorations: DecorationSet, pending: Set<string> }`.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "4.1", "local_key": "task-4-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Implement extractCandidateSymbols (backtick / CamelCase / snake_case + stoplist)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §4.2. Implement the pure function `extractCandidateSymbols(text: string): string[]` in the same file (also exported for unit tests). It applies the three detection passes in priority order — backtick-fenced, CamelCase (>=3 chars, at least one lowercase->uppercase boundary), snake_case (>=1 underscore, total length > 4) — and filters the built-in stoplist.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "4.2", "local_key": "task-4-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-4",
+      "title": "4.4: Implement in-memory LRU (size 200, 5-min TTL) keyed by projectPath::name",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §4.4. Implement an in-memory LRU (size 200) keyed by `${projectPath}::${name}`, with a 5-minute TTL. Use a simple doubly-linked-list + Map implementation or a lightweight existing utility — no external dependency required.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "4.4", "local_key": "task-4-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-3",
+      "title": "4.3: Wire debounced async resolver (300 ms) — lookupSymbols → LRU → DecorationSet rebuild",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §4.3. Wire a debounced async resolver (300 ms) that calls `lookupSymbols(projectPath, candidates)`, updates the LRU cache, and rebuilds the `DecorationSet`. Each resolved match creates an `Decoration.inline` with a CSS class `symbol-mention` and a `data-symbol-path` attribute.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "4.3", "local_key": "task-4-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-4-4", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Create SymbolMentionPopover.tsx — risk badge, callers, CTA",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §5.2. Create `src/components/task-detail/SymbolMentionPopover.tsx` — a React component that accepts a `SymbolHit` and renders: qualified path (monospace small), 1-line description (body-small), risk badge (chip using `LABEL_CHIP_COLORS` palette), up to 3 upstream callers (tight list), and \"Open full impact →\" CTA (small text link).",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "5.2", "local_key": "task-5-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Mount SymbolMentionMark in DescriptionEditor.tsx extensions array",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §5.1. In `DescriptionEditor.tsx`, load `SymbolMentionMark` in the Tiptap `extensions` array, passing `projectPath` (from workspace context), the shared cache singleton, and an `onOpenImpact(qualifiedPath: string)` callback that calls the workspace tab state setter with `{ view: 'all', taskId, innerTab: 'impact', impactSymbol: qualifiedPath }`.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "5.1", "local_key": "task-5-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Mount Radix Popover triggered by pointerenter/focusin on .symbol-mention spans",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §5.3. Mount a Radix `Popover.Root` triggered by `pointerenter` / `focusin` on `.symbol-mention` spans in the editor DOM (delegated event handler on the editor container). Intercept `onOpenAutoFocus` to keep focus in the editor. Close on outside-click and Escape.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "5.3", "local_key": "task-5-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"},
+        {"key": "task-5-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-4",
+      "title": "5.4: Regression test in DescriptionEditor.test.ts — markdown roundtrip with SymbolMentionMark",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §5.4. Add a regression test in `DescriptionEditor.test.ts`: load a description containing potential symbol tokens (e.g. `lookup_symbols`, `DescriptionEditor`), mount the editor with the `SymbolMentionMark` extension loaded, and assert that `editor.storage.markdown.getMarkdown()` equals the input string byte-for-byte.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "5.4", "local_key": "task-5-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Unit tests for extractCandidateSymbols (all detection passes + stoplist)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §6.1. Unit tests for `extractCandidateSymbols` covering: backtick-fenced token is returned first, CamelCase boundary detection (`FooBar` matches, `FOO` and `bar` do not), snake_case length gate (`ab_c` excluded, `do_thing` included), stoplist exclusion (`useEffect` returns nothing), multiple candidates on one line all returned.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "6.1", "local_key": "task-6-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Component test for SymbolMentionPopover (zero callers + three callers)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §6.2. Component test for `SymbolMentionPopover`: render with zero callers and assert no callers section visible; render with three callers and assert all three names appear.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "6.2", "local_key": "task-6-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-2", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-3",
+      "title": "6.3: Integration test — mock lookupSymbols, assert .symbol-mention spans + popover",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §6.3. Integration test (Vitest + Testing Library): mock `lookupSymbols` to return one `SymbolHit` for `lookup_symbols` and `null` for `RandomNonExistent`. Load a description containing both tokens. Assert: `.symbol-mention` spans exist only for the matched token; simulating hover opens the popover with the expected qualified path; the CTA button is present in the popover DOM.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "6.3", "local_key": "task-6-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-1",
+      "title": "7.1: cargo test -p beadspec_lib gitnexus_symbols::tests passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.1. `cargo test -p beadspec_lib gitnexus_symbols::tests` passes.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.1", "local_key": "task-7-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"},
+        {"key": "task-2-2", "type": "blocks"},
+        {"key": "task-2-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-2",
+      "title": "7.2: bun tsc --noEmit passes after bindings regen",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.2. `bun tsc --noEmit` passes after bindings regen.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.2", "local_key": "task-7-2"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-3",
+      "title": "7.3: bun test passes (all frontend unit + integration tests)",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.3. `bun test` passes (all frontend unit + integration tests).",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.3", "local_key": "task-7-3"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-6-1", "type": "blocks"},
+        {"key": "task-6-2", "type": "blocks"},
+        {"key": "task-6-3", "type": "blocks"},
+        {"key": "task-5-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-4",
+      "title": "7.4: Manual — real symbol decorates, popover shows risk badge + callers + CTA",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.4. Manual: open a task whose description mentions a real symbol from the BeadSpec codebase; verify dotted underline appears, popover opens on hover with qualified path + risk badge + callers + CTA, and CTA switches to the Impact tab (or no-ops if `gitnexus-impact-panel` has not yet landed).",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.4", "local_key": "task-7-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-5",
+      "title": "7.5: Manual — useEffect and plain words produce zero decorations",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.5. Manual: open a task description containing only `useEffect` and plain English words; confirm zero decorations are applied.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.5", "local_key": "task-7-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-6",
+      "title": "7.6: Manual — gitnexus off PATH: editor loads normally, no underlines, no UI error",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.6. Manual: temporarily rename `gitnexus` off PATH; confirm the editor loads normally, no underlines appear, no UI error is shown.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.6", "local_key": "task-7-6"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-7-7",
+      "title": "7.7: openspec validate inline-impact-on-mentions passes",
+      "type": "task",
+      "priority": 2,
+      "labels": ["openspec:inline-impact-on-mentions"],
+      "description": "openspec/changes/inline-impact-on-mentions/tasks.md §7.7. `openspec validate inline-impact-on-mentions` passes.",
+      "metadata": {"openspec_change": "inline-impact-on-mentions", "task_ref": "7.7", "local_key": "task-7-7"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-7-1", "type": "blocks"},
+        {"key": "task-7-2", "type": "blocks"},
+        {"key": "task-7-3", "type": "blocks"},
+        {"key": "task-7-4", "type": "blocks"},
+        {"key": "task-7-5", "type": "blocks"},
+        {"key": "task-7-6", "type": "blocks"}
+      ]
+    }
+  ]
+}

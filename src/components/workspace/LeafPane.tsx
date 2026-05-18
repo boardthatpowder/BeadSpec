@@ -4,6 +4,7 @@ import { useActiveProject } from '../../hooks/useProject'
 import { TabBar } from './TabBar'
 import { TaskDetailPanel } from '../task-detail/TaskDetailPanel'
 import { OpenSpecDocPanel } from './OpenSpecDocPanel'
+import { EpicDashboard } from '../epic-dashboard/EpicDashboard'
 import { useFeatureFlag } from '../../contexts/SettingsContext'
 import type { LeafPane as LeafPaneType, TabId } from '../../utils/paneTree'
 import { useDroppable } from '@dnd-kit/core'
@@ -39,8 +40,8 @@ export function LeafPane({ node, isRoot = false }: LeafPaneProps) {
         <TabBar paneId={node.id} tasks={tabMeta} />
       )}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {node.activeTabId ? (
-          <ActiveTab tabId={node.activeTabId} paneId={node.id} />
+        {node.activeTabId && node.tabs.some((t) => t.id === node.activeTabId) ? (
+          <ActiveTab tab={node.tabs.find((t) => t.id === node.activeTabId)!} paneId={node.id} />
         ) : (
           <EmptyPlaceholder paneId={node.id} isRoot={isRoot} />
         )}
@@ -57,11 +58,13 @@ function parseDocTabId(id: string): { change: string; artifact: string } | null 
   return { change: rest.slice(0, colonIdx), artifact: rest.slice(colonIdx + 1) }
 }
 
-function ActiveTab({ tabId, paneId }: { tabId: string; paneId: string }) {
+function ActiveTab({ tab, paneId }: { tab: TabId; paneId: string }) {
   const openspecEnabled = useFeatureFlag('openspec')
-  const doc = parseDocTabId(tabId)
+  if (tab.kind === 'doc') return openspecEnabled ? <OpenSpecDocPanel change={tab.change} artifact={tab.artifact} /> : null
+  if (tab.kind === 'epic') return openspecEnabled ? <EpicDashboard change={tab.change} epicId={tab.epicId} /> : null
+  const doc = parseDocTabId(tab.id)
   if (doc) return openspecEnabled ? <OpenSpecDocPanel change={doc.change} artifact={doc.artifact} /> : null
-  return <TaskDetailPanel taskId={tabId} paneId={paneId} />
+  return <TaskDetailPanel taskId={tab.id} paneId={paneId} />
 }
 
 type EdgeSide = 'left' | 'right' | 'top' | 'bottom'
@@ -124,6 +127,8 @@ function useTabTitles(tabs: TabId[], project: string | null): { taskId: string; 
         if (cached?.title) title = cached.title
       } else if (tab.kind === 'doc') {
         title = `${tab.change}/${tab.artifact.split('/').pop() ?? tab.artifact}`
+      } else if (tab.kind === 'epic') {
+        title = `${tab.change} · dashboard`
       }
     } catch { /* ignore */ }
     return { taskId: tabId, title }

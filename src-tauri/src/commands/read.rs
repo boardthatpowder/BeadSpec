@@ -3,7 +3,7 @@ use sqlx::Row;
 use std::sync::Arc;
 use tauri::State;
 
-fn decode_datetime(row: &sqlx::mysql::MySqlRow, col: &str) -> String {
+pub(crate) fn decode_datetime(row: &sqlx::mysql::MySqlRow, col: &str) -> String {
     row.try_get::<sqlx::types::chrono::NaiveDateTime, _>(col)
         .map(|dt| dt.and_utc().to_rfc3339())
         .unwrap_or_default()

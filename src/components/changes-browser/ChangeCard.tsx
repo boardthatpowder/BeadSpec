@@ -74,7 +74,8 @@ interface ArtifactLinkProps {
 function ArtifactLink({ label, present, change, artifact }: ArtifactLinkProps) {
   const openDocTab = useWorkspaceStore((s) => s.openDocTab)
   const { setState } = useAppState()
-  function handleClick() {
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation()
     if (!present) return
     openDocTab(change, artifact)
     setState({ view: undefined })
@@ -101,6 +102,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
   const project = useActiveProject()
   const { setState } = useAppState()
   const openDocTab = useWorkspaceStore((s) => s.openDocTab)
+  const openEpicTab = useWorkspaceStore((s) => s.openEpicTab)
   const [progress, setProgress] = useState<ChangeProgress | null>(null)
   const [beadsProgress, setBeadsProgress] = useState<ChangeBeadsProgress | null>(null)
   const [deps, setDeps] = useState<ChangeDependencies | null>(null)
@@ -170,8 +172,13 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
 
   return (
     <div
+      role={importedEpicId ? 'button' : undefined}
+      tabIndex={importedEpicId ? 0 : undefined}
+      aria-label={importedEpicId ? `Open ${change.name} dashboard` : undefined}
+      onClick={() => { if (importedEpicId) openEpicTab(change.name, importedEpicId) }}
       className={[
         'border rounded-xl px-4 py-3 flex flex-col gap-2.5 transition-colors',
+        importedEpicId ? 'cursor-pointer' : '',
         change.is_archived
           ? 'border-neutral-800 bg-neutral-900/40 opacity-70'
           : 'border-neutral-800 bg-neutral-900/70 hover:border-neutral-700',
@@ -188,7 +195,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
           </span>
           {importedEpicId ? (
             <button
-              onClick={() => setState({ view: 'all', taskId: importedEpicId })}
+              onClick={(e) => { e.stopPropagation(); setState({ view: 'all', taskId: importedEpicId }) }}
               className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-400 border border-blue-900/50 flex-shrink-0 hover:bg-blue-950/70 transition-colors"
             >
               imported → {importedEpicId}
@@ -240,7 +247,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
           {change.specs?.map((specId) => (
             <button
               key={specId}
-              onClick={() => { openDocTab(change.name, `specs/${specId}/spec.md`); setState({ view: undefined }) }}
+              onClick={(e) => { e.stopPropagation(); openDocTab(change.name, `specs/${specId}/spec.md`); setState({ view: undefined }) }}
               className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 hover:bg-purple-800/40 transition-colors"
             >
               spec: {specId}
@@ -250,7 +257,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
 
         {!isReadOnly && !importedEpicId && (
           <button
-            onClick={() => setShowImportModal(true)}
+            onClick={(e) => { e.stopPropagation(); setShowImportModal(true) }}
             className="px-2.5 py-1 text-xs font-medium text-neutral-300 border border-neutral-700 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors whitespace-nowrap"
           >
             Import to beads

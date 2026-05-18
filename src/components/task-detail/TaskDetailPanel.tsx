@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { commands, unwrap } from "../../ipc";
 import type { TaskDetail, GitRefs } from "../../bindings";
@@ -21,9 +22,15 @@ import { RufloMemoryPanel } from "./RufloMemoryPanel";
 import { GitHistoryPanel } from "./GitHistoryPanel";
 import { OpenSpecPanel } from "./OpenSpecPanel";
 import { HumanQueueToggle } from "./HumanQueueToggle";
+import { ImpactPanel } from "./ImpactPanel";
+import { MismatchChips } from "./MismatchChips";
+import { ReviewsSection } from "../reviews/ReviewsSection";
 import { useFeatureFlag } from "../../contexts/SettingsContext";
+import { useAppState } from "../../contexts/HashStateContext";
+import { useTasks } from "../../hooks/useTasks";
+import { findScopeChangeChild } from "../../lib/findScopeChangeChild";
 
-type TabId = "details" | "dependencies" | "activity";
+type TabId = "details" | "dependencies" | "activity" | "impact";
 
 interface TaskDetailPanelProps {
   taskId: string;
@@ -33,6 +40,8 @@ interface TaskDetailPanelProps {
 export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
   const project = useActiveProject();
   const { innerSubTab, setInnerSubTab } = useWorkspaceStore();
+  const { state } = useAppState();
+  const { allTasks } = useTasks();
 
   // Per-tab inner sub-tab state (task 6.2): keyed by paneId:taskId.
   const activeTab: TabId = (innerSubTab[`${paneId}:${taskId}`] ??
@@ -40,6 +49,12 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
   function setActiveTab(tab: TabId) {
     setInnerSubTab(paneId, taskId, tab);
   }
+
+  useEffect(() => {
+    if (state.impactSymbol && activeTab !== "impact") {
+      setInnerSubTab(paneId, taskId, "impact");
+    }
+  }, [activeTab, paneId, setInnerSubTab, state.impactSymbol, taskId]);
 
   // Register Backspace / Alt+Left shortcuts for dep-graph back-navigation
   useBackNavigation();
@@ -98,7 +113,13 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
       label: `Dependencies (${task.dependencies.length + task.dependents.length})`,
     },
     { id: "activity", label: "Activity" },
+    { id: "impact", label: "Impact" },
   ];
+  const scopeChangeChild = findScopeChangeChild(
+    task,
+    allTasks,
+    [...task.dependencies, ...task.dependents],
+  );
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -142,6 +163,8 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
             </span>
           </div>
         </div>
+
+        <MismatchChips labels={task.labels ?? []} />
 
         {/* Compact metadata strip: status · priority · assignee · type */}
         <div className="flex items-center gap-1.5 flex-wrap mt-3">
@@ -199,6 +222,7 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
               project={project ?? ""}
               rufloAvailable={rufloAvailable}
               paneId={paneId}
+              scopeChangeChild={scopeChangeChild}
             />
           )}
           {activeTab === "dependencies" && (
@@ -215,11 +239,15 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
                 project={project ?? ""}
                 activeTab={activeTab}
               />
+              {rufloAvailable && <ReviewsSection project={project ?? ""} labels={task.labels ?? []} />}
               <GitHistoryPanel
                 gitRefs={gitRefsData}
                 isLoading={gitRefsLoading}
               />
             </div>
+          )}
+          {activeTab === "impact" && (
+            <ImpactPanel task={task} project={project ?? ""} paneId={paneId} />
           )}
         </ErrorBoundary>
       </div>
@@ -232,14 +260,18 @@ function DetailsTab({
   project,
   rufloAvailable,
   paneId,
+  scopeChangeChild,
 }: {
   task: TaskDetail;
   project: string;
   rufloAvailable: boolean;
   paneId: string;
+  scopeChangeChild: { id: string; title: string } | null;
 }) {
   const openspecEnabled = useFeatureFlag("openspec");
   const rufloEnabled = useFeatureFlag("ruflo");
+  const setInnerSubTab = useWorkspaceStore(s => s.setInnerSubTab);
+  const { setState } = useAppState();
 
   // Extract openspec:<change-name> label (case-insensitive prefix check)
   const openspecChangeName: string | null = (() => {
@@ -262,6 +294,10 @@ function DetailsTab({
           taskId={task.id}
           project={project}
           initialContent={task.description}
+          onOpenImpact={(symbol) => {
+            setInnerSubTab(paneId, task.id, "impact")
+            setState({ impactSymbol: symbol })
+          }}
         />
       </div>
 
@@ -283,6 +319,9 @@ function DetailsTab({
           projectRoot={project}
           taskTitle={task.title}
           taskStatus={task.status}
+          taskLabels={task.labels ?? []}
+          taskNotes={task.description}
+          scopeChangeChild={scopeChangeChild}
           paneId={paneId}
           taskId={task.id}
         />

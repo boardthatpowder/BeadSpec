@@ -2,6 +2,7 @@ pub mod bd;
 pub mod commands;
 pub mod db;
 pub mod env_fix;
+pub mod events;
 pub mod notifications;
 pub mod recovery_log;
 pub mod settings;
@@ -75,10 +76,25 @@ pub fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::external::bd_human_respond,
         commands::external::bd_human_dismiss,
         commands::external::ruflo_memory_search,
+        commands::ruflo_memory::ruflo_memory_list,
+        commands::ruflo_memory::ruflo_memory_store,
+        commands::ruflo_memory::ruflo_memory_delete,
         commands::external::ruflo_version_probe,
+        commands::ruflo_sessions::list_session_snapshots,
         commands::external::get_workspace_context,
         commands::external::get_git_refs_for_issue,
         commands::external::get_dolt_history_for_issue,
+        commands::gitnexus::run_gitnexus_impact,
+        commands::gitnexus_symbols::lookup_symbols,
+        commands::gitnexus_status::get_gitnexus_status,
+        commands::gitnexus_status::run_gitnexus_analyze,
+        commands::gitnexus_processes::list_gitnexus_processes,
+        commands::gitnexus_processes::get_gitnexus_process,
+        commands::gitnexus_processes::list_gitnexus_clusters,
+        commands::gitnexus_processes::find_issues_touching_process,
+        commands::gitnexus_processes::get_gitnexus_index_status,
+        commands::gitnexus_processes::trigger_gitnexus_reanalyze,
+        events::activity::list_recent_events,
         commands::openspec::list_changes,
         commands::openspec::read_change_artifact,
         commands::openspec::get_change_progress,
@@ -87,6 +103,12 @@ pub fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::openspec::run_openspec_validate,
         commands::openspec::import_change_to_beads,
         commands::openspec::reconcile_openspec_checkboxes,
+        commands::openspec_validate_history::record_openspec_validation,
+        commands::openspec_validate_history::list_openspec_validations,
+        commands::reviews::list_reviews,
+        commands::reviews::get_review,
+        commands::bd_mol::get_epic_ready_snapshot,
+        commands::bd_mol::claim_task,
         commands::app::get_shortcut_status,
         commands::app::register_quick_capture_shortcut,
         commands::app::validate_binary_path,
