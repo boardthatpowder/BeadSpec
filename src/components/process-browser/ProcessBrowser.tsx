@@ -17,7 +17,7 @@ import { Popover } from '../ui/Popover'
 import { TaskRowSkeleton } from '../ui/Skeleton'
 import { useToast } from '../ui/useToast'
 
-const iconButtonClass = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-[--color-border] bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-[--color-surface-hi] hover:text-[--color-fg] disabled:opacity-50'
+const iconButtonClass = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-(--color-border) bg-(--color-surface-hi) text-(--color-fg-muted) hover:bg-(--color-surface-hi) hover:text-(--color-fg) disabled:opacity-50'
 
 function messageFromError(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message
@@ -174,12 +174,12 @@ function ProcessList({
   })
 
   return (
-    <aside className="min-h-0 border-r border-[--color-border] bg-[--color-bg] flex flex-col">
-      <div className="space-y-2 border-b border-[--color-border] p-3">
+    <aside className="min-h-0 border-r border-(--color-border) bg-(--color-bg) flex flex-col">
+      <div className="space-y-2 border-b border-(--color-border) p-3">
         <label className="sr-only" htmlFor="process-search">Search processes</label>
-        <input id="process-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search processes" className="w-full rounded border border-[--color-border] bg-[--color-surface] px-3 py-2 text-sm outline-none focus:border-blue-700" />
+        <input id="process-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search processes" className="w-full rounded border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm outline-none focus:border-blue-700" />
         <label className="sr-only" htmlFor="process-cluster">Filter by cluster</label>
-        <select id="process-cluster" aria-label="Filter by cluster" value={cluster} onChange={e => setCluster(e.target.value)} className="w-full rounded border border-[--color-border] bg-[--color-surface] px-3 py-2 text-sm">
+        <select id="process-cluster" aria-label="Filter by cluster" value={cluster} onChange={e => setCluster(e.target.value)} className="w-full rounded border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm">
           <option value="">All clusters</option>
           {clusters.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -207,11 +207,11 @@ function ProcessList({
                   variant="ghost"
                   size="md"
                   onClick={() => onSelect(row.name)}
-                  className={`absolute left-0 right-0 h-11 justify-between rounded-none border-0 border-b border-[--color-border] px-3 text-left font-normal ${selected === row.name ? 'bg-blue-950/30 text-blue-200' : 'text-[--color-fg-muted] hover:bg-[--color-surface]/60'}`}
+                  className={`absolute left-0 right-0 h-11 justify-between rounded-none border-0 border-b border-(--color-border) px-3 text-left font-normal ${selected === row.name ? 'bg-blue-950/30 text-blue-200' : 'text-(--color-fg-muted) hover:bg-(--color-surface)/60'}`}
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
                   <span className="min-w-0 truncate text-sm">{row.name}</span>
-                  <span className="rounded bg-[--color-surface] px-1.5 py-0.5 text-[10px] text-[--color-fg-subtle]">{row.step_count}</span>
+                  <span className="rounded bg-(--color-surface) px-1.5 py-0.5 text-[10px] text-(--color-fg-subtle)">{row.step_count}</span>
                 </Button>
               )
             })}
@@ -239,7 +239,7 @@ function ProcessDetail({ project, name }: { project: string; name: string | null
   )
   if (detail.isLoading) return (
     <div className="flex min-h-48 items-center justify-center">
-      <Icon name="Loader2" size="lg" className="animate-spin text-[--color-fg-subtle]" />
+      <Icon name="Loader2" size="lg" className="animate-spin text-(--color-fg-subtle)" />
     </div>
   )
   if (detail.error || !detail.data) return (
@@ -273,10 +273,10 @@ function ProcessDetailBody({
   const step = focused != null ? detail.steps[focused] : null
   return (
     <main className="min-h-0 flex flex-col">
-      <div className="flex items-center justify-between border-b border-[--color-border] px-5 py-4">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-5 py-4">
         <div>
-          <div className="text-base font-semibold text-[--color-fg]">{detail.name}</div>
-          <div className="mt-1 text-xs text-[--color-fg-subtle]">{detail.cluster} · {detail.steps.length} steps</div>
+          <div className="text-base font-semibold text-(--color-fg)">{detail.name}</div>
+          <div className="mt-1 text-xs text-(--color-fg-subtle)">{detail.cluster} · {detail.steps.length} steps</div>
         </div>
         <div className="flex gap-2">
           <IssueMatchesPopover project={project} processName={detail.name} />
@@ -305,15 +305,15 @@ function ProcessDetailBody({
                 size="md"
                 aria-label={`step ${item.index + 1}: ${s.symbol} at ${s.file} line ${s.line}`}
                 onClick={() => setFocused(item.index)}
-                className={`absolute left-0 right-0 min-h-14 flex-col items-stretch gap-0 rounded-none border-0 border-b border-[--color-border] px-5 py-2 text-left font-normal ${focused === item.index ? 'bg-blue-950/20' : 'hover:bg-[--color-surface]/40'}`}
+                className={`absolute left-0 right-0 min-h-14 flex-col items-stretch gap-0 rounded-none border-0 border-b border-(--color-border) px-5 py-2 text-left font-normal ${focused === item.index ? 'bg-blue-950/20' : 'hover:bg-(--color-surface)/40'}`}
                 style={{ transform: `translateY(${item.start}px)` }}
               >
-                <div className="flex items-center gap-2 text-sm text-[--color-fg]">
-                  <span className="w-8 text-xs text-[--color-fg-subtle]">#{item.index + 1}</span>
+                <div className="flex items-center gap-2 text-sm text-(--color-fg)">
+                  <span className="w-8 text-xs text-(--color-fg-subtle)">#{item.index + 1}</span>
                   <span>{s.symbol}</span>
-                  <span className="font-mono text-xs text-[--color-fg-subtle]">{s.file}:{s.line}</span>
+                  <span className="font-mono text-xs text-(--color-fg-subtle)">{s.file}:{s.line}</span>
                 </div>
-                <div className="mt-1 truncate pl-10 font-mono text-xs text-[--color-fg-subtle]">{s.snippet ?? s.symbol}</div>
+                <div className="mt-1 truncate pl-10 font-mono text-xs text-(--color-fg-subtle)">{s.snippet ?? s.symbol}</div>
               </Button>
             )
           })}
@@ -339,10 +339,10 @@ function IssueMatchesPopover({ project, processName }: { project: string; proces
           <Icon name="Search" size="sm" />
         </IconButton>
       </Popover.Trigger>
-      <Popover.Content align="end" className="w-80 bg-[--color-bg] p-2">
+      <Popover.Content align="end" className="w-80 bg-(--color-bg) p-2">
         {query.isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Icon name="Loader2" size="md" className="animate-spin text-[--color-fg-subtle]" />
+            <Icon name="Loader2" size="md" className="animate-spin text-(--color-fg-subtle)" />
           </div>
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState
@@ -356,10 +356,10 @@ function IssueMatchesPopover({ project, processName }: { project: string; proces
             variant="ghost"
             size="xs"
             onClick={() => { setState({ view: 'all', taskId: match.id }); setOpen(false) }}
-            className="h-auto w-full justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-[--color-surface]"
+            className="h-auto w-full justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-(--color-surface)"
           >
-            <span className="truncate text-[--color-fg-muted]">{match.title}</span>
-            <span className="rounded bg-[--color-surface-hi] px-1.5 text-[--color-fg-muted]">{match.overlap_count}</span>
+            <span className="truncate text-(--color-fg-muted)">{match.title}</span>
+            <span className="rounded bg-(--color-surface-hi) px-1.5 text-(--color-fg-muted)">{match.overlap_count}</span>
           </Button>
         ))}
       </Popover.Content>

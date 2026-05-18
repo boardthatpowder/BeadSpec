@@ -39,7 +39,7 @@ export function SplitContainer({ node, renderChild }: SplitContainerProps) {
                 node.direction === 'horizontal'
                   ? 'w-1 hover:w-1.5 cursor-col-resize'
                   : 'h-1 hover:h-1.5 cursor-row-resize',
-                'bg-[--color-surface-hi] hover:bg-blue-600/50 transition-all shrink-0',
+                'bg-(--color-surface-hi) hover:bg-blue-600/50 transition-all shrink-0',
               ].join(' ')}
             />
           )}

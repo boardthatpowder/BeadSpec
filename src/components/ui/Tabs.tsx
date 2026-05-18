@@ -10,7 +10,7 @@ const List = forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn('flex items-center gap-3 border-b border-[--color-border]', className)}
+    className={cn('flex items-center gap-3 border-b border-(--color-border)', className)}
     {...props}
   />
 ))
@@ -23,9 +23,9 @@ const Trigger = forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'border-b-2 border-transparent px-1 pb-2 pt-1 text-sm text-[--color-fg-muted] transition-colors',
-      'data-[state=active]:border-[--color-accent] data-[state=active]:text-[--color-fg]',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-1 focus-visible:ring-offset-[--color-bg]',
+      'border-b-2 border-transparent px-1 pb-2 pt-1 text-sm text-(--color-fg-muted) transition-colors',
+      'data-[state=active]:border-(--color-accent) data-[state=active]:text-(--color-fg)',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) focus-visible:ring-offset-1 focus-visible:ring-offset-(--color-bg)',
       className,
     )}
     {...props}

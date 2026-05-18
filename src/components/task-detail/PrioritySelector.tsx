@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { commands, unwrap } from '../../ipc'
 import type { TaskDetail } from '../../bindings'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../ui/useToast'
-import { Tooltip } from '../ui/Tooltip'
+import { Popover } from '../ui/Popover'
 import { Button } from '../ui/Button'
+import { PriorityChip } from '../ui/PriorityChip'
 
 interface Props {
   task: TaskDetail
@@ -11,27 +13,27 @@ interface Props {
 }
 
 const PRIORITY_LABELS: Record<number, string> = {
-  1: 'Critical',
-  2: 'High',
-  3: 'Medium',
-  4: 'Low',
+  0: 'Critical',
+  1: 'High',
+  2: 'Medium',
+  3: 'Low',
+  4: 'Backlog',
 }
 
-const PRIORITIES = [1, 2, 3, 4] as const
+const PRIORITIES = [0, 1, 2, 3, 4] as const
 
 export function PrioritySelector({ task, project }: Props) {
+  const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
   const select = async (priority: number) => {
+    setOpen(false)
     if (priority === task.priority) return
-
     const previousData = queryClient.getQueryData(['task', project, task.id])
-    queryClient.setQueryData(['task', project, task.id], (old: any) => ({
-      ...old,
-      priority,
-    }))
-
+    queryClient.setQueryData(['task', project, task.id], (old: TaskDetail | undefined) =>
+      old ? { ...old, priority } : old,
+    )
     try {
       await unwrap(commands.updateTaskField(project, task.id, 'priority', String(priority)))
     } catch (err) {
@@ -41,27 +43,36 @@ export function PrioritySelector({ task, project }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-0.5 bg-[--color-surface-hi] rounded-full px-1 py-0.5">
-      {PRIORITIES.map(p => {
-        const active = p === task.priority
-        return (
-          <Tooltip key={p} label={PRIORITY_LABELS[p]}>
-            <Button
-              variant={active ? 'secondary' : 'ghost'}
-              size="xs"
-              onClick={() => select(p)}
-              className={[
-                'h-auto rounded-full px-2 py-0.5 text-xs',
-                active
-                  ? 'bg-neutral-600 text-[--color-fg]'
-                  : 'border-0 text-[--color-fg-subtle] hover:text-[--color-fg-muted]',
-              ].join(' ')}
-            >
-              P{p}
-            </Button>
-          </Tooltip>
-        )
-      })}
-    </div>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <Button
+          variant="ghost"
+          size="xs"
+          aria-label={`Priority: ${PRIORITY_LABELS[task.priority] ?? `P${task.priority}`}`}
+          className="h-auto gap-1.5 border-0 rounded px-1.5 py-1 text-(--color-fg-subtle) hover:text-(--color-fg) hover:bg-(--color-surface-hi)/60"
+        >
+          <PriorityChip value={task.priority} size="md" />
+          <span className="text-xs text-(--color-fg-muted)">{PRIORITY_LABELS[task.priority] ?? `P${task.priority}`}</span>
+        </Button>
+      </Popover.Trigger>
+
+      <Popover.Content align="start" className="py-1 min-w-[140px]">
+        {PRIORITIES.map(p => (
+          <Button
+            key={p}
+            variant="ghost"
+            size="xs"
+            onClick={() => select(p)}
+            className={[
+              'h-auto w-full justify-start gap-2 rounded-none border-0 px-3 py-1.5',
+              p === task.priority ? 'bg-(--color-surface-hi)/60 text-(--color-fg)' : 'text-(--color-fg-muted)',
+            ].join(' ')}
+          >
+            <PriorityChip value={p} size="sm" />
+            <span className="text-xs">{PRIORITY_LABELS[p]}</span>
+          </Button>
+        ))}
+      </Popover.Content>
+    </Popover.Root>
   )
 }

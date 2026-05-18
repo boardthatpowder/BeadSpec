@@ -8,7 +8,7 @@ interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   description?: string
 }
 
-const focusClasses = 'focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-1 focus-visible:ring-offset-[--color-bg]'
+const focusClasses = 'focus-visible:ring-2 focus-visible:ring-(--color-accent) focus-visible:ring-offset-1 focus-visible:ring-offset-(--color-bg)'
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ label, shortcut, description, children, className, ...rest }, ref) => {

@@ -17,7 +17,7 @@ export function GitnexusBadge() {
   if (!project || !status.data) return null
   const data = status.data
   const cls = !data.available
-    ? 'border-[--color-border] bg-[--color-surface] text-[--color-fg-subtle]'
+    ? 'border-(--color-border) bg-(--color-surface) text-(--color-fg-subtle)'
     : data.stale
       ? 'border-amber-800/50 bg-amber-950/30 text-amber-300'
       : data.age_seconds > 3600
@@ -34,9 +34,9 @@ export function GitnexusBadge() {
         GitNexus {data.available ? (data.stale ? 'stale' : 'fresh') : 'off'}
       </Button>
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-72 rounded border border-[--color-border-strong] bg-[--color-bg] p-3 shadow-xl">
-          <div className="text-sm text-[--color-fg]">{data.message}</div>
-          <div className="mt-1 text-xs text-[--color-fg-subtle]">
+        <div className="absolute right-0 z-30 mt-2 w-72 rounded border border-(--color-border-strong) bg-(--color-bg) p-3 shadow-xl">
+          <div className="text-sm text-(--color-fg)">{data.message}</div>
+          <div className="mt-1 text-xs text-(--color-fg-subtle)">
             {data.last_indexed_at ? `Indexed ${data.last_indexed_at}` : 'No index timestamp available'}
           </div>
           <Button

@@ -54,12 +54,12 @@ export function BulkActionToolbar({ selectedIds, onClear }: Props) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-blue-900/20 border-b border-blue-800/40 flex-shrink-0">
       <span className="text-xs text-blue-300 font-medium">{selectedIds.length} selected</span>
-      <div className="w-px h-4 bg-[--color-surface-hi]" />
+      <div className="w-px h-4 bg-(--color-surface-hi)" />
       <select
         onChange={e => e.target.value && bulkStatus(e.target.value)}
         disabled={busy}
         defaultValue=""
-        className="bg-[--color-surface-hi] border border-[--color-border-strong] text-xs text-[--color-fg-muted] rounded px-2 py-1 outline-none"
+        className="bg-(--color-surface-hi) border border-(--color-border-strong) text-xs text-(--color-fg-muted) rounded px-2 py-1 outline-none"
       >
         <option value="" disabled>Set status…</option>
         {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
@@ -70,7 +70,7 @@ export function BulkActionToolbar({ selectedIds, onClear }: Props) {
           onChange={e => setLabelInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && bulkLabel()}
           placeholder="Add label…"
-          className="bg-[--color-surface-hi] border border-[--color-border-strong] text-xs text-[--color-fg-muted] rounded px-2 py-1 outline-none focus:border-blue-500 w-28"
+          className="bg-(--color-surface-hi) border border-(--color-border-strong) text-xs text-(--color-fg-muted) rounded px-2 py-1 outline-none focus:border-blue-500 w-28"
         />
         <Button
           variant="secondary"

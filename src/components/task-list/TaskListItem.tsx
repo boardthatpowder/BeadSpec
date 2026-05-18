@@ -1,28 +1,10 @@
 import type { Task } from '../../bindings'
 import type { WorkerProvenance } from '../../lib/worker-findings'
 import { parsePausedNote } from '../../lib/parsePausedNote'
-import { PRIORITY_PALETTE, STATUS_PALETTE } from '../../lib/palettes'
+import { STATUS_PALETTE } from '../../lib/palettes'
 import { Button } from '../ui/Button'
-import { Icon } from '../ui/Icon'
-
-function classSet(...classes: Array<string | undefined>) {
-  return classes.filter(Boolean).join(' ')
-}
-
-export function statusDotClass(status: string) {
-  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
-  return classSet(palette.bg, status === 'in_progress' ? 'shadow-[0_0_6px_rgba(59,130,246,0.45)]' : undefined)
-}
-
-export function statusBadgeClass(status: string) {
-  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
-  return classSet(palette.bg, palette.text, palette.border)
-}
-
-export function priorityTextClass(priority: number) {
-  const palette = PRIORITY_PALETTE[String(priority)] ?? PRIORITY_PALETTE.low
-  return classSet(palette.text, priority <= 2 ? 'font-semibold' : undefined)
-}
+import { PriorityChip } from '../ui/PriorityChip'
+import { StatusPill } from '../ui/StatusPill'
 
 const COMPACT_PREFIXES = new Set(['branch', 'repo', 'worktree', 'worker'])
 
@@ -47,7 +29,18 @@ const LABEL_CHIP_COLORS: Record<string, string> = {
 
 export function labelChipClass(label: string): string {
   const prefix = label.split(':')[0]
-  return LABEL_CHIP_COLORS[prefix] ?? 'bg-[--color-surface-hi]/60 text-[--color-fg-subtle] border border-[--color-border-strong]/30'
+  return LABEL_CHIP_COLORS[prefix] ?? 'bg-(--color-surface-hi)/60 text-(--color-fg-subtle) border border-(--color-border-strong)/30'
+}
+
+// Kept for external consumers that import these helpers
+export function statusDotClass(status: string) {
+  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
+  return [palette.dot, status === 'in_progress' ? 'shadow-[0_0_6px_rgba(59,130,246,0.45)]' : ''].filter(Boolean).join(' ')
+}
+
+export function statusBadgeClass(status: string) {
+  const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open
+  return [palette.bg, palette.text, palette.border].join(' ')
 }
 
 interface TaskListItemProps {
@@ -65,6 +58,7 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
   const hasMetadata = Boolean(provenance) || visibleLabels.length > 0
   const isPaused = task.labels.includes('openspec:paused')
   const pauseReason = parsePausedNote(task.notes ?? task.description ?? null) ?? undefined
+  const palette = STATUS_PALETTE[isPaused ? 'paused' : task.status] ?? STATUS_PALETTE.open
 
   return (
     <Button
@@ -74,37 +68,30 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
       onDoubleClick={onDoubleClick}
       style={{ fontSize: 'var(--font-size)' }}
       className={[
-        'w-full h-full justify-start rounded-none border-0 border-b border-[--color-border]/40 px-3 text-left font-normal transition-all',
+        'relative w-full h-full justify-start rounded-none border-0 border-b border-(--color-border)/40 pl-4 pr-3 text-left font-normal transition-all overflow-hidden',
         isActive
-          ? 'bg-blue-950/30 border-l-2 border-l-blue-500'
+          ? 'bg-blue-950/30 ring-1 ring-inset ring-blue-500/20'
           : isSelected
-            ? 'bg-[--color-surface-hi]/50'
+            ? 'bg-(--color-surface-hi)/50'
             : isFocused
-              ? 'bg-[--color-surface-hi]/20 border-l-2 border-l-neutral-600'
-              : 'hover:bg-[--color-surface-hi]/20 hover:border-l-2 hover:border-l-neutral-700/50',
+              ? 'bg-(--color-surface-hi)/20'
+              : 'hover:bg-(--color-surface-hi)/20',
       ].join(' ')}
     >
-      {/* Status dot */}
-      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDotClass(task.status)}`} />
+      {/* Status stripe — 3px left edge, colored by status */}
+      <span aria-hidden className={`absolute left-0 top-0 h-full w-[3px] flex-shrink-0 ${palette.dot}`} />
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className={`text-xs truncate flex-1 ${isActive ? 'text-[--color-fg]' : 'text-[--color-fg-muted]'}`}>
+          <span className={`text-xs truncate flex-1 ${isActive ? 'text-(--color-fg)' : 'text-(--color-fg-muted)'}`}>
             {task.title}
           </span>
-          <span title={pauseReason} className={`inline-flex items-center gap-1 border text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? statusBadgeClass('paused') : statusBadgeClass(task.status)}`}>
-            {isPaused ? (
-              <>
-                <Icon name="Pause" size="sm" className="h-2.5 w-2.5" />
-                paused
-              </>
-            ) : task.status.replace('_', ' ')}
-          </span>
+          <StatusPill status={isPaused ? 'paused' : task.status} title={pauseReason} />
         </div>
         {hasMetadata && (
           <div className="flex items-center gap-1 mt-1">
-            <span className="text-[10px] font-mono text-neutral-700">{task.id}</span>
+            <span className="text-[10px] font-mono text-(--color-fg-subtle)">{task.id}</span>
             {provenance && (
               <span
                 className={`text-[10px] px-1.5 py-0 rounded font-mono leading-4 max-w-24 truncate ${labelChipClass(`worker:${provenance.worker}`)}`}
@@ -124,20 +111,20 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
               </span>
             ))}
             {task.labels.length > 2 && (
-              <span className="text-[10px] text-neutral-700">+{task.labels.length - 2}</span>
+              <span className="text-[10px] text-(--color-fg-subtle)">+{task.labels.length - 2}</span>
             )}
           </div>
         )}
         {!hasMetadata && (
           <div className="mt-0.5">
-            <span className="text-[10px] font-mono text-neutral-700">{task.id}</span>
+            <span className="text-[10px] font-mono text-(--color-fg-subtle)">{task.id}</span>
           </div>
         )}
       </div>
 
-      {/* Priority */}
-      <span className={`text-xs flex-shrink-0 tabular-nums ${priorityTextClass(task.priority)}`}>
-        P{task.priority}
+      {/* Priority chip */}
+      <span className="flex-shrink-0 text-(--color-fg-subtle) ml-2">
+        <PriorityChip value={task.priority} size="sm" />
       </span>
     </Button>
   )

@@ -14,11 +14,11 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'border-transparent bg-[--color-accent] text-[--color-accent-fg] hover:bg-blue-600',
-  secondary: 'border-[--color-border] bg-[--color-surface-hi] text-[--color-fg] hover:bg-[--color-surface-hi]',
-  ghost: 'border-transparent bg-transparent text-[--color-fg-muted] hover:bg-[--color-surface-hi] hover:text-[--color-fg]',
-  danger: 'border-transparent bg-[--color-danger] text-white hover:bg-red-600',
-  link: 'border-transparent bg-transparent px-0 text-[--color-accent] underline-offset-4 hover:underline',
+  primary: 'border-transparent bg-(--color-accent) text-(--color-accent-fg) hover:bg-blue-600',
+  secondary: 'border-(--color-border) bg-(--color-surface-hi) text-(--color-fg) hover:bg-(--color-surface-hi)',
+  ghost: 'border-transparent bg-transparent text-(--color-fg-muted) hover:bg-(--color-surface-hi) hover:text-(--color-fg)',
+  danger: 'border-transparent bg-(--color-danger) text-white hover:bg-red-600',
+  link: 'border-transparent bg-transparent px-0 text-(--color-accent) underline-offset-4 hover:underline',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -53,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         className={cn(
           'inline-flex items-center justify-center gap-1.5 rounded-md border font-medium transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-1 focus-visible:ring-offset-[--color-bg]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent) focus-visible:ring-offset-1 focus-visible:ring-offset-(--color-bg)',
           'disabled:opacity-50 disabled:pointer-events-none',
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],

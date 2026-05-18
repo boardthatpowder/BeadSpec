@@ -9,12 +9,12 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const BADGE_PALETTE: Record<BadgeVariant, PaletteClassSet> = {
-  default: { bg: 'bg-[--color-surface-hi]', text: 'text-[--color-fg]', border: 'border-[--color-border]' },
-  success: { bg: 'bg-green-950/40', text: 'text-green-300', border: 'border-green-800/50' },
-  warning: { bg: 'bg-amber-950/40', text: 'text-amber-300', border: 'border-amber-800/50' },
-  danger: { bg: 'bg-red-950/40', text: 'text-red-300', border: 'border-red-800/50' },
-  info: { bg: 'bg-blue-950/40', text: 'text-blue-300', border: 'border-blue-800/50' },
-  muted: { bg: 'bg-[--color-surface-hi]/60', text: 'text-[--color-fg-muted]', border: 'border-[--color-border-strong]/50' },
+  default: { bg: 'bg-(--color-surface-hi)', text: 'text-(--color-fg)',       border: 'border-(--color-border)',           dot: 'bg-neutral-500' },
+  success: { bg: 'bg-green-950/40',          text: 'text-green-300',          border: 'border-green-800/50',               dot: 'bg-green-500'   },
+  warning: { bg: 'bg-amber-950/40',          text: 'text-amber-300',          border: 'border-amber-800/50',               dot: 'bg-amber-500'   },
+  danger:  { bg: 'bg-red-950/40',            text: 'text-red-300',            border: 'border-red-800/50',                 dot: 'bg-red-500'     },
+  info:    { bg: 'bg-blue-950/40',           text: 'text-blue-300',           border: 'border-blue-800/50',                dot: 'bg-blue-500'    },
+  muted:   { bg: 'bg-(--color-surface-hi)/60', text: 'text-(--color-fg-muted)', border: 'border-(--color-border-strong)/50', dot: 'bg-neutral-600' },
 }
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(

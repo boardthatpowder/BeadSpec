@@ -70,7 +70,7 @@ export function InlineTitle({ task, project }: Props) {
           if (e.key === 'Enter') { e.preventDefault(); save() }
           if (e.key === 'Escape') { e.preventDefault(); cancel() }
         }}
-        className="flex-1 bg-[--color-surface-hi] text-base font-semibold text-[--color-fg] leading-snug
+        className="flex-1 bg-(--color-surface-hi) text-base font-semibold text-(--color-fg) leading-snug
                    px-2 py-0.5 rounded border border-blue-500 outline-none w-full"
       />
     )
@@ -80,8 +80,8 @@ export function InlineTitle({ task, project }: Props) {
     <Tooltip label="Click to edit title">
       <h1
         onClick={() => setEditing(true)}
-        className="text-base font-semibold text-[--color-fg] leading-snug flex-1
-                   cursor-text hover:bg-[--color-surface-hi]/60 rounded px-1 -mx-1 transition-colors"
+        className="text-base font-semibold text-(--color-fg) leading-snug flex-1
+                   cursor-text hover:bg-(--color-surface-hi)/60 rounded px-1 -mx-1 transition-colors"
       >
         {task.title}
       </h1>

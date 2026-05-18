@@ -64,7 +64,7 @@ export function BdAutocomplete({ inputRef, onSelect }: Props) {
 
   return (
     <div
-      className="fixed z-50 bg-[--color-surface] border border-[--color-border-strong] rounded-lg shadow-xl py-1 w-64"
+      className="fixed z-50 bg-(--color-surface) border border-(--color-border-strong) rounded-lg shadow-xl py-1 w-64"
       style={{ top: position.top, left: position.left }}
     >
       {filtered.map(t => (
@@ -72,10 +72,10 @@ export function BdAutocomplete({ inputRef, onSelect }: Props) {
           key={t.id}
           type="button"
           onClick={() => { onSelect(t); setQuery(null) }}
-          className="w-full text-left px-3 py-2 hover:bg-[--color-surface-hi] transition-colors flex items-center gap-2"
+          className="w-full text-left px-3 py-2 hover:bg-(--color-surface-hi) transition-colors flex items-center gap-2"
         >
-          <span className="text-xs font-mono text-[--color-fg-subtle] flex-shrink-0">{t.id}</span>
-          <span className="text-sm text-[--color-fg-muted] truncate">{t.title}</span>
+          <span className="text-xs font-mono text-(--color-fg-subtle) flex-shrink-0">{t.id}</span>
+          <span className="text-sm text-(--color-fg-muted) truncate">{t.title}</span>
         </button>
       ))}
     </div>

@@ -94,6 +94,6 @@ describe('QuickCaptureApp theme', () => {
 
     expect(document.documentElement.getAttribute('data-theme')).toBe('light')
     expect(host.textContent).toContain('No active project')
-    expect(host.firstElementChild?.className).toContain('bg-[--color-surface]')
+    expect(host.firstElementChild?.className).toContain('bg-(--color-surface)')
   })
 })
