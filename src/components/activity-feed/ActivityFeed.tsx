@@ -7,6 +7,8 @@ import { useActivityStream } from './useActivityStream'
 import { useAutoFollow } from './useAutoFollow'
 import { ActivityFilters } from './ActivityFilters'
 import { ActivityRow } from './ActivityRow'
+import { ViewHelpHeader } from '../shared/ViewHelpHeader'
+import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
 
 export function ActivityFeed() {
   const project = useActiveProject()
@@ -26,10 +28,16 @@ export function ActivityFeed() {
   })
   const { onScroll, scrollToBottom } = useAutoFollow(scrollRef, autoFollow, filtered.length, () => setAutoFollow(false))
 
-  if (!project) return <div className="p-6 text-sm text-neutral-500">Connect a project to see workflow activity.</div>
+  if (!project) return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.activity} />
+      <div className="p-6 text-sm text-neutral-500">Connect a project to see workflow activity.</div>
+    </div>
+  )
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      <ViewHelpHeader help={WORKFLOW_VIEW_HELP.activity} />
       <ActivityFilters
         activeKinds={activeKinds}
         range={range}
