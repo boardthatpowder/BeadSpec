@@ -5,6 +5,7 @@ import { useAppState } from '../../contexts/HashStateContext'
 import { rufloMemoryDelete, rufloMemoryList, rufloMemoryStore } from '../../ipc'
 import type { MemoryEntry, MemoryListResponse } from '../../bindings'
 import { formatAbsolute } from '../../lib/format/date'
+import { buildNamespaceTree } from './namespaceTree'
 import { parseMemoryKey } from './parseMemoryKey'
 import { PanelHeader } from '../shared/PanelHeader'
 import { Dialog } from '../ui/Dialog'
@@ -14,7 +15,7 @@ import { ErrorState } from '../ui/ErrorState'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TaskRowSkeleton } from '../ui/Skeleton'
-import { useToast } from '../ui/Toast'
+import { useToast } from '../ui/useToast'
 
 const iconButtonClass = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-[--color-border] bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-neutral-700 hover:text-[--color-fg]'
 
@@ -120,19 +121,6 @@ export function MemoryBrowser() {
       {storeOpen && <StoreDialog namespace={namespace} onClose={() => setStoreOpen(false)} />}
     </div>
   )
-}
-
-export function buildNamespaceTree(entries: MemoryEntry[]) {
-  const counts = new Map<string, number>()
-  for (const entry of entries) {
-    const parts = entry.key.split('|')
-    let path = ''
-    for (const part of parts) {
-      path = path ? `${path}|${part}` : part
-      counts.set(path, (counts.get(path) ?? 0) + 1)
-    }
-  }
-  return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b))
 }
 
 function NamespaceTree({ entries, selected, onSelect }: { entries: MemoryEntry[]; selected: string; onSelect: (ns: string) => void }) {

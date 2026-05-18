@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { commands, unwrap } from "../../ipc";
 import { IconButton } from "../ui/IconButton";
 import { useActiveProject } from "../../hooks/useProject";
-import { useToast } from "../ui/Toast";
+import { useToast } from "../ui/useToast";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 

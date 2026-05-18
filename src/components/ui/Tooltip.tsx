@@ -1,13 +1,7 @@
-import { createContext, useContext } from 'react'
+import { useContext } from 'react'
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { useSettings } from '../../contexts/SettingsContext'
-
-interface TooltipConfig {
-  enabled: boolean
-  delayMs: number
-}
-
-export const TooltipConfigContext = createContext<TooltipConfig>({ enabled: true, delayMs: 500 })
+import { TooltipConfigContext } from './tooltipConfig'
 
 export function AppTooltipProvider({ children }: { children: React.ReactNode }) {
   const { settings } = useSettings()

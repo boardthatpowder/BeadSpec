@@ -38,14 +38,15 @@ describe('motion polish contract', () => {
   it('animates command palette and toast entrance and exit', () => {
     const commandPalette = read('src/components/CommandPalette.tsx')
     const toast = read('src/components/ui/Toast.tsx')
+    const useToast = read('src/components/ui/useToast.ts')
 
     expect(commandPalette).toContain('data-[state=open]:animate-in')
     expect(commandPalette).toContain('data-[state=open]:zoom-in-95')
     expect(commandPalette).toContain('data-[state=closed]:zoom-out-95')
     expect(commandPalette).toContain('motion-reduce:animate-none')
 
-    expect(toast).toContain('dismissing?: boolean')
-    expect(toast).toContain('TOAST_EXIT_MS = 150')
+    expect(useToast).toContain('dismissing?: boolean')
+    expect(useToast).toContain('TOAST_EXIT_MS = 150')
     expect(toast).toContain('animate-in slide-in-from-bottom-2 fade-in-0 duration-200')
     expect(toast).toContain('animate-out slide-out-to-bottom-2 fade-out-0 duration-150')
   })

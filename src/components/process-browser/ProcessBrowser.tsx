@@ -15,7 +15,7 @@ import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { Popover } from '../ui/Popover'
 import { TaskRowSkeleton } from '../ui/Skeleton'
-import { useToast } from '../ui/Toast'
+import { useToast } from '../ui/useToast'
 
 const iconButtonClass = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-[--color-border] bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-neutral-700 hover:text-[--color-fg] disabled:opacity-50'
 

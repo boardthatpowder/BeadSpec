@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { commands, unwrap } from '../../ipc'
 import type { TaskDetail } from '../../bindings'
-import { useToast } from '../ui/Toast'
+import { useToast } from '../ui/useToast'
 import { Tooltip } from '../ui/Tooltip'
 import { Button } from '../ui/Button'
 

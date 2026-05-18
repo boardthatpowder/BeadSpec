@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { useProjectStore, restoreLastProject, connectProjectWithContext } from '../hooks/useProject'
-import { useToast } from './ui/Toast'
+import { useToast } from './ui/useToast'
 import { useZoom } from '../hooks/useZoom'
 
 export function AppInit() {
