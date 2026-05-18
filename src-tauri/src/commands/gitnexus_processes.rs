@@ -153,6 +153,41 @@ fn process_items(value: &Value) -> Vec<Value> {
         .unwrap_or_default()
 }
 
+fn markdown_rows(value: &Value) -> Vec<HashMap<String, String>> {
+    let Some(markdown) = value.get("markdown").and_then(Value::as_str) else {
+        return Vec::new();
+    };
+    let mut lines = markdown.lines().filter(|line| line.trim().starts_with('|'));
+    let Some(header_line) = lines.next() else {
+        return Vec::new();
+    };
+    let headers = split_markdown_row(header_line);
+    let _separator = lines.next();
+    lines
+        .filter_map(|line| {
+            let cells = split_markdown_row(line);
+            if cells.len() != headers.len() {
+                return None;
+            }
+            Some(
+                headers
+                    .iter()
+                    .cloned()
+                    .zip(cells)
+                    .collect::<HashMap<String, String>>(),
+            )
+        })
+        .collect()
+}
+
+fn split_markdown_row(line: &str) -> Vec<String> {
+    line.trim()
+        .trim_matches('|')
+        .split('|')
+        .map(|cell| cell.trim().to_string())
+        .collect()
+}
+
 pub(crate) fn parse_process_summaries(value: &Value) -> Vec<ProcessSummary> {
     process_items(value)
         .iter()
@@ -176,6 +211,36 @@ pub(crate) fn parse_process_summaries(value: &Value) -> Vec<ProcessSummary> {
         .collect()
 }
 
+pub(crate) fn parse_cypher_process_summaries(value: &Value) -> Vec<ProcessSummary> {
+    markdown_rows(value)
+        .into_iter()
+        .filter_map(|row| {
+            let id = row.get("id")?;
+            if !id.starts_with("proc_") {
+                return None;
+            }
+            let name = row
+                .get("label")
+                .or_else(|| row.get("heuristicLabel"))
+                .filter(|value| !value.is_empty())
+                .cloned()
+                .unwrap_or_else(|| id.clone());
+            Some(ProcessSummary {
+                name,
+                cluster: row
+                    .get("processType")
+                    .filter(|value| !value.is_empty())
+                    .cloned()
+                    .unwrap_or_else(|| "Unclustered".into()),
+                step_count: row
+                    .get("stepCount")
+                    .and_then(|value| value.parse::<u32>().ok())
+                    .unwrap_or(0),
+            })
+        })
+        .collect()
+}
+
 pub(crate) fn parse_process_detail(value: &Value, fallback_name: &str) -> ProcessDetail {
     let process = value.get("process").unwrap_or(value);
     let steps = process
@@ -190,12 +255,77 @@ pub(crate) fn parse_process_detail(value: &Value, fallback_name: &str) -> Proces
     }
 }
 
+pub(crate) fn parse_cypher_process_detail(value: &Value, fallback_name: &str) -> ProcessDetail {
+    let row = markdown_rows(value).into_iter().next();
+    let Some(row) = row else {
+        return ProcessDetail {
+            name: fallback_name.to_string(),
+            cluster: "Unclustered".into(),
+            steps: Vec::new(),
+        };
+    };
+    let mut steps = Vec::new();
+    if let Some(step) = row
+        .get("entryPointId")
+        .and_then(|id| process_step_from_symbol_id(id))
+    {
+        steps.push(step);
+    }
+    if let Some(step) = row
+        .get("terminalId")
+        .and_then(|id| process_step_from_symbol_id(id))
+    {
+        if !steps.iter().any(|existing| {
+            existing.symbol == step.symbol
+                && existing.file == step.file
+                && existing.line == step.line
+        }) {
+            steps.push(step);
+        }
+    }
+    ProcessDetail {
+        name: row
+            .get("label")
+            .filter(|value| !value.is_empty())
+            .cloned()
+            .unwrap_or_else(|| fallback_name.to_string()),
+        cluster: row
+            .get("processType")
+            .filter(|value| !value.is_empty())
+            .cloned()
+            .unwrap_or_else(|| "Unclustered".into()),
+        steps,
+    }
+}
+
+fn process_step_from_symbol_id(id: &str) -> Option<ProcessStep> {
+    let (kind_and_file, symbol) = id.rsplit_once(':')?;
+    let (_, file) = kind_and_file.split_once(':')?;
+    Some(ProcessStep {
+        symbol: symbol.to_string(),
+        file: file.to_string(),
+        line: 0,
+        snippet: None,
+    })
+}
+
+fn escape_cypher_string(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('\'', "\\'")
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn list_gitnexus_processes(project_path: String) -> Result<Vec<ProcessSummary>, String> {
-    gitnexus_cli_json(&project_path, &["processes", "--json"], 60)
+    if let Ok(value) = gitnexus_cli_json(&project_path, &["processes", "--json"], 60).await {
+        let processes = parse_process_summaries(&value);
+        if !processes.is_empty() {
+            return Ok(processes);
+        }
+    }
+    let query = "MATCH (n) WHERE n.stepCount > 0 RETURN n.id AS id, n.label AS label, n.heuristicLabel AS heuristicLabel, n.processType AS processType, n.stepCount AS stepCount LIMIT 1000";
+    gitnexus_cli_json(&project_path, &["cypher", "-r", &project_path, query], 60)
         .await
-        .map(|v| parse_process_summaries(&v))
+        .map(|v| parse_cypher_process_summaries(&v))
 }
 
 #[tauri::command]
@@ -204,9 +334,19 @@ pub async fn get_gitnexus_process(
     project_path: String,
     name: String,
 ) -> Result<ProcessDetail, String> {
-    gitnexus_cli_json(&project_path, &["process", &name, "--json"], 60)
+    if let Ok(value) = gitnexus_cli_json(&project_path, &["process", &name, "--json"], 60).await {
+        let detail = parse_process_detail(&value, &name);
+        if !detail.steps.is_empty() {
+            return Ok(detail);
+        }
+    }
+    let escaped = escape_cypher_string(&name);
+    let query = format!(
+        "MATCH (n) WHERE n.id = '{escaped}' OR n.label = '{escaped}' RETURN n.id AS id, n.label AS label, n.entryPointId AS entryPointId, n.terminalId AS terminalId, n.processType AS processType, n.stepCount AS stepCount LIMIT 1"
+    );
+    gitnexus_cli_json(&project_path, &["cypher", "-r", &project_path, &query], 60)
         .await
-        .map(|v| parse_process_detail(&v, &name))
+        .map(|v| parse_cypher_process_detail(&v, &name))
 }
 
 #[tauri::command]
@@ -528,5 +668,39 @@ mod tests {
             stale: 14_401 > 14_400,
         };
         assert!(status.stale);
+    }
+
+    #[test]
+    fn parses_processes_from_current_cypher_markdown_output() {
+        let value = serde_json::json!({
+            "markdown": "| id | label | processType | stepCount |\n| --- | --- | --- | --- |\n| proc_0_attempt | Attempt_dolt_recovery → Is_leap | cross_community | 6 |\n| proc_1_health | BdHealthPanel → MakeLeaf | intra_community | 3 |",
+            "row_count": 2
+        });
+
+        let processes = parse_cypher_process_summaries(&value);
+
+        assert_eq!(processes.len(), 2);
+        assert_eq!(processes[0].name, "Attempt_dolt_recovery → Is_leap");
+        assert_eq!(processes[0].cluster, "cross_community");
+        assert_eq!(processes[0].step_count, 6);
+    }
+
+    #[test]
+    fn parses_process_detail_from_current_cypher_markdown_output() {
+        let value = serde_json::json!({
+            "markdown": "| id | label | entryPointId | terminalId | processType | stepCount |\n| --- | --- | --- | --- | --- | --- |\n| proc_0_attempt | Attempt_dolt_recovery → Is_leap | Function:src-tauri/src/commands/recovery.rs:attempt_dolt_recovery | Function:src-tauri/src/db/recovery/enumerate.rs:is_leap | cross_community | 6 |",
+            "row_count": 1
+        });
+
+        let detail = parse_cypher_process_detail(&value, "Attempt_dolt_recovery → Is_leap");
+
+        assert_eq!(detail.name, "Attempt_dolt_recovery → Is_leap");
+        assert_eq!(detail.cluster, "cross_community");
+        assert_eq!(detail.steps.len(), 2);
+        assert_eq!(detail.steps[0].symbol, "attempt_dolt_recovery");
+        assert_eq!(
+            detail.steps[1].file,
+            "src-tauri/src/db/recovery/enumerate.rs"
+        );
     }
 }

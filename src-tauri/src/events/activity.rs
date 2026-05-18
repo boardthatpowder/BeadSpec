@@ -1,11 +1,14 @@
 use crate::commands::external::{find_ruflo_with_override, run_ruflo_managed};
+use crate::commands::read::decode_datetime;
+use crate::db::pool::ProjectRegistry;
 use serde_json::{json, Value};
 use sqlx::types::chrono::{DateTime, Utc};
+use sqlx::Row;
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct ActivityEvent {
@@ -73,6 +76,32 @@ fn parse_ts(ts: &str) -> Option<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(ts)
         .ok()
         .map(|dt| dt.with_timezone(&Utc))
+}
+
+fn merge_recent_events(
+    live_events: Vec<ActivityEvent>,
+    history_events: Vec<ActivityEvent>,
+    since_ts: Option<DateTime<Utc>>,
+    limit: usize,
+) -> Vec<ActivityEvent> {
+    let mut seen = HashSet::new();
+    let mut merged = Vec::new();
+
+    for event in live_events.into_iter().chain(history_events) {
+        if since_ts
+            .map(|since| parse_ts(&event.ts).map(|ts| ts <= since).unwrap_or(true))
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        if seen.insert(event.id.clone()) {
+            merged.push(event);
+        }
+    }
+
+    merged.sort_by(|a, b| b.ts.cmp(&a.ts));
+    merged.truncate(limit);
+    merged
 }
 
 pub fn emit_event(handle: &AppHandle, event: ActivityEvent) {
@@ -315,11 +344,12 @@ fn unix_secs(time: SystemTime) -> u64 {
 #[specta::specta]
 pub async fn list_recent_events(
     handle: AppHandle,
-    _project_path: String,
+    project_path: String,
     limit: u32,
     since_ts: Option<String>,
+    registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<Vec<ActivityEvent>, String> {
-    start_all_sources(handle, _project_path);
+    start_all_sources(handle, project_path.clone());
     let since = match since_ts {
         Some(ts) if !ts.is_empty() => Some(
             DateTime::parse_from_rfc3339(&ts)
@@ -328,7 +358,115 @@ pub async fn list_recent_events(
         ),
         _ => None,
     };
-    Ok(ring().since(since, limit.min(1000) as usize))
+    let limit = limit.min(1000) as usize;
+    let live_events = ring().since(since, limit);
+    let history_events = load_beads_history_events(&project_path, &registry, limit).await;
+    Ok(merge_recent_events(
+        live_events,
+        history_events,
+        since,
+        limit,
+    ))
+}
+
+async fn load_beads_history_events(
+    project_path: &str,
+    registry: &State<'_, Arc<ProjectRegistry>>,
+    limit: usize,
+) -> Vec<ActivityEvent> {
+    let Ok(project) = registry.get(project_path).await else {
+        return Vec::new();
+    };
+    let row_limit = limit.min(1000) as i64;
+
+    let comment_rows = sqlx::query(
+        "SELECT c.id, c.issue_id, c.author, c.text, c.created_at, i.title \
+         FROM comments c \
+         LEFT JOIN issues i ON i.id = c.issue_id \
+         ORDER BY c.created_at DESC \
+         LIMIT ?",
+    )
+    .bind(row_limit)
+    .fetch_all(project.pool())
+    .await
+    .unwrap_or_default();
+
+    let mut events: Vec<ActivityEvent> = comment_rows
+        .iter()
+        .filter_map(|row| {
+            let id: String = row.try_get("id").ok()?;
+            let issue_id: String = row.try_get("issue_id").ok()?;
+            let ts = decode_datetime(row, "created_at");
+            if ts.is_empty() {
+                return None;
+            }
+            let title: Option<String> = row.try_get("title").ok().flatten();
+            let author: String = row.try_get("author").unwrap_or_else(|_| "unknown".into());
+            let text: String = row.try_get("text").unwrap_or_default();
+            Some(ActivityEvent {
+                id: format!("bd:comment:{id}"),
+                ts,
+                kind: "bd.comment".into(),
+                source: "bd".into(),
+                summary: title
+                    .map(|title| format!("Comment on {issue_id}: {title}"))
+                    .unwrap_or_else(|| format!("Comment on {issue_id}")),
+                detail: json!({
+                    "issue_id": issue_id,
+                    "author": author,
+                    "text": text,
+                })
+                .to_string(),
+                correlation_id: Some(issue_id),
+            })
+        })
+        .collect();
+
+    let status_rows = sqlx::query(
+        "SELECT COALESCE(to_id, from_id) AS issue_id, from_status, to_status, to_commit_date \
+         FROM dolt_diff_issues \
+         WHERE diff_type != 'removed' \
+           AND (from_status IS NULL OR from_status != to_status) \
+         ORDER BY to_commit_date DESC \
+         LIMIT ?",
+    )
+    .bind(row_limit)
+    .fetch_all(project.pool())
+    .await
+    .unwrap_or_default();
+
+    for (i, row) in status_rows.iter().enumerate() {
+        let issue_id: String = row
+            .try_get::<Option<String>, _>("issue_id")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        if issue_id.is_empty() {
+            continue;
+        }
+        let ts = decode_datetime(row, "to_commit_date");
+        if ts.is_empty() {
+            continue;
+        }
+        let old_status: Option<String> = row.try_get("from_status").ok().flatten();
+        let new_status: Option<String> = row.try_get("to_status").ok().flatten();
+        events.push(ActivityEvent {
+            id: format!("bd:status:{issue_id}:{ts}:{i}"),
+            ts,
+            kind: "bd.status_changed".into(),
+            source: "bd".into(),
+            summary: format!("Status changed for {issue_id}"),
+            detail: json!({
+                "issue_id": issue_id,
+                "from_status": old_status,
+                "to_status": new_status,
+            })
+            .to_string(),
+            correlation_id: Some(issue_id),
+        });
+    }
+
+    events
 }
 
 #[cfg(test)]
@@ -379,6 +517,31 @@ mod tests {
             ring.push(event(i, now));
         }
         assert_eq!(ring.since(None, 6000).len(), 5000);
+    }
+
+    #[test]
+    fn merge_recent_events_adds_history_backfill_and_dedupes() {
+        let now = Utc::now();
+        let live = event(1, now);
+        let duplicate = event(1, now);
+        let older_history = ActivityEvent {
+            id: "bd:comment:2".into(),
+            ts: DateTime::parse_from_rfc3339(&format_ts(now.timestamp() - 60))
+                .unwrap()
+                .with_timezone(&Utc)
+                .to_rfc3339(),
+            kind: "bd.comment".into(),
+            source: "bd".into(),
+            summary: "Comment on BEADSPEC-1".into(),
+            detail: json!({ "issue_id": "BEADSPEC-1" }).to_string(),
+            correlation_id: Some("BEADSPEC-1".into()),
+        };
+
+        let merged = merge_recent_events(vec![live], vec![duplicate, older_history], None, 10);
+
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[0].id, "1");
+        assert_eq!(merged[1].id, "bd:comment:2");
     }
 
     #[test]
