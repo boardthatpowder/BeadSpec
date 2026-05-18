@@ -58,6 +58,7 @@ pub fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::read::get_task,
         commands::read::get_task_history,
         commands::read::search_tasks,
+        commands::workers::list_worker_findings,
         commands::app::focus_main_window,
         commands::app::update_tray_badge,
         commands::app::set_start_at_login,
