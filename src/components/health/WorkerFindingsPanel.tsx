@@ -4,6 +4,7 @@ import { useWorkerFindings } from '../../hooks/useWorkerFindings'
 import { formatSeverityBreakdown, formatWorkerFindingDate } from '../../lib/worker-findings'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { formatLabel, labelChipClass, PRIORITY_STYLE } from '../task-list/TaskListItem'
+import { Button } from '../ui/Button'
 
 type WorkerGroup = {
   worker: string
@@ -103,11 +104,12 @@ export function WorkerFindingsPanel() {
 
             <div className="border border-neutral-800 rounded-lg overflow-hidden">
               {group.findings.map(finding => (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   key={finding.issue_id}
-                  type="button"
                   onClick={() => openPinned(finding.issue_id)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left bg-neutral-950 hover:bg-neutral-900 border-b border-neutral-800/70 last:border-b-0 transition-colors"
+                  className="h-auto w-full justify-start gap-2 rounded-none border-0 border-b border-neutral-800/70 bg-neutral-950 px-3 py-2 text-left hover:bg-neutral-900 last:border-b-0"
                 >
                   <span className="w-24 text-[10px] font-mono text-neutral-500 truncate">
                     {finding.issue_id}
@@ -121,7 +123,7 @@ export function WorkerFindingsPanel() {
                   <span className="text-[10px] text-neutral-600 tabular-nums flex-shrink-0">
                     {formatWorkerFindingDate(finding.created_at)}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           </section>

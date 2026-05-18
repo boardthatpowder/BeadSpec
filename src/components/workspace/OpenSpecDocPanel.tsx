@@ -11,6 +11,7 @@ import { buildOpenSpecDocReferences } from './openSpecDocReferences'
 import { SymbolMentionPopover } from '../task-detail/SymbolMentionPopover'
 import type { ChangeInfo, SymbolHit } from '../../bindings'
 import type { OpenSpecDocReference } from './openSpecDocReferences'
+import { Button } from '../ui/Button'
 
 interface OpenSpecDocPanelProps {
   change: string
@@ -124,14 +125,16 @@ function OpenSpecDocReferenceNav({
         }
 
         return (
-          <button
+          <Button
             key={reference.artifact}
+            variant="ghost"
+            size="xs"
             type="button"
             onClick={() => onOpen(reference.artifact)}
             className={baseClass}
           >
             {reference.label}
-          </button>
+          </Button>
         )
       })}
     </div>

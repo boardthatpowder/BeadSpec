@@ -1,8 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { commands, unwrap } from '../../ipc'
 import type { TaskDetail } from '../../bindings'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../ui/Toast'
+import { Dialog } from '../ui/Dialog'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
+import { Popover } from '../ui/Popover'
 
 interface BlockerConfirmDialogProps {
   blockingIds: string[]
@@ -12,17 +16,12 @@ interface BlockerConfirmDialogProps {
 
 function BlockerConfirmDialog({ blockingIds, onConfirm, onCancel }: BlockerConfirmDialogProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onCancel() }}>
+      <Dialog.Content className="max-w-md p-6">
+        <Dialog.Header className="sr-only">Close anyway?</Dialog.Header>
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-full bg-amber-900/30 border border-amber-800/40 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-            </svg>
+            <Icon name="AlertTriangle" size="lg" className="text-amber-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-neutral-100">Close anyway?</h3>
@@ -39,23 +38,24 @@ function BlockerConfirmDialog({ blockingIds, onConfirm, onCancel }: BlockerConfi
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={onCancel}
-            className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-neutral-700
-              bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100 transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="danger"
+            size="xs"
             onClick={onConfirm}
-            className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-amber-700/60
-              bg-amber-900/40 text-amber-300 hover:bg-amber-800/50 hover:text-amber-200 transition-colors"
+            className="border-amber-700/60 bg-amber-900/40 text-amber-300 hover:bg-amber-800/50 hover:text-amber-200"
           >
             Close anyway
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }
 
@@ -81,20 +81,8 @@ function statusLabel(s: string) {
 export function StatusDropdown({ task, project }: Props) {
   const [open, setOpen] = useState(false)
   const [blockerDialog, setBlockerDialog] = useState<{ ids: string[] } | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
   const { toast } = useToast()
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
 
   const doChange = async (status: Status, force: boolean) => {
     const previousData = queryClient.getQueryData(['task', project, task.id])
@@ -126,34 +114,33 @@ export function StatusDropdown({ task, project }: Props) {
 
   return (
     <>
-      <div ref={ref} className="relative">
-        <button
-          onClick={() => setOpen(o => !o)}
-          className={`text-xs px-2 py-0.5 rounded-full font-medium cursor-pointer
-                      hover:opacity-80 transition-opacity ${colorClass}`}
-        >
-          {statusLabel(task.status)}
-        </button>
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Trigger asChild>
+          <Button
+            variant="ghost"
+            size="xs"
+            className={`h-auto rounded-full border-0 px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-80 ${colorClass}`}
+          >
+            {statusLabel(task.status)}
+          </Button>
+        </Popover.Trigger>
 
-        {open && (
-          <div className="absolute left-0 top-full mt-1 z-50 min-w-[130px]
-                          bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl py-1">
+        <Popover.Content align="start" className="min-w-[130px] bg-neutral-900 py-1">
             {STATUS_OPTIONS.map(s => (
-              <button
+              <Button
                 key={s}
+                variant="ghost"
+                size="xs"
                 onClick={() => select(s)}
-                className={`w-full text-left px-3 py-1.5 text-xs transition-colors
-                            hover:bg-neutral-800 ${s === task.status ? 'font-semibold' : ''}
-                            ${STATUS_COLORS[s] ? '' : ''}`}
+                className={`h-auto w-full justify-start rounded-none border-0 px-3 py-1.5 text-left ${s === task.status ? 'font-semibold' : ''}`}
               >
                 <span className={`px-1.5 py-0.5 rounded-full ${STATUS_COLORS[s] ?? ''}`}>
                   {statusLabel(s)}
                 </span>
-              </button>
+              </Button>
             ))}
-          </div>
-        )}
-      </div>
+        </Popover.Content>
+      </Popover.Root>
 
       {blockerDialog && (
         <BlockerConfirmDialog

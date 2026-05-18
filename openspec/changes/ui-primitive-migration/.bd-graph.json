@@ -1,0 +1,476 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: ui-primitive-migration",
+      "type": "epic",
+      "priority": 2,
+      "labels": ["openspec:ui-primitive-migration"],
+      "description": "Execution tracker for openspec/changes/ui-primitive-migration. Migrate all existing components to the shared primitives from ui-design-foundation: Dialog, Button, Icon, Tabs, Popover.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "local_key": "epic"}
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Migrate CommandPalette to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.1. Migrate `CommandPalette.tsx` — replace `fixed inset-0` overlay with `<Dialog.Root open={isOpen} onOpenChange={…}>`, keep existing Zustand store for open state, remove manual Esc handler.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.1", "local_key": "task-1-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-2",
+      "title": "1.2: Migrate SettingsDialog to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.2. Migrate `SettingsDialog.tsx` — replace `fixed inset-0` overlay with `<Dialog.Root>`, remove manual `useEffect` Escape listener.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.2", "local_key": "task-1-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-3",
+      "title": "1.3: Migrate ShortcutModal to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.3. Migrate `ShortcutModal.tsx` — replace overlay with `<Dialog.Root>` + `<Dialog.Header>` / `<Dialog.Body>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.3", "local_key": "task-1-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-4",
+      "title": "1.4: Migrate RecoveryDialog to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.4. Migrate `RecoveryDialog.tsx` — replace overlay with `<Dialog.Root>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.4", "local_key": "task-1-4"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-5",
+      "title": "1.5: Migrate TaskPickerModal to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.5. Migrate `TaskPickerModal.tsx` — replace overlay with `<Dialog.Root>`, keep search input focus on open.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.5", "local_key": "task-1-5"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-6",
+      "title": "1.6: Migrate MemoryBrowser drawers to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.6. Migrate `MemoryBrowser.tsx` MemoryDrawer + StoreDialog — replace both `fixed inset-0` overlays with `<Dialog.Root>` each.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.6", "local_key": "task-1-6"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-7",
+      "title": "1.7: Migrate ImportModal to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.7. Migrate `ImportModal.tsx` — replace overlay with `<Dialog.Root>` + `<Dialog.Header>` / `<Dialog.Body>` / `<Dialog.Footer>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.7", "local_key": "task-1-7"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-8",
+      "title": "1.8: Migrate PourConfirmDialog to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.8. Migrate `PourConfirmDialog.tsx` — replace overlay with `<Dialog.Root>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.8", "local_key": "task-1-8"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-9",
+      "title": "1.9: Migrate BlockerConfirmDialog to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.9. Migrate `BlockerConfirmDialog.tsx` — replace overlay with `<Dialog.Root>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.9", "local_key": "task-1-9"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-10",
+      "title": "1.10: Migrate SessionsTab snapshot drawer to Dialog primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.10. Migrate `SessionsTab.tsx` snapshot detail drawer — replace overlay with `<Dialog.Root>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.10", "local_key": "task-1-10"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-1-11",
+      "title": "1.11: Typecheck after dialog migrations",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §1.11. Run `bun run typecheck` — zero errors after dialog migrations.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "1.11", "local_key": "task-1-11"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-1", "type": "blocks"},
+        {"key": "task-1-2", "type": "blocks"},
+        {"key": "task-1-3", "type": "blocks"},
+        {"key": "task-1-4", "type": "blocks"},
+        {"key": "task-1-5", "type": "blocks"},
+        {"key": "task-1-6", "type": "blocks"},
+        {"key": "task-1-7", "type": "blocks"},
+        {"key": "task-1-8", "type": "blocks"},
+        {"key": "task-1-9", "type": "blocks"},
+        {"key": "task-1-10", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Migrate BulkActionToolbar to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.1. Migrate `BulkActionToolbar.tsx` — replace all `<button>` elements with `<Button variant size>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.1", "local_key": "task-2-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Migrate TaskDetailPanel buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.2. Migrate `TaskDetailPanel.tsx` header actions and footer buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.2", "local_key": "task-2-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-3",
+      "title": "2.3: Migrate StatusDropdown trigger to Button ghost",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.3. Migrate `StatusDropdown.tsx` trigger button — replace with `<Button variant=\"ghost\">`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.3", "local_key": "task-2-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-4",
+      "title": "2.4: Migrate EpicDashboard buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.4. Migrate `EpicDashboard.tsx` action buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.4", "local_key": "task-2-4"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-5",
+      "title": "2.5: Migrate ChangesBrowser and ChangeCard buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.5. Migrate `ChangesBrowser.tsx` and `ChangeCard.tsx` action buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.5", "local_key": "task-2-5"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-7", "type": "blocks"}]
+    },
+    {
+      "key": "task-2-6",
+      "title": "2.6: Migrate ActivityFeed buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.6. Migrate `ActivityFeed.tsx` filter/action buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.6", "local_key": "task-2-6"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-7",
+      "title": "2.7: Migrate MemoryBrowser buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.7. Migrate `MemoryBrowser.tsx` delete/store/refresh buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.7", "local_key": "task-2-7"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-6", "type": "blocks"}]
+    },
+    {
+      "key": "task-2-8",
+      "title": "2.8: Migrate ProcessBrowser buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.8. Migrate `ProcessBrowser.tsx` re-analyze/open/find buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.8", "local_key": "task-2-8"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-9",
+      "title": "2.9: Migrate Health panel buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.9. Migrate `BdHealthPanel.tsx`, `SessionsTab.tsx`, `WorkerFindingsPanel.tsx`, `ReviewsHealthTab.tsx` buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.9", "local_key": "task-2-9"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-10", "type": "blocks"}]
+    },
+    {
+      "key": "task-2-10",
+      "title": "2.10: Migrate TrayPopover and QuickCaptureApp buttons to Button primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.10. Migrate `TrayPopover.tsx` and `QuickCaptureApp.tsx` buttons — replace with `<Button>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.10", "local_key": "task-2-10"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-2-11",
+      "title": "2.11: Typecheck after button migrations",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §2.11. Run `bun run typecheck` — zero errors after button migrations.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "2.11", "local_key": "task-2-11"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-2-1", "type": "blocks"},
+        {"key": "task-2-2", "type": "blocks"},
+        {"key": "task-2-3", "type": "blocks"},
+        {"key": "task-2-4", "type": "blocks"},
+        {"key": "task-2-5", "type": "blocks"},
+        {"key": "task-2-6", "type": "blocks"},
+        {"key": "task-2-7", "type": "blocks"},
+        {"key": "task-2-8", "type": "blocks"},
+        {"key": "task-2-9", "type": "blocks"},
+        {"key": "task-2-10", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Replace TaskList SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.1. Replace inline SVGs in `TaskList.tsx` (sort chevrons, expand/collapse, check icons) with `<Icon>`; replace unicode arrows with Icon.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.1", "local_key": "task-3-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-3-2",
+      "title": "3.2: Replace TaskListItem SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.2. Replace inline SVGs in `TaskListItem.tsx` (status dots, priority indicators) with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.2", "local_key": "task-3-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-3-3",
+      "title": "3.3: Replace TaskDetailPanel SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.3. Replace inline SVGs in `TaskDetailPanel.tsx` (tab icons, action icons) with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.3", "local_key": "task-3-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-3-4",
+      "title": "3.4: Replace OpenSpecPanel unicode glyphs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.4. Replace inline SVGs + unicode glyphs in `OpenSpecPanel.tsx` (↗ → ExternalLink, ✓ → Check, ✗ → X, ⚠ → AlertTriangle) with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.4", "local_key": "task-3-4"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-3-5",
+      "title": "3.5: Replace ChangesBrowser/ChangeCard/ImportModal SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.5. Replace inline SVGs in `ChangesBrowser.tsx`, `ChangeCard.tsx`, `ImportModal.tsx` with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.5", "local_key": "task-3-5"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-7", "type": "blocks"}]
+    },
+    {
+      "key": "task-3-6",
+      "title": "3.6: Replace ActivityFeed/ActivityRow SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.6. Replace inline SVGs in `ActivityFeed.tsx`, `ActivityRow.tsx` with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.6", "local_key": "task-3-6"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-3-7",
+      "title": "3.7: Replace ProcessBrowser/MemoryBrowser SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.7. Replace inline SVGs in `ProcessBrowser.tsx`, `MemoryBrowser.tsx` with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.7", "local_key": "task-3-7"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-6", "type": "blocks"}]
+    },
+    {
+      "key": "task-3-8",
+      "title": "3.8: Replace Health panel SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.8. Replace inline SVGs in `BdHealthPanel.tsx`, `SessionsTab.tsx`, `WorkerFindingsPanel.tsx` with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.8", "local_key": "task-3-8"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-10", "type": "blocks"}]
+    },
+    {
+      "key": "task-3-9",
+      "title": "3.9: Replace EpicDashboard/ImpactPanel SVGs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.9. Replace inline SVGs in `EpicDashboard.tsx`, `ImpactPanel.tsx` with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.9", "local_key": "task-3-9"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-3-10",
+      "title": "3.10: Replace remaining unicode glyphs with Icon",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.10. Replace ✕ in `Toast.tsx`, `TrayPopover.tsx`, `BulkActionToolbar.tsx` with `<Icon name=\"X\">`; replace 🔗 in `TaskPickerModal.tsx` with `<Icon name=\"Link2\">`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.10", "local_key": "task-3-10"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-5", "type": "blocks"}]
+    },
+    {
+      "key": "task-3-11",
+      "title": "3.11: Replace remaining SVGs in CommandPalette/TopBar/ViewSwitcher/FilterBar/KpiBar",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.11. Replace remaining inline SVGs in `CommandPalette.tsx`, `TopBar.tsx`, `ViewSwitcher.tsx`, `FilterBar.tsx`, `KpiBar.tsx` with `<Icon>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.11", "local_key": "task-3-11"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-1-1", "type": "blocks"}]
+    },
+    {
+      "key": "task-3-12",
+      "title": "3.12: Typecheck after icon migrations",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §3.12. Run `bun run typecheck` — zero errors after icon migrations.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "3.12", "local_key": "task-3-12"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-3-1", "type": "blocks"},
+        {"key": "task-3-2", "type": "blocks"},
+        {"key": "task-3-3", "type": "blocks"},
+        {"key": "task-3-4", "type": "blocks"},
+        {"key": "task-3-5", "type": "blocks"},
+        {"key": "task-3-6", "type": "blocks"},
+        {"key": "task-3-7", "type": "blocks"},
+        {"key": "task-3-8", "type": "blocks"},
+        {"key": "task-3-9", "type": "blocks"},
+        {"key": "task-3-10", "type": "blocks"},
+        {"key": "task-3-11", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Migrate TaskDetailPanel tabs to Tabs primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §4.1. Migrate `TaskDetailPanel.tsx` tab bar — replace `<button className=\"border-b-2 …\">` pattern with `<Tabs.Root value={activeTab} onValueChange={setActiveTab}>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "4.1", "local_key": "task-4-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-2-2", "type": "blocks"}]
+    },
+    {
+      "key": "task-4-2",
+      "title": "4.2: Migrate BdHealthPanel tabs to Tabs primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §4.2. Migrate `BdHealthPanel.tsx` tab bar — same Tabs pattern.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "4.2", "local_key": "task-4-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-2-9", "type": "blocks"}]
+    },
+    {
+      "key": "task-4-3",
+      "title": "4.3: Migrate HealthPanel tabs to Tabs primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §4.3. Migrate `HealthPanel.tsx` tab bar — same Tabs pattern.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "4.3", "local_key": "task-4-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-4-4",
+      "title": "4.4: Typecheck after tabs migrations",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §4.4. Run `bun run typecheck` — zero errors after tabs migrations.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "4.4", "local_key": "task-4-4"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-4-1", "type": "blocks"},
+        {"key": "task-4-2", "type": "blocks"},
+        {"key": "task-4-3", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-5-1",
+      "title": "5.1: Migrate FilterBar dropdown to Popover primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §5.1. Migrate `FilterBar.tsx` filter dropdown — replace hand-rolled portal/outside-click with `<Popover.Root><Popover.Trigger asChild><Popover.Content>`.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "5.1", "local_key": "task-5-1"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-5-2",
+      "title": "5.2: Migrate StatusFilterPill to Popover primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §5.2. Migrate `StatusFilterPill.tsx` in `ChangesBrowser.tsx` — same Popover pattern.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "5.2", "local_key": "task-5-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-2-5", "type": "blocks"}]
+    },
+    {
+      "key": "task-5-3",
+      "title": "5.3: Migrate IssueMatchesPopover to Popover primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §5.3. Migrate `IssueMatchesPopover.tsx` in `ProcessBrowser.tsx` — same Popover pattern.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "5.3", "local_key": "task-5-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-2-8", "type": "blocks"}]
+    },
+    {
+      "key": "task-5-4",
+      "title": "5.4: Migrate TabContextMenu to Popover primitive",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §5.4. Migrate `TabContextMenu.tsx` in `workspace/` — same Popover pattern.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "5.4", "local_key": "task-5-4"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}]
+    },
+    {
+      "key": "task-5-5",
+      "title": "5.5: Typecheck after popover migrations",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §5.5. Run `bun run typecheck` — zero errors after popover migrations.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "5.5", "local_key": "task-5-5"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-5-1", "type": "blocks"},
+        {"key": "task-5-2", "type": "blocks"},
+        {"key": "task-5-3", "type": "blocks"},
+        {"key": "task-5-4", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-1",
+      "title": "6.1: Final typecheck across all migrations",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.1. Run `bun run typecheck` — zero errors across all migrations.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.1", "local_key": "task-6-1"},
+      "dependencies": [
+        {"key": "epic", "type": "parent-child"},
+        {"key": "task-1-11", "type": "blocks"},
+        {"key": "task-2-11", "type": "blocks"},
+        {"key": "task-3-12", "type": "blocks"},
+        {"key": "task-4-4", "type": "blocks"},
+        {"key": "task-5-5", "type": "blocks"}
+      ]
+    },
+    {
+      "key": "task-6-2",
+      "title": "6.2: Run bun test — all existing tests pass",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.2. Run `bun test` — all existing tests pass.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.2", "local_key": "task-6-2"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-1", "type": "blocks"}]
+    },
+    {
+      "key": "task-6-3",
+      "title": "6.3: Run bun run lint — zero errors",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.3. Run `bun run lint` — zero errors.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.3", "local_key": "task-6-3"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-2", "type": "blocks"}]
+    },
+    {
+      "key": "task-6-4",
+      "title": "6.4: Manual smoke — modal a11y verification",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.4. Manual smoke: open each migrated modal — verify Esc closes, backdrop click closes, Tab stays inside.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.4", "local_key": "task-6-4"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-3", "type": "blocks"}]
+    },
+    {
+      "key": "task-6-5",
+      "title": "6.5: Manual smoke — visual consistency check",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.5. Manual smoke: walk every view and confirm button/icon visual consistency — no raw `<button>` or inline SVG remaining.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.5", "local_key": "task-6-5"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-4", "type": "blocks"}]
+    },
+    {
+      "key": "task-6-6",
+      "title": "6.6: Manual smoke — tab arrow-key navigation",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.6. Manual smoke: verify all three tab bars (TaskDetail, BdHealth, Health) use arrow-key navigation.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.6", "local_key": "task-6-6"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-5", "type": "blocks"}]
+    },
+    {
+      "key": "task-6-7",
+      "title": "6.7: Manual smoke — popover Esc and outside-click",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.7. Manual smoke: verify all four popovers (FilterBar, StatusFilterPill, IssueMatchesPopover, TabContextMenu) close on Esc and outside-click.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.7", "local_key": "task-6-7"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-6", "type": "blocks"}]
+    },
+    {
+      "key": "task-6-8",
+      "title": "6.8: Run openspec validate ui-primitive-migration",
+      "type": "task", "priority": 2, "labels": ["openspec:ui-primitive-migration"],
+      "description": "openspec/changes/ui-primitive-migration/tasks.md §6.8. Run `openspec validate ui-primitive-migration` — passes.",
+      "metadata": {"openspec_change": "ui-primitive-migration", "task_ref": "6.8", "local_key": "task-6-8"},
+      "dependencies": [{"key": "epic", "type": "parent-child"}, {"key": "task-6-7", "type": "blocks"}]
+    }
+  ]
+}

@@ -28,6 +28,8 @@ import { HelpButton } from './HelpButton'
 import { useFeatureFlag, useSettings } from '../../contexts/SettingsContext'
 import { useActiveProject } from '../../hooks/useProject'
 import type { Task } from '../../bindings'
+import { Icon } from '../ui/Icon'
+import { Tabs } from '../ui/Tabs'
 
 export function AppLayout() {
   const [leftWidth, setLeftWidth] = useState(30)
@@ -142,12 +144,7 @@ function TopBar() {
         <div className="flex min-w-0 items-center gap-3 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 14 14" fill="currentColor">
-                <circle cx="4" cy="4" r="2" />
-                <circle cx="10" cy="4" r="2" />
-                <circle cx="4" cy="10" r="2" />
-                <circle cx="10" cy="10" r="2" />
-              </svg>
+              <Icon name="Grid2X2" size="sm" className="text-white" />
             </div>
             <span className="text-sm font-semibold text-white tracking-tight">BeadSpec</span>
           </div>
@@ -257,30 +254,33 @@ function HealthPanel() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Tab bar */}
-      <div className="flex items-center gap-0 px-5 border-b border-neutral-800 flex-shrink-0 pt-1">
-        {HEALTH_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setState({ healthTab: tab.id })}
-            className={[
-              'px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px',
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-neutral-500 hover:text-neutral-300',
-            ].join(' ')}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(value) => setState({ healthTab: value as HealthTab })}
+        className="h-full flex flex-col overflow-hidden"
+      >
+        <Tabs.List className="flex-shrink-0 gap-0 px-5 pt-1">
+          {HEALTH_TABS.map(tab => (
+            <Tabs.Trigger key={tab.id} value={tab.id} className="px-4 py-2 text-xs font-medium">
+              {tab.label}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'checks'   && <BdHealthPanel />}
-        {activeTab === 'formulas' && <FormulasBrowser />}
-        {activeTab === 'sessions' && project && <SessionsTab project={project} />}
-        {activeTab === 'reviews' && project && <ReviewsHealthTab project={project} />}
-      </div>
+        {/* Tab content */}
+        <Tabs.Content value="checks" className="flex-1 overflow-hidden">
+          <BdHealthPanel />
+        </Tabs.Content>
+        <Tabs.Content value="formulas" className="flex-1 overflow-hidden">
+          <FormulasBrowser />
+        </Tabs.Content>
+        <Tabs.Content value="sessions" className="flex-1 overflow-hidden">
+          {project && <SessionsTab project={project} />}
+        </Tabs.Content>
+        <Tabs.Content value="reviews" className="flex-1 overflow-hidden">
+          {project && <ReviewsHealthTab project={project} />}
+        </Tabs.Content>
+      </Tabs.Root>
     </div>
   )
 }

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { commands, unwrap } from '../../ipc'
 import { useQueryClient } from '@tanstack/react-query'
 import { useActiveProject } from '../../hooks/useProject'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 import { useToast } from '../ui/Toast'
 
 const STATUSES = ['open', 'in_progress', 'blocked', 'closed']
@@ -70,14 +72,24 @@ export function BulkActionToolbar({ selectedIds, onClear }: Props) {
           placeholder="Add label…"
           className="bg-neutral-800 border border-neutral-700 text-xs text-neutral-300 rounded px-2 py-1 outline-none focus:border-blue-500 w-28"
         />
-        <button onClick={bulkLabel} disabled={!labelInput.trim() || busy}
-          className="text-xs px-2 py-1 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded transition-colors disabled:opacity-40">
+        <Button
+          variant="secondary"
+          size="xs"
+          onClick={bulkLabel}
+          disabled={!labelInput.trim() || busy}
+        >
           Add
-        </button>
+        </Button>
       </div>
-      <button onClick={onClear} className="ml-auto text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
-        ✕ Clear
-      </button>
+      <Button
+        variant="ghost"
+        size="xs"
+        onClick={onClear}
+        leadingIcon={<Icon name="X" size="sm" className="h-3 w-3" />}
+        className="ml-auto"
+      >
+        Clear
+      </Button>
     </div>
   )
 }

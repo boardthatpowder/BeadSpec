@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react'
 import { useHumanQueue, HumanQueueItem } from '../../hooks/useHumanQueue'
 import { useAppState } from '../../contexts/HashStateContext'
-import { IconButton } from '../ui/IconButton'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
 
@@ -13,13 +14,15 @@ export function BdHumanQueueChip() {
 
   return (
     <div className="relative flex-shrink-0">
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition-colors"
+        className="h-auto rounded-full border-amber-500/40 bg-amber-500/20 px-2.5 py-1 text-amber-300 hover:bg-amber-500/30"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
         {items.length} {items.length === 1 ? 'decision' : 'decisions'}
-      </button>
+      </Button>
 
       {open && (
         <BdHumanQueuePopover
@@ -98,13 +101,15 @@ function BdHumanQueuePopover({ items, onClose }: PopoverProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 sticky top-0 bg-neutral-900">
         <span className="text-sm font-semibold text-neutral-100">Pending decisions</span>
-        <IconButton
-          label="Close"
+        <Button
+          aria-label="Close"
+          variant="ghost"
+          size="xs"
           onClick={onClose}
-          className="text-neutral-500 hover:text-neutral-300 transition-colors text-lg leading-none"
+          className="h-7 w-7 px-0 text-neutral-500 hover:text-neutral-300"
         >
-          ×
-        </IconButton>
+          <Icon name="X" size="sm" />
+        </Button>
       </div>
 
       {/* Items or empty state */}
@@ -192,19 +197,23 @@ function HumanQueueItemRow({
             className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 text-neutral-100 placeholder-neutral-500 resize-none focus:outline-none focus:border-amber-500/60"
           />
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="xs"
               onClick={onRespondSubmit}
               disabled={!respondText.trim()}
-              className="px-3 py-1 text-xs rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="border-amber-500/40 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Send
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={onRespondCancel}
-              className="px-3 py-1 text-xs rounded-md text-neutral-400 hover:text-neutral-200 transition-colors"
+              className="text-neutral-400 hover:text-neutral-200"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -212,24 +221,31 @@ function HumanQueueItemRow({
       {/* Action buttons */}
       {!isResponding && (
         <div className="flex items-center gap-2 mt-0.5">
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={onRespondOpen}
-            className="px-2.5 py-1 text-xs rounded-md bg-neutral-800 border border-neutral-700 text-neutral-300 hover:border-amber-500/50 hover:text-amber-300 transition-colors"
+            className="border-neutral-700 bg-neutral-800 text-neutral-300 hover:border-amber-500/50 hover:text-amber-300"
           >
             Respond
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={onDismiss}
-            className="px-2.5 py-1 text-xs rounded-md bg-neutral-800 border border-neutral-700 text-neutral-400 hover:text-neutral-200 transition-colors"
+            className="border-neutral-700 bg-neutral-800 text-neutral-400 hover:text-neutral-200"
           >
             Dismiss
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={onViewIssue}
-            className="px-2.5 py-1 text-xs rounded-md text-neutral-500 hover:text-neutral-300 transition-colors ml-auto"
+            className="ml-auto text-neutral-500 hover:text-neutral-300"
+            trailingIcon={<Icon name="ArrowRight" size="sm" />}
           >
-            View issue →
-          </button>
+            View issue
+          </Button>
         </div>
       )}
     </div>

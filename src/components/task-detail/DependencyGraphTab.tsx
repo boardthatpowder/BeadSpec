@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useEffect, useRef, useState, createContext, useContext } from 'react'
 import cytoscape from 'cytoscape'
-import { IconButton } from '../ui/IconButton'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 import {
   ReactFlow,
   Background,
@@ -96,7 +97,9 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
           )}
           {/* Expand/collapse control — always visible on non-self nodes; active when hiddenCount > 0 */}
           {!isSelf && data.branch && (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={(e) => { e.stopPropagation(); if (data.hiddenCount > 0 || data.isExpanded) toggle(data.id, data.branch!) }}
               title={data.isExpanded ? 'Collapse' : data.hiddenCount > 0 ? `Expand ${data.hiddenCount} more` : 'No further dependencies'}
               disabled={data.hiddenCount === 0 && !data.isExpanded}
@@ -107,31 +110,28 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
                   : 'text-neutral-600 cursor-default',
               ].join(' ')}
             >
-              <svg
+              <Icon
+                name="ChevronRight"
+                size="sm"
                 className={['w-2.5 h-2.5 transition-transform', data.isExpanded ? 'rotate-90' : ''].join(' ')}
-                viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8"
-              >
-                <path d="M3 2l4 3-4 3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+                strokeWidth={1.8}
+              />
               {(data.hiddenCount > 0 && !data.isExpanded) && (
                 <span>{data.hiddenCount}</span>
               )}
-            </button>
+            </Button>
           )}
           {/* Open in tab button — fades in on hover for non-self nodes */}
           {!isSelf && (
-            <IconButton
-              label="Open in new tab"
+            <Button
+              variant="ghost"
+              size="xs"
+              aria-label="Open in new tab"
               onClick={(e) => { e.stopPropagation(); openPinned(data.id) }}
               className="w-4 h-4 flex items-center justify-center rounded text-neutral-500 opacity-0 group-hover:opacity-100 hover:text-neutral-200 hover:bg-neutral-700 transition-all"
             >
-              <svg
-                className="w-2.5 h-2.5"
-                viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"
-              >
-                <path d="M2 8L8 2M4 2h4v4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </IconButton>
+              <Icon name="ExternalLink" size="sm" className="h-2.5 w-2.5" strokeWidth={1.5} />
+            </Button>
           )}
         </div>
       </div>
@@ -147,9 +147,7 @@ function TaskNodeComponent({ data }: { data: TaskNode }) {
         style={{ color: borderColor, backgroundColor: `${borderColor}22` }}
       >
         {isClosed && (
-          <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <Icon name="Check" size="sm" className="h-2.5 w-2.5" strokeWidth={2} />
         )}
         {data.status.replace('_', ' ')}
       </div>
@@ -586,15 +584,17 @@ function CytoscapeGraph({ nodes, edges, onNodeClick, onToggle }: {
     <div style={{ position: 'absolute', inset: 0, background: '#0a0a0a', overflow: 'hidden' }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0, background: '#0a0a0a' }} />
       {badges.map(b => (
-        <button
+        <Button
           key={b.id}
+          variant="ghost"
+          size="xs"
           onClick={(e) => { e.stopPropagation(); onToggle(b.id, b.branch) }}
           title={b.isExpanded ? 'Collapse' : `Expand ${b.hiddenCount} more`}
           style={{ position: 'absolute', left: b.x, top: b.y, transform: 'translate(-50%, -50%)' }}
           className="text-[9px] font-medium px-1 rounded bg-neutral-700 hover:bg-neutral-600 text-neutral-300 transition-colors leading-none py-0.5 z-10 pointer-events-auto"
         >
           {b.isExpanded ? '−' : `+${b.hiddenCount}`}
-        </button>
+        </Button>
       ))}
     </div>
   )

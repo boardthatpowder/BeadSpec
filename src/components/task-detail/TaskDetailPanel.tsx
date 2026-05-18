@@ -29,6 +29,8 @@ import { useFeatureFlag } from "../../contexts/SettingsContext";
 import { useAppState } from "../../contexts/HashStateContext";
 import { useTasks } from "../../hooks/useTasks";
 import { findScopeChangeChild } from "../../lib/findScopeChangeChild";
+import { Icon } from "../ui/Icon";
+import { Tabs } from "../ui/Tabs";
 
 type TabId = "details" | "dependencies" | "activity" | "impact";
 
@@ -137,19 +139,7 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-400 border border-neutral-700"
                   title={gitRefsData.branches.join(", ")}
                 >
-                  <svg
-                    className="w-2.5 h-2.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 3v12m0 0a3 3 0 100 6 3 3 0 000-6zm0 0h6a3 3 0 100-6H6"
-                    />
-                  </svg>
+                  <Icon name="GitBranch" size="sm" />
                   {gitRefsData.branches[0]}
                   {gitRefsData.branches.length > 1 && (
                     <span className="text-neutral-600">
@@ -194,29 +184,22 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
       <OutsideFilterIndicator visible={false} />
 
       {/* Tabs */}
-      <div className="flex-shrink-0 flex border-b border-neutral-800 px-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={[
-              "px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors",
-              activeTab === tab.id
-                ? "border-blue-500 text-blue-400"
-                : "border-transparent text-neutral-500 hover:text-neutral-300",
-            ].join(" ")}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div
-        className={`flex-1 min-h-0 relative ${activeTab === "dependencies" ? "overflow-hidden" : "overflow-y-auto"}`}
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as TabId)}
+        className="flex flex-1 min-h-0 flex-col"
       >
-        <ErrorBoundary key={activeTab}>
-          {activeTab === "details" && (
+        <Tabs.List className="flex-shrink-0 px-6">
+          {tabs.map((tab) => (
+            <Tabs.Trigger key={tab.id} value={tab.id} className="px-4 py-3 text-sm font-medium">
+              {tab.label}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+
+        {/* Tab content */}
+        <Tabs.Content value="details" className="flex-1 min-h-0 overflow-y-auto">
+          <ErrorBoundary key="details">
             <DetailsTab
               task={task}
               project={project ?? ""}
@@ -224,20 +207,26 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
               paneId={paneId}
               scopeChangeChild={scopeChangeChild}
             />
-          )}
-          {activeTab === "dependencies" && (
+          </ErrorBoundary>
+        </Tabs.Content>
+
+        <Tabs.Content value="dependencies" className="flex-1 min-h-0 overflow-hidden">
+          <ErrorBoundary key="dependencies">
             <DependenciesTab
               key={task.id}
               task={task}
               project={project ?? ""}
             />
-          )}
-          {activeTab === "activity" && (
+          </ErrorBoundary>
+        </Tabs.Content>
+
+        <Tabs.Content value="activity" className="flex-1 min-h-0 overflow-y-auto">
+          <ErrorBoundary key="activity">
             <div className="p-5 flex flex-col gap-4">
               <ActivityTimeline
                 taskId={task.id}
                 project={project ?? ""}
-                activeTab={activeTab}
+                activeTab="activity"
               />
               {rufloAvailable && <ReviewsSection project={project ?? ""} labels={task.labels ?? []} />}
               <GitHistoryPanel
@@ -245,12 +234,15 @@ export function TaskDetailPanel({ taskId, paneId }: TaskDetailPanelProps) {
                 isLoading={gitRefsLoading}
               />
             </div>
-          )}
-          {activeTab === "impact" && (
+          </ErrorBoundary>
+        </Tabs.Content>
+
+        <Tabs.Content value="impact" className="flex-1 min-h-0 overflow-y-auto">
+          <ErrorBoundary key="impact">
             <ImpactPanel task={task} project={project ?? ""} paneId={paneId} />
-          )}
-        </ErrorBoundary>
-      </div>
+          </ErrorBoundary>
+        </Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 }

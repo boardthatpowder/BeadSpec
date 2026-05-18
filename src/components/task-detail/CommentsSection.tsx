@@ -5,6 +5,7 @@ import type { HistoryEntry } from '../../bindings'
 import { useToast } from '../ui/Toast'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { Button } from '../ui/Button'
 
 interface Props { taskId: string; project: string }
 
@@ -88,13 +89,15 @@ export function CommentsSection({ taskId, project }: Props) {
             </div>
           )}
         </div>
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={submit}
           disabled={submitting || !editor || editor.isEmpty}
           className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs rounded-lg transition-colors self-end"
         >
           {submitting ? '…' : 'Send'}
-        </button>
+        </Button>
       </div>
     </div>
   )

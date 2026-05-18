@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../../stores/workspace'
 import { Tooltip } from '../ui/Tooltip'
 import { ImportModal } from './ImportModal'
 import type { ChangeBeadsProgress, ChangeDependencies, ChangeDepLink, ChangeInfo, ChangeProgress, Task } from '../../bindings'
+import { Button } from '../ui/Button'
 
 type ChangeStatus = 'draft' | 'not_started' | 'in_progress' | 'complete' | 'archived'
 
@@ -82,18 +83,20 @@ function ArtifactLink({ label, present, change, artifact }: ArtifactLinkProps) {
   }
   return (
     <Tooltip label={present ? `Open ${label}` : `${label} not present`}>
-    <button
+    <Button
+      variant="ghost"
+      size="xs"
       onClick={handleClick}
       disabled={!present}
       className={[
-        'px-2 py-0.5 text-[10px] font-mono rounded border transition-colors',
+        'h-auto px-2 py-0.5 text-[10px] font-mono',
         present
           ? 'border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500 cursor-pointer'
           : 'border-neutral-800 text-neutral-700 cursor-not-allowed opacity-40',
       ].join(' ')}
     >
       {label}
-    </button>
+    </Button>
     </Tooltip>
   )
 }
@@ -194,12 +197,14 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
             {STATUS_CONFIG[changeStatus].label}
           </span>
           {importedEpicId ? (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={(e) => { e.stopPropagation(); setState({ view: 'all', taskId: importedEpicId }) }}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-400 border border-blue-900/50 flex-shrink-0 hover:bg-blue-950/70 transition-colors"
+              className="h-auto px-1.5 py-0.5 text-[10px] bg-blue-950/40 text-blue-400 border-blue-900/50 flex-shrink-0 hover:bg-blue-950/70"
             >
               imported → {importedEpicId}
-            </button>
+            </Button>
           ) : (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800/60 text-neutral-600 flex-shrink-0">
               not imported
@@ -245,23 +250,27 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
             artifact="tasks.md"
           />
           {change.specs?.map((specId) => (
-            <button
+            <Button
               key={specId}
+              variant="ghost"
+              size="xs"
               onClick={(e) => { e.stopPropagation(); openDocTab(change.name, `specs/${specId}/spec.md`); setState({ view: undefined }) }}
-              className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 hover:bg-purple-800/40 transition-colors"
+              className="h-auto px-2 py-0.5 text-xs bg-purple-900/30 text-purple-300 hover:bg-purple-800/40"
             >
               spec: {specId}
-            </button>
+            </Button>
           ))}
         </div>
 
         {!isReadOnly && !importedEpicId && (
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={(e) => { e.stopPropagation(); setShowImportModal(true) }}
-            className="px-2.5 py-1 text-xs font-medium text-neutral-300 border border-neutral-700 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors whitespace-nowrap"
+            className="whitespace-nowrap"
           >
             Import to beads
-          </button>
+          </Button>
         )}
       </div>
 
@@ -321,18 +330,20 @@ function DependencyChipRow({ label, links, direction, changesBySlug, onOpenEpic 
           const target = changesBySlug.get(link.slug)
           const archived = target?.is_archived ?? false
           return (
-            <button
+            <Button
               key={link.epic_id}
+              variant="ghost"
+              size="xs"
               onClick={() => onOpenEpic(link.epic_id)}
               aria-label={`${label} ${link.slug} — open epic ${link.epic_id}`}
               className={[
-                'text-[10px] px-1.5 py-0.5 rounded font-mono transition-colors',
+                'h-auto px-1.5 py-0.5 text-[10px] font-mono',
                 chipPalette,
                 archived ? 'opacity-60' : '',
               ].join(' ')}
             >
               {link.slug}
-            </button>
+            </Button>
           )
         })}
       </div>

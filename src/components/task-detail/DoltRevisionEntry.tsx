@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { DoltRevision } from '../../bindings'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 interface Props {
   revision: DoltRevision
@@ -58,9 +60,7 @@ export function DoltRevisionEntry({ revision }: Props) {
       {/* Timeline dot — violet for Dolt */}
       <div className="relative flex flex-col items-center">
         <div className="w-6 h-6 rounded-full bg-violet-900/40 border border-violet-700/50 flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-violet-400" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 100-16 8 8 0 000 16zm-1-11h2v6h-2zm0-4h2v2h-2z" />
-          </svg>
+          <Icon name="Info" size="sm" className="h-3 w-3 text-violet-400" />
         </div>
       </div>
 
@@ -83,13 +83,15 @@ export function DoltRevisionEntry({ revision }: Props) {
 
           {/* Expand toggle */}
           {fieldDiffs.length > 0 && (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => setExpanded(prev => !prev)}
               className="ml-auto text-xs text-neutral-600 hover:text-neutral-400 hover:bg-neutral-700 px-1.5 py-0.5 rounded transition-colors"
               aria-expanded={expanded}
             >
               {expanded ? 'Hide changes' : `${fieldDiffs.length} change${fieldDiffs.length > 1 ? 's' : ''}`}
-            </button>
+            </Button>
           )}
         </div>
 

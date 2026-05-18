@@ -3,8 +3,9 @@ import { useAppState } from '../../contexts/HashStateContext'
 import { useQuery } from '@tanstack/react-query'
 import { commands, unwrap } from '../../ipc'
 import { useActiveProject } from '../../hooks/useProject'
-import { IconButton } from '../ui/IconButton'
 import { useBackNavigation } from '../../hooks/useBackNavigation'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 export function BreadcrumbBar() {
   const { history } = useNavigationHistory()
@@ -49,30 +50,34 @@ export function BreadcrumbBar() {
 
   return (
     <div className="flex items-center gap-1 px-6 py-2 border-b border-neutral-800 bg-neutral-950/50 text-xs">
-      <IconButton
-        label="Go back"
+      <Button
+        variant="ghost"
+        size="xs"
+        aria-label="Go back"
         onClick={goBack}
-        className="text-neutral-500 hover:text-neutral-300 transition-colors mr-1"
+        className="mr-1 h-auto border-0 px-1 py-0 text-neutral-500 hover:text-neutral-300"
       >
-        ←
-      </IconButton>
+        <Icon name="ArrowLeft" size="sm" />
+      </Button>
       {crumbs.map((id, i) => (
         <span key={`${id}-${i}`} className="flex items-center gap-1">
-          {i > 0 && <span className="text-neutral-700">›</span>}
+          {i > 0 && <Icon name="ChevronRight" size="sm" className="text-neutral-700" />}
           {id === '...' ? (
             <span className="text-neutral-600">…</span>
           ) : (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => navigateTo(id)}
               className={[
-                'transition-colors max-w-32 truncate',
+                'h-auto max-w-32 border-0 px-0 py-0 font-normal transition-colors',
                 id === state.taskId
                   ? 'text-neutral-200 font-medium cursor-default'
                   : 'text-neutral-500 hover:text-neutral-300',
               ].join(' ')}
             >
-              {metas[id] ?? id}
-            </button>
+              <span className="truncate">{metas[id] ?? id}</span>
+            </Button>
           )}
         </span>
       ))}

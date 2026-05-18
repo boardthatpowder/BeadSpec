@@ -9,6 +9,9 @@ import { findIssuesTouchingProcess, getGitnexusIndexStatus, getGitnexusProcess, 
 import type { IssueMatch, ProcessDetail as ProcessDetailType, ProcessSummary } from '../../bindings'
 import { ViewHelpHeader } from '../shared/ViewHelpHeader'
 import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
+import { Popover } from '../ui/Popover'
 
 export function ProcessBrowser() {
   const project = useActiveProject()
@@ -98,9 +101,15 @@ function StaleIndexBanner({ project }: { project: string }) {
   return (
     <div className="flex items-center justify-between border-b border-amber-900/50 bg-amber-950/30 px-4 py-2 text-xs text-amber-300">
       <span>GitNexus index is stale{message ? ` · ${message}` : ''}</span>
-      <button onClick={() => triggerGitnexusReanalyze(project)} className="rounded border border-amber-800 px-2 py-1 hover:bg-amber-900/30">
+      <Button
+        variant="secondary"
+        size="xs"
+        onClick={() => triggerGitnexusReanalyze(project)}
+        leadingIcon={<Icon name="RefreshCw" size="sm" className="h-3 w-3" />}
+        className="border-amber-800 bg-transparent text-amber-300 hover:bg-amber-900/30"
+      >
         Re-analyze
-      </button>
+      </Button>
     </div>
   )
 }
@@ -148,15 +157,17 @@ function ProcessList({
             {virtualizer.getVirtualItems().map(item => {
               const row = rows[item.index]
               return (
-                <button
+                <Button
                   key={row.name}
+                  variant="ghost"
+                  size="md"
                   onClick={() => onSelect(row.name)}
-                  className={`absolute left-0 right-0 flex h-11 items-center justify-between gap-3 border-b border-neutral-900 px-3 text-left ${selected === row.name ? 'bg-blue-950/30 text-blue-200' : 'text-neutral-300 hover:bg-neutral-900/60'}`}
+                  className={`absolute left-0 right-0 h-11 justify-between rounded-none border-0 border-b border-neutral-900 px-3 text-left font-normal ${selected === row.name ? 'bg-blue-950/30 text-blue-200' : 'text-neutral-300 hover:bg-neutral-900/60'}`}
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
                   <span className="min-w-0 truncate text-sm">{row.name}</span>
                   <span className="rounded bg-neutral-900 px-1.5 py-0.5 text-[10px] text-neutral-500">{row.step_count}</span>
-                </button>
+                </Button>
               )
             })}
           </div>
@@ -207,13 +218,15 @@ function ProcessDetailBody({
         </div>
         <div className="flex gap-2">
           <IssueMatchesPopover project={project} processName={detail.name} />
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             disabled={!step}
             onClick={() => step && openPath(`${step.file}:${step.line}:0`).catch(() => {})}
-            className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-40"
+            leadingIcon={<Icon name="ExternalLink" size="sm" className="h-3 w-3" />}
           >
             Open in editor
-          </button>
+          </Button>
         </div>
       </div>
       <div ref={parentRef[1]} role="listbox" className="flex-1 overflow-auto">
@@ -221,11 +234,13 @@ function ProcessDetailBody({
           {virtualizer.getVirtualItems().map(item => {
             const s = detail.steps[item.index]
             return (
-              <button
+              <Button
                 key={`${s.symbol}-${item.index}`}
+                variant="ghost"
+                size="md"
                 aria-label={`step ${item.index + 1}: ${s.symbol} at ${s.file} line ${s.line}`}
                 onClick={() => setFocused(item.index)}
-                className={`absolute left-0 right-0 min-h-14 border-b border-neutral-900 px-5 py-2 text-left ${focused === item.index ? 'bg-blue-950/20' : 'hover:bg-neutral-900/40'}`}
+                className={`absolute left-0 right-0 min-h-14 flex-col items-stretch gap-0 rounded-none border-0 border-b border-neutral-900 px-5 py-2 text-left font-normal ${focused === item.index ? 'bg-blue-950/20' : 'hover:bg-neutral-900/40'}`}
                 style={{ transform: `translateY(${item.start}px)` }}
               >
                 <div className="flex items-center gap-2 text-sm text-neutral-200">
@@ -234,7 +249,7 @@ function ProcessDetailBody({
                   <span className="font-mono text-xs text-neutral-600">{s.file}:{s.line}</span>
                 </div>
                 <div className="mt-1 truncate pl-10 font-mono text-xs text-neutral-500">{s.snippet ?? s.symbol}</div>
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -253,26 +268,32 @@ function IssueMatchesPopover({ project, processName }: { project: string; proces
     retry: false,
   })
   return (
-    <div className="relative">
-      <button onClick={() => setOpen(v => !v)} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">
-        Find issues
-      </button>
-      {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 rounded border border-neutral-700 bg-neutral-950 p-2 shadow-xl">
-          {query.isLoading ? <div className="p-2 text-xs text-neutral-500">Loading…</div> : (query.data?.length ?? 0) === 0 ? (
-            <div className="p-2 text-xs text-neutral-500">No matching issues.</div>
-          ) : query.data!.map(match => (
-            <button
-              key={match.id}
-              onClick={() => { setState({ view: 'all', taskId: match.id }); setOpen(false) }}
-              className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-neutral-900"
-            >
-              <span className="truncate text-neutral-300">{match.title}</span>
-              <span className="rounded bg-neutral-800 px-1.5 text-neutral-400">{match.overlap_count}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <Button
+          variant="secondary"
+          size="xs"
+          leadingIcon={<Icon name="Search" size="sm" className="h-3 w-3" />}
+        >
+          Find issues
+        </Button>
+      </Popover.Trigger>
+      <Popover.Content align="end" className="w-80 bg-neutral-950 p-2">
+        {query.isLoading ? <div className="p-2 text-xs text-neutral-500">Loading…</div> : (query.data?.length ?? 0) === 0 ? (
+          <div className="p-2 text-xs text-neutral-500">No matching issues.</div>
+        ) : query.data!.map(match => (
+          <Button
+            key={match.id}
+            variant="ghost"
+            size="xs"
+            onClick={() => { setState({ view: 'all', taskId: match.id }); setOpen(false) }}
+            className="h-auto w-full justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-neutral-900"
+          >
+            <span className="truncate text-neutral-300">{match.title}</span>
+            <span className="rounded bg-neutral-800 px-1.5 text-neutral-400">{match.overlap_count}</span>
+          </Button>
+        ))}
+      </Popover.Content>
+    </Popover.Root>
   )
 }

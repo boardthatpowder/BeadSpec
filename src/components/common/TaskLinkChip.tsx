@@ -1,5 +1,6 @@
 import { useAppState } from '../../contexts/HashStateContext'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
+import { Button } from '../ui/Button'
 
 interface TaskLinkChipProps {
   id: string
@@ -29,7 +30,9 @@ export function TaskLinkChip({ id, title, fromTaskId }: TaskLinkChipProps) {
   }
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="xs"
       onClick={handleClick}
       title={`${id} — ${title}`}
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono
@@ -40,6 +43,6 @@ export function TaskLinkChip({ id, title, fromTaskId }: TaskLinkChipProps) {
       <span className="text-neutral-600 flex-shrink-0">{shortId}</span>
       <span className="text-neutral-500 flex-shrink-0">·</span>
       <span className="truncate">{truncatedTitle}</span>
-    </button>
+    </Button>
   )
 }

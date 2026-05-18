@@ -1,4 +1,5 @@
 import { useWorkspaceStore } from '../../stores/workspace'
+import { Button } from '../ui/Button'
 
 const ISSUE_ID_RE = /\b([A-Z]+-[a-z0-9]+)\b/g
 
@@ -33,7 +34,9 @@ function IssueChip({ id }: { id: string }) {
   const { openPinned } = useWorkspaceStore()
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="xs"
       onClick={(e) => {
         e.stopPropagation()
         openPinned(id)
@@ -45,6 +48,6 @@ function IssueChip({ id }: { id: string }) {
         transition-colors cursor-pointer mx-0.5 leading-4"
     >
       {id}
-    </button>
+    </Button>
   )
 }

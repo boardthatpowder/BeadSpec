@@ -9,6 +9,8 @@ import { useFeatureFlag } from '../../contexts/SettingsContext'
 import type { LeafPane as LeafPaneType, TabId } from '../../utils/paneTree'
 import { useDroppable } from '@dnd-kit/core'
 import { useDragActive } from './WorkspaceDndProvider'
+import { Button } from '../ui/Button'
+import { Icon, type IconName } from '../ui/Icon'
 
 interface LeafPaneProps {
   node: LeafPaneType
@@ -72,7 +74,7 @@ type EdgeSide = 'left' | 'right' | 'top' | 'bottom'
 function EdgeDropZone({ paneId, edge }: { paneId: string; edge: EdgeSide }) {
   const { setNodeRef, isOver } = useDroppable({ id: `edge:${paneId}:${edge}` })
   const isDragging = useDragActive()
-  const arrow: Record<EdgeSide, string> = { left: '←', right: '→', top: '↑', bottom: '↓' }
+  const arrow: Record<EdgeSide, IconName> = { left: 'ArrowLeft', right: 'ArrowRight', top: 'ArrowUp', bottom: 'ArrowDown' }
   const posClass: Record<EdgeSide, string> = {
     left: 'top-0 left-0 h-full w-1/5',
     right: 'top-0 right-0 h-full w-1/5',
@@ -92,7 +94,7 @@ function EdgeDropZone({ paneId, edge }: { paneId: string; edge: EdgeSide }) {
           : 'bg-blue-900/20 border border-dashed border-blue-700/40',
       ].join(' ')}
     >
-      {isDragging && <span className="text-blue-300 text-xs select-none">{arrow[edge]}</span>}
+      {isDragging && <Icon name={arrow[edge]} size="sm" className="select-none text-blue-300" />}
     </div>
   )
 }
@@ -103,12 +105,14 @@ export function EmptyPlaceholder({ paneId, isRoot }: { paneId: string; isRoot: b
     <div className="h-full flex flex-col items-center justify-center gap-3 text-neutral-600">
       <span className="text-sm">Select a task to open</span>
       {!isRoot && (
-        <button
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={(e) => { e.stopPropagation(); closePane(paneId) }}
-          className="text-xs text-neutral-500 hover:text-neutral-300 border border-neutral-800 px-3 py-1 rounded transition-colors"
+          className="border-neutral-800 text-neutral-500 hover:text-neutral-300"
         >
           Close pane
-        </button>
+        </Button>
       )}
     </div>
   )

@@ -7,6 +7,8 @@ import type { MemoryEntry } from '../../bindings'
 import { parseMemoryKey } from './parseMemoryKey'
 import { ViewHelpHeader } from '../shared/ViewHelpHeader'
 import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
+import { Dialog } from '../ui/Dialog'
+import { Button } from '../ui/Button'
 
 export function MemoryBrowser() {
   const project = useActiveProject()
@@ -40,14 +42,14 @@ export function MemoryBrowser() {
         <aside className="border-r border-neutral-800 bg-neutral-950 p-3">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-medium text-neutral-200">Namespaces</div>
-            <button onClick={() => setStoreOpen(true)} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">+ Store</button>
+            <Button variant="secondary" size="xs" onClick={() => setStoreOpen(true)}>+ Store</Button>
           </div>
           <NamespaceTree entries={entries} selected={namespace} onSelect={(ns) => { setNamespace(ns); setState({ memoryNamespace: ns || undefined }) }} />
         </aside>
         <main className="min-w-0 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
             <span className="text-sm text-neutral-300">{namespace || 'All memory'}</span>
-            <button onClick={() => query.refetch()} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">Refresh</button>
+            <Button variant="secondary" size="xs" onClick={() => query.refetch()}>Refresh</Button>
           </div>
           <div className="flex-1 overflow-auto">
             {query.error ? (
@@ -57,12 +59,12 @@ export function MemoryBrowser() {
             ) : visible.length === 0 ? (
               <div className="p-4 text-sm text-neutral-600">No memory entries.</div>
             ) : visible.map(entry => (
-              <button key={entry.key} onClick={() => setSelected(entry)} className="grid w-full grid-cols-[1fr_80px_140px] gap-3 border-b border-neutral-900 px-4 py-2 text-left hover:bg-neutral-900/50">
+              <Button key={entry.key} variant="ghost" size="sm" onClick={() => setSelected(entry)} className="grid h-auto w-full grid-cols-[1fr_80px_140px] gap-3 rounded-none border-0 border-b border-neutral-900 px-4 py-2 text-left hover:bg-neutral-900/50">
                 <span className="truncate font-mono text-xs text-neutral-300">{entry.key}</span>
                 <span className="text-xs text-neutral-600">{(entry.score ?? 0).toFixed(2)}</span>
                 <span className="text-xs text-neutral-500">{entry.ts ? new Date(entry.ts * 1000).toLocaleString() : 'no ts'}</span>
                 <span className="col-span-3 truncate text-xs text-neutral-500">{entry.preview}</span>
-              </button>
+              </Button>
             ))}
           </div>
         </main>
@@ -90,11 +92,11 @@ function NamespaceTree({ entries, selected, onSelect }: { entries: MemoryEntry[]
   const tree = buildNamespaceTree(entries)
   return (
     <div className="space-y-1 overflow-auto">
-      <button onClick={() => onSelect('')} className={`block w-full rounded px-2 py-1 text-left text-xs ${selected === '' ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500 hover:bg-neutral-900'}`}>All ({entries.length})</button>
+      <Button variant="ghost" size="xs" onClick={() => onSelect('')} className={`h-auto w-full justify-start px-2 py-1 text-left ${selected === '' ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500 hover:bg-neutral-900'}`}>All ({entries.length})</Button>
       {tree.map(([path, count]) => (
-        <button key={path} onClick={() => onSelect(path)} className={`block w-full rounded px-2 py-1 text-left font-mono text-[10px] ${selected === path ? 'bg-blue-950/40 text-blue-300' : 'text-neutral-500 hover:bg-neutral-900'}`}>
+        <Button key={path} variant="ghost" size="xs" onClick={() => onSelect(path)} className={`h-auto w-full justify-start px-2 py-1 text-left font-mono text-[10px] ${selected === path ? 'bg-blue-950/40 text-blue-300' : 'text-neutral-500 hover:bg-neutral-900'}`}>
           {path} <span className="text-neutral-700">({count})</span>
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -112,9 +114,10 @@ function MemoryDrawer({ entry, onClose }: { entry: MemoryEntry; onClose: () => v
     },
   })
   return (
-    <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose}>
-      <aside className="absolute right-0 top-0 h-full w-96 max-w-full overflow-auto border-l border-neutral-800 bg-neutral-950 p-4" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="mb-4 text-xs text-neutral-500 hover:text-neutral-300">Close</button>
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>
+      <Dialog.Content className="left-auto right-0 top-0 h-full w-96 max-w-full translate-x-0 translate-y-0 overflow-auto rounded-none border-y-0 border-r-0 bg-neutral-950 p-4">
+        <Dialog.Header className="sr-only">Memory entry details</Dialog.Header>
+        <Button variant="ghost" size="xs" onClick={onClose} className="mb-4 h-auto border-0 text-neutral-500 hover:text-neutral-300">Close</Button>
         <div className="break-all font-mono text-xs text-neutral-300">{entry.key}</div>
         <div className="mt-3 flex flex-wrap gap-1">
           {Object.entries(facets).filter(([k]) => !['raw', 'rest'].includes(k)).map(([k, v]) => v != null && (
@@ -123,11 +126,11 @@ function MemoryDrawer({ entry, onClose }: { entry: MemoryEntry; onClose: () => v
         </div>
         <pre className="mt-4 whitespace-pre-wrap text-sm text-neutral-300 select-text">{entry.body}</pre>
         <div className="mt-4 flex gap-2">
-          {facets.issue && <button onClick={() => setState({ view: 'all', taskId: facets.issue })} className="rounded bg-blue-600 px-2 py-1 text-xs text-white">Open issue</button>}
-          <button onClick={() => remove.mutate()} className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300">Delete</button>
+          {facets.issue && <Button variant="primary" size="xs" onClick={() => setState({ view: 'all', taskId: facets.issue })}>Open issue</Button>}
+          <Button variant="danger" size="xs" onClick={() => remove.mutate()} className="border-red-900/60 text-red-100">Delete</Button>
         </div>
-      </aside>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }
 
@@ -143,16 +146,16 @@ function StoreDialog({ namespace, onClose }: { namespace: string; onClose: () =>
     },
   })
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-[520px] rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-        <div className="mb-3 text-sm font-medium text-neutral-200">Store memory</div>
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>
+      <Dialog.Content className="w-[520px] rounded-lg bg-neutral-950 p-4">
+        <Dialog.Header className="border-0 px-0 py-0 mb-3 text-sm">Store memory</Dialog.Header>
         <input value={key} onChange={e => setKey(e.target.value)} className="mb-2 w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 font-mono text-xs" placeholder="key" />
         <textarea value={value} onChange={e => setValue(e.target.value)} className="h-40 w-full rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm" placeholder="value" />
         <div className="mt-3 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded border border-neutral-700 px-3 py-1 text-sm text-neutral-300">Cancel</button>
-          <button onClick={() => store.mutate()} disabled={!key || !value} className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-40">Store</button>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={() => store.mutate()} disabled={!key || !value}>Store</Button>
         </div>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }

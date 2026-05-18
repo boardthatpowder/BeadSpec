@@ -15,6 +15,8 @@ import { useLineageForTask } from '../../hooks/useDependencyLineage'
 import { TaskLinkChip } from '../common/TaskLinkChip'
 import { useDensity } from '../../contexts/DensityContext'
 import type { Density } from '../../contexts/DensityContext'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 const DENSITY_ROW_HEIGHT: Record<Density, number> = {
   compact:     42,
@@ -75,17 +77,17 @@ interface GroupHeaderRowProps {
 
 export function GroupHeaderRow({ label, count, collapsed, onToggle }: GroupHeaderRowProps) {
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="md"
       onClick={onToggle}
-      className="w-full h-full flex items-center gap-2 px-3 bg-neutral-900/60 border-b border-neutral-800/80 border-l-2 border-l-neutral-700/60 hover:bg-neutral-800/60 transition-colors group"
+      className="group h-full w-full justify-start gap-2 rounded-none border-0 border-b border-l-2 border-neutral-800/80 border-l-neutral-700/60 bg-neutral-900/60 px-3 font-normal hover:bg-neutral-800/60"
     >
-      {/* Chevron */}
-      <svg
-        className={`w-3 h-3 text-neutral-500 group-hover:text-neutral-400 flex-shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}
-        viewBox="0 0 12 12" fill="currentColor"
-      >
-        <path d="M6 8L1 3h10L6 8z" />
-      </svg>
+      <Icon
+        name="ChevronDown"
+        size="sm"
+        className={`h-3 w-3 text-neutral-500 group-hover:text-neutral-400 flex-shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}
+      />
 
       {/* Label */}
       <span className="text-xs font-semibold text-neutral-400 capitalize flex-1 text-left truncate">
@@ -103,7 +105,7 @@ export function GroupHeaderRow({ label, count, collapsed, onToggle }: GroupHeade
           ({count} hidden)
         </span>
       )}
-    </button>
+    </Button>
   )
 }
 
@@ -150,18 +152,19 @@ function TaskRowLineage({ taskId }: { taskId: string }) {
 
           {unblocks.length > 0 && (
             <div className="flex flex-col gap-1">
-              <button
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={e => { e.stopPropagation(); setUnlocksExpanded(x => !x) }}
-                className="flex items-center gap-1 text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors w-fit"
+                className="h-auto w-fit border-0 bg-transparent px-0 py-0 text-[10px] font-normal text-neutral-500 hover:bg-transparent hover:text-neutral-300"
               >
                 <span>Unblocks: {unblocks.length} task{unblocks.length !== 1 ? 's' : ''}</span>
-                <svg
-                  className={`w-2.5 h-2.5 transition-transform ${unlocksExpanded ? 'rotate-90' : ''}`}
-                  viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"
-                >
-                  <path d="M3 2l4 3-4 3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+                <Icon
+                  name="ChevronRight"
+                  size="sm"
+                  className={`h-2.5 w-2.5 transition-transform ${unlocksExpanded ? 'rotate-90' : ''}`}
+                />
+              </Button>
               {unlocksExpanded && (
                 <div className="flex items-start gap-1.5 flex-wrap pl-1">
                   {unblocks.map(dep => (
@@ -387,38 +390,60 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
 
   const SortIcon = ({ field }: { field: SortField }) =>
     sortField === field ? (
-      <span className="ml-1 text-blue-400 text-[10px]">{sortDir === 'asc' ? '↑' : '↓'}</span>
-    ) : <span className="ml-1 text-neutral-700 text-[10px]">↕</span>
+      <Icon
+        name={sortDir === 'asc' ? 'ArrowUp' : 'ArrowDown'}
+        size="sm"
+        className="ml-1 inline h-2.5 w-2.5 text-blue-400"
+      />
+    ) : (
+      <Icon name="ArrowUpDown" size="sm" className="ml-1 inline h-2.5 w-2.5 text-neutral-700" />
+    )
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sort header */}
       <div className="flex items-center px-3 py-2 border-b border-neutral-800/60 bg-neutral-900/40 flex-shrink-0">
         {groupConfig !== null ? (
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={toggleExpandCollapseAll}
             title={hasCollapsed ? 'Expand all' : 'Collapse all'}
-            className="w-4 mr-2 flex-shrink-0 flex items-center justify-center text-neutral-600 hover:text-neutral-400 transition-colors"
+            className="mr-2 h-auto w-4 flex-shrink-0 border-0 bg-transparent px-0 py-0 text-neutral-600 hover:bg-transparent hover:text-neutral-400"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="currentColor">
-              {/* upper chevron — points up (expand) or down (collapse) */}
-              <path d={hasCollapsed ? 'M7 1L2 6h10L7 1z' : 'M7 6L2 2h10L7 6z'} />
-              {/* lower chevron — points down (expand) or up (collapse) */}
-              <path d={hasCollapsed ? 'M7 13L2 8h10L7 13z' : 'M7 8L2 12h10L7 8z'} />
-            </svg>
-          </button>
+            <Icon
+              name={hasCollapsed ? 'ChevronsUpDown' : 'ChevronsDownUp'}
+              size="sm"
+              className="h-3.5 w-3.5"
+            />
+          </Button>
         ) : (
           <div className="w-4 mr-2 flex-shrink-0" />
         )}
-        <button onClick={() => handleSort('title')} className="flex-1 text-left text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => handleSort('title')}
+          className="h-auto flex-1 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+        >
           Title <SortIcon field="title" />
-        </button>
-        <button onClick={() => handleSort('status')} className="w-20 text-left text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => handleSort('status')}
+          className="h-auto w-20 justify-start rounded-none border-0 bg-transparent px-0 py-0 text-left text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+        >
           Status <SortIcon field="status" />
-        </button>
-        <button onClick={() => handleSort('priority')} className="w-8 text-right text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => handleSort('priority')}
+          className="h-auto w-8 justify-end rounded-none border-0 bg-transparent px-0 py-0 text-right text-xs font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+        >
           P <SortIcon field="priority" />
-        </button>
+        </Button>
       </div>
 
       {/* Virtualized list */}
@@ -474,8 +499,10 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                     {quickStatusFlatIdx === item.flatIndex && (
                       <div className="absolute inset-0 bg-neutral-950/96 backdrop-blur-sm flex items-center gap-1.5 px-3 z-10 border-l-2 border-l-blue-500">
                         {STATUSES.map(s => (
-                          <button
+                          <Button
                             key={s}
+                            variant="secondary"
+                            size="xs"
                             onClick={() => {
                               if (project) {
                                 unwrap(commands.changeTaskStatus(project, item.task.id, s, false))
@@ -483,17 +510,19 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                               }
                               setQuickStatusFlatIdx(null)
                             }}
-                            className={`text-xs px-2 py-1 rounded-md font-medium ${STATUS_BADGE[s]} hover:opacity-90 transition-opacity`}
+                            className={`h-auto rounded-md border-0 px-2 py-1 text-xs ${STATUS_BADGE[s]} hover:opacity-90`}
                           >
                             {s.replace('_', ' ')}
-                          </button>
+                          </Button>
                         ))}
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="xs"
                           onClick={() => setQuickStatusFlatIdx(null)}
-                          className="ml-auto text-[10px] text-neutral-600 hover:text-neutral-400 transition-colors"
+                          className="ml-auto h-auto border-0 bg-transparent px-0 py-0 text-[10px] font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
                         >
                           esc
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -505,11 +534,7 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
 
         {sorted.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-40 gap-3">
-            <svg className="w-8 h-8 text-neutral-800" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="6" width="24" height="4" rx="2" />
-              <rect x="4" y="14" width="16" height="4" rx="2" />
-              <rect x="4" y="22" width="20" height="4" rx="2" />
-            </svg>
+            <Icon name="ListTodo" size="lg" className="h-8 w-8 text-neutral-800" />
             <span className="text-neutral-600 text-sm">No tasks match the current filters</span>
           </div>
         )}

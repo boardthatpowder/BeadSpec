@@ -1,8 +1,7 @@
 // Right-click context menu for a workspace tab.
-import { useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { useWorkspaceStore } from '../../stores/workspace'
-import { useDismissable } from '../../hooks/useDismissable'
+import { Button } from '../ui/Button'
+import { Popover } from '../ui/Popover'
 
 interface TabContextMenuProps {
   taskId: string
@@ -14,37 +13,44 @@ interface TabContextMenuProps {
 
 export function TabContextMenu({ taskId, paneId, x, y, onDismiss }: TabContextMenuProps) {
   const { closeTab, closeOthers, closeToRight, closeAll, splitPane } = useWorkspaceStore()
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useDismissable(menuRef, onDismiss)
 
   function item(label: string, action: () => void) {
     return (
-      <button
+      <Button
         key={label}
+        variant="ghost"
+        size="xs"
         onClick={() => { action(); onDismiss() }}
-        className="w-full px-3 py-1.5 text-left text-sm text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100 transition-colors"
+        className="h-auto w-full justify-start rounded-none border-0 px-3 py-1.5 text-left text-sm font-normal text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100"
       >
         {label}
-      </button>
+      </Button>
     )
   }
 
-  const menu = (
-    <div
-      ref={menuRef}
-      style={{ position: 'fixed', top: y, left: x, zIndex: 9000 }}
-      className="bg-neutral-800 border border-neutral-700 rounded shadow-lg py-1 min-w-[180px]"
-    >
-      {item('Close', () => closeTab(paneId, taskId))}
-      {item('Close Others', () => closeOthers(paneId, taskId))}
-      {item('Close to the Right', () => closeToRight(paneId, taskId))}
-      {item('Close All', () => closeAll(paneId))}
-      <div className="my-1 border-t border-neutral-700" />
-      {item('Split Right', () => splitPane(paneId, 'horizontal'))}
-      {item('Split Down', () => splitPane(paneId, 'vertical'))}
-    </div>
+  return (
+    <Popover.Root open onOpenChange={(open) => { if (!open) onDismiss() }}>
+      <Popover.Trigger asChild>
+        <span
+          aria-hidden
+          style={{ position: 'fixed', top: y, left: x, width: 1, height: 1 }}
+        />
+      </Popover.Trigger>
+      <Popover.Content
+        align="start"
+        side="bottom"
+        sideOffset={0}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        className="min-w-[180px] rounded border-neutral-700 bg-neutral-800 py-1 shadow-lg"
+      >
+        {item('Close', () => closeTab(paneId, taskId))}
+        {item('Close Others', () => closeOthers(paneId, taskId))}
+        {item('Close to the Right', () => closeToRight(paneId, taskId))}
+        {item('Close All', () => closeAll(paneId))}
+        <div className="my-1 border-t border-neutral-700" />
+        {item('Split Right', () => splitPane(paneId, 'horizontal'))}
+        {item('Split Down', () => splitPane(paneId, 'vertical'))}
+      </Popover.Content>
+    </Popover.Root>
   )
-
-  return createPortal(menu, document.body)
 }

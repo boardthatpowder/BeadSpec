@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { listReviews } from '../../ipc'
 import type { ReviewScope } from '../../bindings'
 import { ReviewRow } from '../reviews/ReviewRow'
+import { Button } from '../ui/Button'
 
 const KINDS = ['pr-review', 'code-review', 'security-review'] as const
 
@@ -45,17 +46,19 @@ export function ReviewsHealthTab({ project }: { project: string }) {
           {KINDS.map(kind => {
             const active = activeKinds.has(kind)
             return (
-              <button
+              <Button
+                variant="ghost"
+                size="xs"
                 key={kind}
                 onClick={() => setActiveKinds(prev => {
                   const next = new Set(prev)
                   active ? next.delete(kind) : next.add(kind)
                   return next
                 })}
-                className={`rounded border px-2 py-1 text-xs ${active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-neutral-800 text-neutral-500'}`}
+                className={`h-auto rounded px-2 py-1 ${active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-neutral-800 text-neutral-500'}`}
               >
                 {kind.replace('-review', '')}
-              </button>
+              </Button>
             )
           })}
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews" className="rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm" />
@@ -69,17 +72,19 @@ export function ReviewsHealthTab({ project }: { project: string }) {
             const isCollapsed = collapsed.has(branch)
             return (
               <section key={branch} className="rounded border border-neutral-800 bg-neutral-950/30">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setCollapsed(prev => {
                     const next = new Set(prev)
                     isCollapsed ? next.delete(branch) : next.add(branch)
                     return next
                   })}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left"
+                  className="h-auto w-full justify-between rounded-none border-0 px-3 py-2 text-left"
                 >
                   <span className="font-mono text-xs text-neutral-300">{branch}</span>
                   <span className="text-xs text-neutral-600">{rows.length}</span>
-                </button>
+                </Button>
                 {!isCollapsed && <div className="space-y-2 border-t border-neutral-800 p-2">{rows.map(r => <ReviewRow key={r.key} review={r} />)}</div>}
               </section>
             )
