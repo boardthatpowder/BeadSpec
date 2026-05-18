@@ -14,7 +14,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { ErrorState } from '../ui/ErrorState'
 import { Icon } from '../ui/Icon'
 import { Tooltip } from '../ui/Tooltip'
-import { useToast } from '../ui/Toast'
+import { useToast } from '../ui/useToast'
 
 function paletteClass(status: string) {
   const palette = STATUS_PALETTE[status] ?? STATUS_PALETTE.open

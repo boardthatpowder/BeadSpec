@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useActiveProject } from '../../hooks/useProject'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
-import { useToast } from '../ui/Toast'
+import { useToast } from '../ui/useToast'
 
 const STATUSES = ['open', 'in_progress', 'blocked', 'closed']
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkerFinding } from '../../bindings'
-import { groupFindings } from './WorkerFindingsPanel'
+import { groupFindings } from './groupFindings'
 
 function finding(overrides: Partial<WorkerFinding> & Pick<WorkerFinding, 'issue_id' | 'worker' | 'priority' | 'created_at'>): WorkerFinding {
   return {

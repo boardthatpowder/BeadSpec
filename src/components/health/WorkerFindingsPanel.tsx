@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
-import type { WorkerFinding } from '../../bindings'
 import { useActiveProject } from '../../hooks/useProject'
 import { useWorkerFindings } from '../../hooks/useWorkerFindings'
 import { formatAbsolute } from '../../lib/format/date'
 import { PRIORITY_PALETTE } from '../../lib/palettes'
 import { formatSeverityBreakdown } from '../../lib/worker-findings'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { groupFindings } from './groupFindings'
 import { formatLabel, labelChipClass } from '../task-list/TaskListItem'
 import { PanelHeader } from '../shared/PanelHeader'
 import { Button } from '../ui/Button'
@@ -13,33 +13,6 @@ import { EmptyState } from '../ui/EmptyState'
 import { ErrorState } from '../ui/ErrorState'
 import { Icon } from '../ui/Icon'
 import { Tooltip } from '../ui/Tooltip'
-
-type WorkerGroup = {
-  worker: string
-  findings: WorkerFinding[]
-}
-
-export function groupFindings(findings: WorkerFinding[]): WorkerGroup[] {
-  const groups = new Map<string, WorkerFinding[]>()
-  for (const finding of findings) {
-    const workerFindings = groups.get(finding.worker) ?? []
-    workerFindings.push(finding)
-    groups.set(finding.worker, workerFindings)
-  }
-
-  return [...groups.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([worker, workerFindings]) => ({
-      worker,
-      findings: [...workerFindings].sort((left, right) => {
-        const priority = left.priority - right.priority
-        if (priority !== 0) return priority
-        const created = right.created_at.localeCompare(left.created_at)
-        if (created !== 0) return created
-        return left.issue_id.localeCompare(right.issue_id)
-      }),
-    }))
-}
 
 function errorMessage(error: unknown): string {
   if (typeof error === 'string') return error

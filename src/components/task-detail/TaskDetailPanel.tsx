@@ -33,7 +33,7 @@ import { formatAbsolute } from "../../lib/format/date";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tabs } from "../ui/Tabs";
-import { useToast } from "../ui/Toast";
+import { useToast } from "../ui/useToast";
 
 type TabId = "details" | "dependencies" | "activity" | "impact";
 
