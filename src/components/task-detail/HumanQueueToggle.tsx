@@ -3,6 +3,7 @@ import { commands, unwrap } from '../../ipc'
 import type { TaskDetail } from '../../bindings'
 import { useToast } from '../ui/Toast'
 import { Tooltip } from '../ui/Tooltip'
+import { Button } from '../ui/Button'
 
 interface Props {
   task: TaskDetail
@@ -38,25 +39,29 @@ export function HumanQueueToggle({ task, project }: Props) {
   if (isHuman) {
     return (
       <Tooltip label="Remove human decision flag">
-        <button
+        <Button
+          variant="secondary"
+          size="xs"
           onClick={toggle}
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/20 hover:text-amber-400 transition-colors"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
           Needs decision
-        </button>
+        </Button>
       </Tooltip>
     )
   }
 
   return (
     <Tooltip label="Flag for human decision" description="Mark this task as requiring a human decision">
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={toggle}
-        className="text-xs text-neutral-600 hover:text-amber-400 transition-colors"
+        className="h-auto border-0 px-0 py-0 text-xs font-normal text-neutral-600 hover:text-amber-400"
       >
         Flag for decision
-      </button>
+      </Button>
     </Tooltip>
   )
 }

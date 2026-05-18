@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { commands, unwrap } from '../../ipc'
+import { Button } from '../ui/Button'
 
 interface Memory {
   key: string
@@ -70,18 +71,24 @@ export function MemoryTrajectoryTab({ taskId, title }: { taskId: string; title: 
         const parsed = parseTrajectoryKey(entry.key)!
         const open = expanded.has(idx)
         return (
-          <button key={entry.key} onClick={() => setExpanded(prev => {
-            const next = new Set(prev)
-            if (next.has(idx)) next.delete(idx)
-            else next.add(idx)
-            return next
-          })} className="w-full px-4 py-3 text-left hover:bg-neutral-800/20">
+          <Button
+            key={entry.key}
+            variant="ghost"
+            size="sm"
+            onClick={() => setExpanded(prev => {
+              const next = new Set(prev)
+              if (next.has(idx)) next.delete(idx)
+              else next.add(idx)
+              return next
+            })}
+            className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/20"
+          >
             <div className="flex items-center gap-2">
               <span title={parsed.ts ? new Date(parsed.ts * 1000).toISOString() : undefined} className="text-xs text-neutral-500">{relative(parsed.ts)}</span>
               <span className={`rounded border px-1.5 py-0.5 text-[10px] ${outcomeChipClass(parsed.outcome)}`}>{parsed.outcome ?? 'unknown'}</span>
             </div>
             <div className="mt-1 whitespace-pre-wrap text-xs text-neutral-400">{open ? entry.preview : entry.preview.slice(0, 120)}</div>
-          </button>
+          </Button>
         )
       })}
     </div>

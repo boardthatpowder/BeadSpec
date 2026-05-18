@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useAppState } from '../../contexts/HashStateContext'
 import { useTasks } from '../../hooks/useTasks'
 import { applyFilters } from '../../lib/filterParser'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 const STATUS_CONFIG = [
   { key: 'open',        label: 'Open',        color: 'text-neutral-300',  activeColor: 'text-neutral-100',  dot: 'bg-neutral-500' },
@@ -54,13 +56,15 @@ export function KpiBar() {
 
   return (
     <div className="flex items-center gap-1">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setState({ filters: {} })}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-neutral-800/60 transition-colors group"
+        className="h-auto gap-2 border-0 px-3 py-1.5 group"
       >
         <span className="text-base font-semibold tabular-nums text-white">{total}</span>
         <span className="text-xs text-neutral-500 group-hover:text-neutral-400 transition-colors">Total</span>
-      </button>
+      </Button>
 
       <div className="w-px h-5 bg-neutral-800/80" />
 
@@ -69,12 +73,14 @@ export function KpiBar() {
         const count = whatIfCounts[s.key] ?? 0
         const disabled = count === 0 && !isActive
         return (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             key={s.key}
             onClick={() => !disabled && toggleStatus(s.key)}
             disabled={disabled}
             className={[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
+              'h-auto gap-1.5 border-0 px-3 py-1.5',
               disabled
                 ? 'opacity-40 cursor-not-allowed'
                 : isActive
@@ -89,22 +95,24 @@ export function KpiBar() {
             <span className={`text-xs transition-colors ${isActive ? 'text-neutral-400' : 'text-neutral-600'}`}>
               {s.label}
             </span>
-          </button>
+          </Button>
         )
       })}
 
       {(pausedCount > 0 || pausedActive) && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={togglePaused}
           className={[
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
+            'h-auto gap-1.5 border-0 px-3 py-1.5',
             pausedActive ? 'bg-violet-950/60 ring-1 ring-violet-800/60' : 'hover:bg-neutral-800/40',
           ].join(' ')}
         >
-          <span className="text-xs text-violet-300">⏸</span>
+          <Icon name="Pause" size="sm" className="text-violet-300" />
           <span className="text-sm font-semibold tabular-nums text-violet-300">{pausedCount}</span>
           <span className="text-xs text-violet-400/80">Paused</span>
-        </button>
+        </Button>
       )}
     </div>
   )

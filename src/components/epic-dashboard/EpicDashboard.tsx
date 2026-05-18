@@ -7,6 +7,7 @@ import { commands, unwrap } from '../../ipc'
 import { claimTask, getEpicReadySnapshot, runOpenspecValidate } from '../../ipc'
 import type { Task } from '../../bindings'
 import { labelChipClass, formatLabel, STATUS_BADGE } from '../task-list/TaskListItem'
+import { Button } from '../ui/Button'
 
 export function EpicDashboard({ change, epicId }: { change: string; epicId: string }) {
   const project = useActiveProject()
@@ -41,13 +42,15 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
               {(snapshot.data?.ready.length ?? 0)} ready · {snapshot.data?.total_in_progress ?? 0} in progress · via {snapshot.data?.source ?? 'loading'}
             </div>
           </div>
-          <button onClick={() => snapshot.refetch()} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">Refresh</button>
+          <Button variant="secondary" size="xs" onClick={() => snapshot.refetch()}>Refresh</Button>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <EpicValidationPill project={project} change={change} />
           <div className="flex gap-1.5">
             {(['proposal.md', 'design.md', 'tasks.md'] as const).map(artifact => (
-              <button key={artifact} onClick={() => openDocTab(change, artifact)} className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300">{artifact}</button>
+              <Button key={artifact} variant="secondary" size="xs" onClick={() => openDocTab(change, artifact)}>
+                {artifact}
+              </Button>
             ))}
           </div>
         </div>
@@ -56,7 +59,14 @@ export function EpicDashboard({ change, epicId }: { change: string; epicId: stri
       {snapshot.data?.blocked.length ? (
         <div className="rounded border border-amber-900/50 bg-amber-950/30 p-3 text-sm text-amber-300">
           Currently blocked by: {snapshot.data.blocked.map(b => `${b.blocker_id} — ${b.blocker_title}`).join(' → ')}
-          <button onClick={() => setState({ view: 'all', taskId: epicId })} className="ml-3 text-amber-200 underline">View full graph</button>
+          <Button
+            variant="link"
+            size="xs"
+            onClick={() => setState({ view: 'all', taskId: epicId })}
+            className="ml-3 h-auto text-amber-200"
+          >
+            View full graph
+          </Button>
         </div>
       ) : null}
 
@@ -100,7 +110,12 @@ function EpicTaskRow({ task, paused, project, onClaimed }: { task: Task; paused:
   })
   return (
     <div className="flex items-center gap-3 px-4 py-2">
-      <button onClick={() => setState({ view: 'all', taskId: task.id })} className="min-w-0 flex-1 text-left">
+      <Button
+        variant="ghost"
+        size="md"
+        onClick={() => setState({ view: 'all', taskId: task.id })}
+        className="h-auto min-w-0 flex-1 justify-start border-0 bg-transparent p-0 text-left font-normal hover:bg-transparent"
+      >
         <div className="flex items-center gap-2">
           <span className={`rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>{task.status.replace('_', ' ')}</span>
           {paused && <span className="rounded bg-violet-950/40 px-1.5 py-0.5 text-[10px] text-violet-300">Paused</span>}
@@ -109,9 +124,16 @@ function EpicTaskRow({ task, paused, project, onClaimed }: { task: Task; paused:
         <div className="mt-1 flex gap-1">
           {task.labels.slice(0, 3).map(label => <span key={label} className={`rounded px-1.5 py-0.5 text-[10px] ${labelChipClass(label)}`}>{formatLabel(label)}</span>)}
         </div>
-      </button>
+      </Button>
       {task.status === 'open' && !task.assignee && (
-        <button onClick={() => claim.mutate()} disabled={claim.isPending} className="rounded bg-blue-600 px-2 py-1 text-xs text-white disabled:opacity-40">Claim</button>
+        <Button
+          variant="primary"
+          size="xs"
+          onClick={() => claim.mutate()}
+          disabled={claim.isPending}
+        >
+          Claim
+        </Button>
       )}
     </div>
   )
@@ -121,8 +143,13 @@ function EpicValidationPill({ project, change }: { project: string; change: stri
   const validate = useMutation({ mutationFn: () => runOpenspecValidate(project, change) })
   const result = validate.data
   return (
-    <button onClick={() => validate.mutate()} className={`rounded border px-2 py-1 text-xs ${!result ? 'border-neutral-700 text-neutral-400' : result.valid ? 'border-green-800 bg-green-950/30 text-green-300' : 'border-red-800 bg-red-950/30 text-red-300'}`}>
+    <Button
+      variant="secondary"
+      size="xs"
+      onClick={() => validate.mutate()}
+      className={!result ? 'border-neutral-700 text-neutral-400' : result.valid ? 'border-green-800 bg-green-950/30 text-green-300' : 'border-red-800 bg-red-950/30 text-red-300'}
+    >
       {validate.isPending ? 'validating…' : !result ? 'Validate' : result.valid ? 'Validation: pass' : `Validation: fail (${result.errors.length})`}
-    </button>
+    </Button>
   )
 }

@@ -6,6 +6,8 @@ import { usePendingEdits } from '../../hooks/usePendingEdits'
 import { useAppState } from '../../contexts/HashStateContext'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { writeGroupBy } from '../../stores/layoutStore'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 function parseConnectError(e: unknown): string {
   const raw = typeof e === 'string' ? e : null
@@ -117,16 +119,16 @@ export function ProjectSwitcher() {
 
   return (
     <div ref={ref} className="relative">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm text-neutral-200 hover:bg-neutral-800 transition-colors"
+        className="h-auto px-2.5 py-1 text-neutral-200"
         disabled={connecting}
       >
         <span className="font-medium">{connecting ? '…' : activeProject ? `Project: ${activeName}` : activeName}</span>
-        <svg className="w-3 h-3 text-neutral-500" viewBox="0 0 12 12" fill="currentColor">
-          <path d="M6 8L1 3h10L6 8z"/>
-        </svg>
-      </button>
+        <Icon name="ChevronDown" size="sm" className="text-neutral-500" />
+      </Button>
 
       {connectError && (
         <div className="absolute top-full left-0 mt-1 text-xs text-red-400 bg-neutral-900 border border-red-800 rounded px-2 py-1.5 z-50 max-w-xs whitespace-pre-wrap">
@@ -140,21 +142,21 @@ export function ProjectSwitcher() {
             <div className="px-3 py-2 text-xs text-neutral-500">No projects found</div>
           )}
           {projects.map(p => (
-            <button
+            <Button
               key={p.project_path}
+              variant="ghost"
+              size="sm"
               onClick={() => switchProject(p.project_path)}
               className={[
-                'w-full text-left px-3 py-2 text-sm hover:bg-neutral-800 transition-colors flex items-center justify-between',
+                'h-auto w-full justify-between rounded-none px-3 py-2 text-left',
                 p.project_path === activeProject ? 'text-blue-400' : 'text-neutral-200',
               ].join(' ')}
             >
               <span>{p.name}</span>
               {p.project_path === activeProject && (
-                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="currentColor">
-                  <path d="M2 7l4 4 6-6" stroke="currentColor" strokeWidth="2" fill="none"/>
-                </svg>
+                <Icon name="Check" size="sm" />
               )}
-            </button>
+            </Button>
           ))}
 
           <div className="border-t border-neutral-800 mt-1 pt-1">
@@ -171,20 +173,23 @@ export function ProjectSwitcher() {
                   placeholder="/path/to/project"
                   className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 outline-none focus:border-blue-500"
                 />
-                <button
+                <Button
+                  variant="primary"
+                  size="xs"
                   onClick={addProject}
-                  className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white transition-colors"
                 >
                   Add
-                </button>
+                </Button>
               </div>
             ) : (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowAdd(true)}
-                className="w-full text-left px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 transition-colors"
+                className="h-auto w-full justify-start rounded-none px-3 py-2 text-xs"
               >
                 + Add project by path…
-              </button>
+              </Button>
             )}
           </div>
         </div>

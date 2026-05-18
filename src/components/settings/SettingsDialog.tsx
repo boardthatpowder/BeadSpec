@@ -4,6 +4,9 @@ import { useSettings } from '../../contexts/SettingsContext'
 import { NotificationPrefsPanel } from '../notifications/NotificationPrefs'
 import type { AppSettings } from '../../stores/settingsStore'
 import { snapToStep } from '../../stores/zoomStore'
+import { Dialog } from '../ui/Dialog'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 // Global open-state managed via a module-level setter so SettingsButton can open it
 // without prop drilling.
@@ -18,27 +21,13 @@ export function SettingsDialog() {
     return () => { _setOpen = null }
   }, [])
 
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open])
-
-  if (!open) return null
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Settings"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-24"
-      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
-    >
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl w-full max-w-2xl max-h-[70vh] overflow-y-auto">
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Content className="top-24 max-w-2xl -translate-y-0 rounded-lg p-0 max-h-[70vh] overflow-y-auto">
+        <Dialog.Header className="sr-only">Settings</Dialog.Header>
         <SettingsContent onClose={() => setOpen(false)} />
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }
 
@@ -49,15 +38,15 @@ function SettingsContent({ onClose }: { onClose: () => void }) {
     <div className="flex flex-col">
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 flex-shrink-0">
         <h2 className="text-base font-semibold text-neutral-100">Settings</h2>
-        <button
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={onClose}
-          className="text-neutral-500 hover:text-neutral-300 transition-colors"
+          className="h-auto border-0 px-1 text-neutral-500 hover:text-neutral-300"
           aria-label="Close settings"
         >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
-          </svg>
-        </button>
+          <Icon name="X" size="sm" />
+        </Button>
       </div>
 
       <FeaturesSection settings={settings} updateSettings={updateSettings} />
@@ -91,12 +80,14 @@ function ToggleRow({
         <div className="text-sm text-neutral-200">{label}</div>
         {description && <div className="text-xs text-neutral-500 mt-0.5">{description}</div>}
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={[
-          'w-10 h-6 rounded-full transition-colors flex-shrink-0',
+          'w-10 h-6 rounded-full border-0 p-0 transition-colors flex-shrink-0',
           checked ? 'bg-blue-600' : 'bg-neutral-700',
         ].join(' ')}
       >
@@ -106,7 +97,7 @@ function ToggleRow({
             checked ? 'translate-x-4' : 'translate-x-0',
           ].join(' ')}
         />
-      </button>
+      </Button>
     </div>
   )
 }
@@ -248,18 +239,20 @@ function AppearanceSection({ settings, updateSettings }: SectionProps) {
           <span className="text-xs text-neutral-400">Density</span>
           <div className="flex items-center gap-2">
             {DENSITY_OPTIONS.map(opt => (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 key={opt.value}
                 onClick={() => updateSettings({ density: opt.value })}
                 className={[
-                  'flex-1 py-1.5 text-xs rounded border transition-colors',
+                  'h-auto flex-1 py-1.5 text-xs',
                   settings.density === opt.value
                     ? 'bg-blue-600 border-blue-500 text-white'
                     : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500',
                 ].join(' ')}
               >
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -306,18 +299,20 @@ function TooltipsSection({ settings, updateSettings }: SectionProps) {
           <span className="text-xs text-neutral-400">Hover delay</span>
           <div className="flex items-center gap-2">
             {DELAY_OPTIONS.map(opt => (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 key={opt.value}
                 onClick={() => updateSettings({ tooltips: { ...tooltips, delayMs: opt.value } })}
                 className={[
-                  'flex-1 py-1.5 text-xs rounded border transition-colors',
+                  'h-auto flex-1 py-1.5 text-xs',
                   tooltips.delayMs === opt.value
                     ? 'bg-blue-600 border-blue-500 text-white'
                     : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500',
                 ].join(' ')}
               >
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

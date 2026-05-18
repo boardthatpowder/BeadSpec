@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { clsx } from 'clsx'
+import { Button } from './Button'
+import { Icon } from './Icon'
 
 export interface Toast {
   id: string
@@ -55,19 +57,24 @@ export function ToastContainer() {
         >
           <span className="flex-1">{t.message}</span>
           {t.undoFn && (
-            <button
-              className="text-blue-400 hover:text-blue-300 font-medium text-xs"
+            <Button
+              variant="link"
+              size="xs"
+              className="h-auto text-blue-400 hover:text-blue-300"
               onClick={() => { t.undoFn?.(); remove(t.id) }}
             >
               Undo
-            </button>
+            </Button>
           )}
-          <button
-            className="text-neutral-500 hover:text-neutral-300 text-xs"
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label="Dismiss notification"
+            className="h-auto border-0 px-1 text-neutral-500 hover:text-neutral-300"
             onClick={() => remove(t.id)}
           >
-            ✕
-          </button>
+            <Icon name="X" size="sm" />
+          </Button>
         </div>
       ))}
     </div>

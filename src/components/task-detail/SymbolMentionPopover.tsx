@@ -1,4 +1,6 @@
 import type { SymbolHit } from '../../bindings'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 const RISK_CLASS: Record<string, string> = {
   Low: 'bg-neutral-800 text-neutral-300 border-neutral-700',
@@ -35,12 +37,15 @@ export function SymbolMentionPopover({
           ))}
         </div>
       )}
-      <button
+      <Button
+        variant="link"
+        size="xs"
         onClick={() => onOpenImpact(hit.name)}
-        className="mt-3 text-xs text-blue-400 hover:text-blue-300"
+        trailingIcon={<Icon name="ArrowRight" size="sm" />}
+        className="mt-3 h-auto px-0 py-0 text-xs text-blue-400 hover:text-blue-300"
       >
-        Open full impact →
-      </button>
+        Open full impact
+      </Button>
     </div>
   )
 }

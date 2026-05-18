@@ -1,5 +1,6 @@
 import { useSettings } from '../../contexts/SettingsContext'
 import type { NotificationPrefs } from '../../stores/settingsStore'
+import { Button } from '../ui/Button'
 
 export function NotificationPrefsPanel() {
   const { settings, updateSettings } = useSettings()
@@ -56,7 +57,9 @@ function Toggle({ label, description, checked, onChange }: {
         <div className="text-sm text-neutral-200">{label}</div>
         <div className="text-xs text-neutral-500">{description}</div>
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
@@ -71,7 +74,7 @@ function Toggle({ label, description, checked, onChange }: {
             checked ? 'translate-x-4' : 'translate-x-0',
           ].join(' ')}
         />
-      </button>
+      </Button>
     </label>
   )
 }

@@ -15,6 +15,8 @@ import {
 } from '../../ipc'
 import { commands, unwrap } from '../../ipc'
 import type { ChangeInfo, ValidationHistoryEntry, ValidationResult } from '../../bindings'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 type ContainerMode = 'section' | 'tab'
 
@@ -103,18 +105,20 @@ function ArtifactLink({
 
   return (
     <Tooltip label="Open document" description={filePath}>
-      <button
+      <Button
+        variant="link"
+        size="xs"
         onClick={() => openDocTab(changeName, artifact)}
         className={[
-          'flex items-center gap-1.5 text-xs text-left transition-colors',
+          'h-auto justify-start gap-1.5 text-left',
           archived
             ? 'text-neutral-500 opacity-50 hover:opacity-75 hover:text-neutral-400'
             : 'text-blue-400 hover:text-blue-300',
         ].join(' ')}
       >
-        <span className="text-neutral-500">↗</span>
+        <Icon name="ExternalLink" size="sm" className="text-neutral-500" />
         {label}
-      </button>
+      </Button>
     </Tooltip>
   )
 }
@@ -198,13 +202,15 @@ function ValidateSection({
       <div className="flex items-center justify-between">
         <span className="text-xs text-neutral-400">Validate</span>
         {!archived && (
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={handleValidate}
             disabled={loading}
-            className="text-xs px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+            className="h-auto px-2 py-0.5"
           >
             {loading ? 'Validating…' : 'Re-validate'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -224,7 +230,7 @@ function ValidateSection({
             <span
               className={result.valid ? 'text-green-400' : 'text-red-400'}
             >
-              {result.valid ? '✓ Valid' : '✗ Invalid'}
+              <Icon name={result.valid ? 'Check' : 'X'} size="sm" className="inline-block" /> {result.valid ? 'Valid' : 'Invalid'}
             </span>
             {timestamp && (
               <span className="text-neutral-600">as of {timestamp}</span>
@@ -275,23 +281,23 @@ function ValidationHistory({ projectRoot, changeName }: { projectRoot: string; c
         ) : visible.map((entry, idx) => {
           const open = expanded.has(idx)
           return (
-            <button key={`${entry.ts_epoch}-${idx}`} onClick={() => setExpanded(prev => {
+            <Button key={`${entry.ts_epoch}-${idx}`} variant="ghost" size="sm" onClick={() => setExpanded(prev => {
               const next = new Set(prev)
               if (next.has(idx)) next.delete(idx)
               else next.add(idx)
               return next
-            })} className="block w-full border-b border-neutral-800/40 px-2 py-2 text-left text-xs">
+            })} className="block h-auto w-full rounded-none border-0 border-b border-neutral-800/40 px-2 py-2 text-left text-xs">
               <div className="flex items-center gap-2">
                 <span title={entry.ts_iso} className="text-neutral-500">{new Date(entry.ts_iso).toLocaleString()}</span>
                 <span className={entry.valid ? 'text-green-400' : 'text-red-400'}>{entry.valid ? 'pass' : 'fail'}</span>
                 <span className="truncate text-neutral-600">{entry.valid ? 'No errors' : entry.errors[0]}</span>
               </div>
               {open && !entry.valid && <ul className="mt-1 list-disc pl-4 text-red-300">{entry.errors.map(e => <li key={e}>{e}</li>)}</ul>}
-            </button>
+            </Button>
           )
         })}
         {entries.length > 5 && (
-          <button onClick={() => setShowAll(v => !v)} className="px-2 py-2 text-xs text-blue-400">{showAll ? 'Show fewer' : `Showing 5 of ${entries.length} · Show all`}</button>
+          <Button variant="link" size="xs" onClick={() => setShowAll(v => !v)} className="h-auto px-2 py-2 text-blue-400">{showAll ? 'Show fewer' : `Showing 5 of ${entries.length} · Show all`}</Button>
         )}
       </div>
     </details>
@@ -306,12 +312,14 @@ function PausedBanner({ labels, notes, scopeChangeChild }: { labels: string[]; n
     <div className="rounded border border-violet-800/40 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-300">
       <div>Paused: {reason}</div>
       {scopeChangeChild ? (
-        <button
+        <Button
+          variant="link"
+          size="xs"
           onClick={() => setState({ view: 'all', taskId: scopeChangeChild.id })}
-          className="mt-1 text-left text-violet-200 underline decoration-violet-600 underline-offset-2"
+          className="mt-1 h-auto justify-start text-left text-violet-200 decoration-violet-600"
         >
           Resolves: {scopeChangeChild.id} — {scopeChangeChild.title}
-        </button>
+        </Button>
       ) : (
         <div className="mt-1 text-violet-400/60">No scope-change child detected yet</div>
       )}
@@ -332,7 +340,7 @@ function DriftWarning({ drift }: { drift: DriftType }) {
 
   return (
     <div className="flex items-start gap-2 text-xs rounded px-2 py-1.5 bg-yellow-950/40 border border-yellow-800/40 text-yellow-300">
-      <span className="flex-shrink-0">⚠</span>
+      <Icon name="AlertTriangle" size="sm" className="flex-shrink-0" />
       <span>Drift detected: {msg}</span>
     </div>
   )
@@ -433,13 +441,15 @@ function OpenSpecPanelBody({
         <div>
           <div className="text-xs text-neutral-500 mb-1">Specs</div>
           {changeInfo.specs.map((specId) => (
-            <button
+            <Button
               key={specId}
+              variant="link"
+              size="xs"
               onClick={() => openDocTab(changeName, `specs/${specId}/spec.md`)}
-              className="block text-xs text-purple-400 hover:text-purple-200 truncate transition-colors"
+              className="block h-auto justify-start truncate text-purple-400 hover:text-purple-200"
             >
               {specId}/spec.md
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -512,7 +522,7 @@ export function OpenSpecPanel({
     >
       <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none list-none">
         <span className="text-xs text-neutral-500 group-open:rotate-90 transition-transform inline-block">
-          ▶
+          <Icon name="ChevronRight" size="sm" />
         </span>
         <span className="text-xs font-medium text-neutral-300">OpenSpec</span>
         <span className="text-xs text-neutral-600 font-mono ml-1">{changeName}</span>

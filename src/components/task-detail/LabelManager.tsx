@@ -3,7 +3,8 @@ import { commands, unwrap } from '../../ipc'
 import type { TaskDetail } from '../../bindings'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../ui/Toast'
-import { IconButton } from '../ui/IconButton'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 interface Props {
   task: TaskDetail
@@ -81,14 +82,16 @@ export function LabelManager({ task, project }: Props) {
                      bg-neutral-800 text-neutral-400 font-mono group"
         >
           {l}
-          <IconButton
-            label={`Remove ${l}`}
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label={`Remove ${l}`}
             onClick={() => removeLabel(l)}
             className="text-neutral-600 hover:text-neutral-300 transition-colors
-                       leading-none -mr-0.5 opacity-0 group-hover:opacity-100"
+                       h-auto border-0 px-0 py-0 leading-none -mr-0.5 opacity-0 group-hover:opacity-100"
           >
-            ×
-          </IconButton>
+            <Icon name="X" size="sm" />
+          </Button>
         </span>
       ))}
 
@@ -107,12 +110,14 @@ export function LabelManager({ task, project }: Props) {
                      border border-blue-500 outline-none font-mono w-24"
         />
       ) : (
-        <button
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={() => setAdding(true)}
-          className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+          className="h-auto border-0 px-0 py-0 text-xs font-normal text-neutral-600 hover:text-neutral-400"
         >
           + Add label
-        </button>
+        </Button>
       )}
     </div>
   )

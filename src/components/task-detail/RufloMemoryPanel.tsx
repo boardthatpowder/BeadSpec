@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { commands, unwrap } from '../../ipc'
 import { useAppState } from '../../contexts/HashStateContext'
 import { MemoryTrajectoryTab } from './MemoryTrajectoryTab'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 interface Props {
   taskId: string
@@ -99,35 +101,45 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
   return (
     <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 overflow-hidden">
       {/* Section header */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-neutral-800/30 transition-colors"
+        className="h-auto w-full justify-between rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/30"
       >
         <span className="text-xs font-medium text-neutral-400">Related memories</span>
-        <svg
+        <Icon
+          name="ChevronDown"
+          size="sm"
           className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
           strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+        />
+      </Button>
 
       {open && (
         <div className="border-t border-neutral-800/60">
           <div className="flex items-center justify-between border-b border-neutral-800/40 px-4 py-2">
             <div className="flex rounded border border-neutral-800 p-0.5">
               {(['search', 'trajectory'] as const).map(tab => (
-                <button key={tab} onClick={() => setSubTab(tab)} className={`px-2 py-0.5 text-[10px] capitalize ${subTab === tab ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500'}`}>
+                <Button
+                  key={tab}
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setSubTab(tab)}
+                  className={`h-auto rounded-sm border-0 px-2 py-0.5 text-[10px] capitalize ${subTab === tab ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500'}`}
+                >
                   {tab}
-                </button>
+                </Button>
               ))}
             </div>
-            <button onClick={() => setState({ view: 'memory', memoryNamespace: `issue:${taskId}` })} className="text-[10px] text-blue-400 hover:text-blue-300">
+            <Button
+              variant="link"
+              size="xs"
+              onClick={() => setState({ view: 'memory', memoryNamespace: `issue:${taskId}` })}
+              className="h-auto px-0 py-0 text-[10px] text-blue-400 hover:text-blue-300"
+            >
               Open in Memory browser
-            </button>
+            </Button>
           </div>
 
           {subTab === 'trajectory' ? (
@@ -152,10 +164,12 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
                 const isExpanded = expandedSet.has(idx)
                 const shortKey = mem.key.replace(/^[^-]+-/, '').replace(/-\d{13}$/, '')
                 return (
-                  <button
+                  <Button
                     key={idx}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => toggleExpanded(idx)}
-                    className="w-full text-left px-4 py-3 hover:bg-neutral-800/20 transition-colors"
+                    className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/20"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-medium text-neutral-300 truncate">{shortKey}</span>
@@ -164,7 +178,7 @@ export function RufloMemoryPanel({ taskId, title, labels }: Props) {
                     <div className="text-xs text-neutral-500 whitespace-pre-wrap break-words">
                       {isExpanded ? mem.preview : excerpt(mem.preview)}
                     </div>
-                  </button>
+                  </Button>
                 )
               })}
             </div>

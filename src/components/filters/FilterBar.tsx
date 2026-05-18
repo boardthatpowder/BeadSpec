@@ -1,7 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, RefObject } from 'react'
-import { createPortal } from 'react-dom'
 import { IconButton } from '../ui/IconButton'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
+import { Popover } from '../ui/Popover'
 import { Tooltip } from '../ui/Tooltip'
+import { useState, useEffect, useMemo } from 'react'
 import {
   parseFilterDimensions,
   detectDimensionGroups,
@@ -18,62 +20,6 @@ import type { Task } from '../../bindings'
 
 // ─── Structural label prefixes excluded from grouping sub-menu ────────────────
 const STRUCTURAL_PREFIXES = new Set(['worker'])
-
-function Popover({
-  anchorRef,
-  open,
-  onClose,
-  children,
-}: {
-  anchorRef: RefObject<HTMLElement | null>
-  open: boolean
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  const popoverRef = useRef<HTMLDivElement>(null)
-
-  useLayoutEffect(() => {
-    if (!open) return
-    const reposition = () => {
-      const anchor = anchorRef.current
-      const popover = popoverRef.current
-      if (!anchor || !popover) return
-      const rect = anchor.getBoundingClientRect()
-      const pw = popover.offsetWidth
-      const left = Math.min(rect.left, window.innerWidth - pw - 8)
-      popover.style.top = `${rect.bottom + 6}px`
-      popover.style.left = `${Math.max(8, left)}px`
-    }
-    reposition()
-    window.addEventListener('resize', reposition)
-    window.addEventListener('scroll', reposition, { capture: true })
-    return () => {
-      window.removeEventListener('resize', reposition)
-      window.removeEventListener('scroll', reposition, { capture: true })
-    }
-  }, [open, anchorRef])
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (
-        !anchorRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
-      ) onClose()
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open, anchorRef, onClose])
-
-  if (!open) return null
-  return createPortal(
-    <div ref={popoverRef} style={{ position: 'fixed', zIndex: 9999 }}>
-      {children}
-    </div>,
-    document.body
-  )
-}
 
 const STATUS_OPTIONS = [
   { value: 'open',        label: 'Open' },
@@ -140,7 +86,6 @@ interface GroupByDropdownProps {
 function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
   const { state, setState } = useAppState()
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
   const config = deserializeGroupConfig(state.groupBy)
   const isActive = config !== null
@@ -180,41 +125,42 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
   }
 
   return (
-    <div ref={ref}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className={[
-          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-colors',
-          isActive
-            ? 'border-emerald-500/70 text-emerald-300 bg-emerald-900/20'
-            : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
-        ].join(' ')}
-      >
-        {/* Group icon */}
-        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M2 4h12M2 8h8M2 12h5" strokeLinecap="round" />
-        </svg>
-        <span>Group</span>
-        {isActive && (
-          <span className="bg-emerald-500 text-white rounded-full px-1.5 text-[10px] font-semibold leading-4">
-            {getGroupByLabel(config)}
-          </span>
-        )}
-        <svg
-          className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`}
-          viewBox="0 0 12 12" fill="currentColor"
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <Button
+          variant="secondary"
+          size="xs"
+          className={[
+            'rounded-lg px-2.5 py-1.5',
+            isActive
+              ? 'border-emerald-500/70 text-emerald-300 bg-emerald-900/20'
+              : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+          ].join(' ')}
         >
-          <path d="M6 8L1 3h10L6 8z" />
-        </svg>
-      </button>
+          <Icon name="Group" size="sm" className="h-3 w-3" />
+          <span>Group</span>
+          {isActive && (
+            <span className="bg-emerald-500 text-white rounded-full px-1.5 text-[10px] font-semibold leading-4">
+              {getGroupByLabel(config)}
+            </span>
+          )}
+          <Icon
+            name="ChevronDown"
+            size="sm"
+            className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </Button>
+      </Popover.Trigger>
 
-      <Popover anchorRef={ref} open={open} onClose={() => setOpen(false)}>
-        <div className="bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl py-1.5 min-w-44">
+      <Popover.Content align="start" className="min-w-44 rounded-xl border-neutral-800 bg-neutral-950 p-0 shadow-2xl">
+        <div className="py-1.5">
           {/* None option */}
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => selectConfig(null)}
             className={[
-              'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
+              'h-auto w-full justify-start gap-2 rounded-none border-0 px-3 py-1.5 font-normal',
               config === null
                 ? 'text-emerald-300 bg-emerald-900/20'
                 : 'text-neutral-300 hover:bg-neutral-800/40',
@@ -222,13 +168,11 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
           >
             <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${config === null ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-600'}`}>
               {config === null && (
-                <svg viewBox="0 0 10 10" className="w-2 h-2 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <Icon name="Check" size="sm" className="h-2 w-2 text-white" />
               )}
             </span>
             <span>None</span>
-          </button>
+          </Button>
 
           {/* Divider: By field */}
           <div className="mx-3 my-1 border-t border-neutral-800/60" />
@@ -246,8 +190,10 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
             const eligible = fieldEligibility[opt.value]
             const isDisabled = !eligible && !isSelected
             return (
-              <button
+              <Button
                 key={opt.value}
+                variant="ghost"
+                size="xs"
                 disabled={isDisabled}
                 onClick={() => {
                   if (isDisabled) return
@@ -255,7 +201,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
                   else selectConfig(deserializeGroupConfig(opt.value) as GroupConfig)
                 }}
                 className={[
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
+                  'h-auto w-full justify-start gap-2 rounded-none border-0 px-3 py-1.5 font-normal',
                   isSelected
                     ? 'text-emerald-300 bg-emerald-900/20'
                     : eligible
@@ -265,13 +211,11 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
               >
                 <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-600'}`}>
                   {isSelected && (
-                    <svg viewBox="0 0 10 10" className="w-2 h-2 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <Icon name="Check" size="sm" className="h-2 w-2 text-white" />
                   )}
                 </span>
                 <span>{opt.label}</span>
-              </button>
+              </Button>
             )
           })}
 
@@ -296,8 +240,10 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
               const eligible = visibleLabelPrefixSet.has(prefix)
               const isDisabled = !eligible && !isSelected
               return (
-                <button
+                <Button
                   key={prefix}
+                  variant="ghost"
+                  size="xs"
                   disabled={isDisabled}
                   onClick={() => {
                     if (isDisabled) return
@@ -305,7 +251,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
                     else selectConfig({ type: 'label-prefix', prefix })
                   }}
                   className={[
-                    'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
+                    'h-auto w-full justify-start gap-2 rounded-none border-0 px-3 py-1.5 font-normal',
                     isSelected
                       ? 'text-emerald-300 bg-emerald-900/20'
                       : eligible
@@ -315,19 +261,17 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
                 >
                   <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-600'}`}>
                     {isSelected && (
-                      <svg viewBox="0 0 10 10" className="w-2 h-2 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <Icon name="Check" size="sm" className="h-2 w-2 text-white" />
                     )}
                   </span>
                   <span className="font-mono">{prefix}</span>
-                </button>
+                </Button>
               )
             })
           )}
         </div>
-      </Popover>
-    </div>
+      </Popover.Content>
+    </Popover.Root>
   )
 }
 
@@ -342,7 +286,6 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
   const { state, setState } = useAppState()
   const activeFilters: Record<string, string[] | string> = state.filters ?? {}
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const filtersRef = useRef<HTMLDivElement>(null)
   const workspaceContext = useWorkspaceContext()
   const rufloEnabled = useFeatureFlag('ruflo')
 
@@ -415,33 +358,28 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
               : 'Off — showing all tasks'
             }
           >
-            <button
+            <Button
+              variant="secondary"
+              size="xs"
               onClick={toggleWorkspaceScope}
               className={[
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-colors flex-shrink-0',
+                'flex-shrink-0 rounded-lg px-2.5 py-1.5',
                 workspaceScope === 'on'
                   ? 'bg-blue-900/30 text-blue-300 border-blue-500/60 hover:bg-blue-900/50'
                   : 'bg-blue-900/10 text-blue-400/50 border-blue-700/30 opacity-50 hover:opacity-70',
               ].join(' ')}
             >
-              {/* Scope icon */}
-              <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="8" cy="8" r="6" />
-                <circle cx="8" cy="8" r="2" />
-                <path d="M8 2v2M8 12v2M2 8h2M12 8h2" strokeLinecap="round" />
-              </svg>
+              <Icon name="Crosshair" size="sm" className="h-3 w-3 flex-shrink-0" />
               <span className={workspaceScope === 'off' ? 'line-through' : ''}>
                 Workspace scope
               </span>
-            </button>
+            </Button>
           </Tooltip>
         )}
 
         {/* Search */}
         <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-800/40 border border-neutral-700/50 focus-within:border-neutral-500 transition-colors">
-          <svg className="w-3 h-3 text-neutral-500 flex-shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3 3" strokeLinecap="round" />
-          </svg>
+          <Icon name="Search" size="sm" className="h-3 w-3 text-neutral-500 flex-shrink-0" />
           <input
             id="filter-search"
             placeholder="Search…"
@@ -479,46 +417,42 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
 
         {/* More filters button */}
         {dimensions.length > 0 && (
-          <div ref={filtersRef}>
-            <button
-              onClick={() => setFiltersOpen(o => !o)}
-              className={[
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-colors',
-                filtersOpen || activeSecondaryDimCount > 0
-                  ? 'border-violet-500/70 text-violet-300 bg-violet-900/20'
-                  : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
-              ].join(' ')}
-            >
-              <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M2 4h12M4 8h8M6 12h4" strokeLinecap="round" />
-              </svg>
-              <span>Filters</span>
-              {activeSecondaryDimCount > 0 && (
-                <span className="bg-violet-500 text-white rounded-full px-1.5 text-[10px] font-semibold leading-4">
-                  {activeSecondaryDimCount}
-                </span>
-              )}
-              <svg
-                className={`w-3 h-3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
-                viewBox="0 0 12 12" fill="currentColor"
+          <Popover.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Popover.Trigger asChild>
+              <Button
+                variant="secondary"
+                size="xs"
+                className={[
+                  'rounded-lg px-2.5 py-1.5',
+                  filtersOpen || activeSecondaryDimCount > 0
+                    ? 'border-violet-500/70 text-violet-300 bg-violet-900/20'
+                    : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+                ].join(' ')}
               >
-                <path d="M6 8L1 3h10L6 8z" />
-              </svg>
-            </button>
+                <Icon name="ListFilter" size="sm" className="h-3 w-3" />
+                <span>Filters</span>
+                {activeSecondaryDimCount > 0 && (
+                  <span className="bg-violet-500 text-white rounded-full px-1.5 text-[10px] font-semibold leading-4">
+                    {activeSecondaryDimCount}
+                  </span>
+                )}
+                <Icon
+                  name="ChevronDown"
+                  size="sm"
+                  className={`h-3 w-3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                />
+              </Button>
+            </Popover.Trigger>
 
-            <Popover
-              anchorRef={filtersRef}
-              open={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-            >
+            <Popover.Content align="start" className="rounded-xl border-neutral-800 bg-neutral-950 p-0 shadow-2xl">
               <FiltersPopover
                 groups={groups}
                 activeFilters={activeFilters}
                 allTasks={allTasks}
                 onToggle={toggle}
               />
-            </Popover>
-          </div>
+            </Popover.Content>
+          </Popover.Root>
         )}
 
         {/* Group by dropdown */}
@@ -526,15 +460,15 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
 
         {/* Clear all — shown if any filter or group is active */}
         {(Object.values(activeFilters).some(v => Array.isArray(v) ? v.length > 0 : !!v) || groupByConfig !== null) && (
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={clearAll}
-            className="ml-auto text-xs text-neutral-600 hover:text-neutral-400 transition-colors flex items-center gap-1"
+            className="ml-auto h-auto border-0 bg-transparent px-0 py-0 font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
           >
-            <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
-            </svg>
+            <Icon name="X" size="sm" className="h-3 w-3" />
             Clear
-          </button>
+          </Button>
         )}
       </div>
 
@@ -553,9 +487,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
                 onClick={() => removeChip(dim, value)}
                 className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity flex-shrink-0"
               >
-                <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M2 2l6 6M8 2l-6 6" strokeLinecap="round" />
-                </svg>
+                <Icon name="X" size="sm" className="h-2.5 w-2.5" />
               </IconButton>
             </span>
           ))}
@@ -585,7 +517,7 @@ function FiltersPopover({
   onToggle: (dim: string, value: string) => void
 }) {
   return (
-    <div className="bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl py-2 min-w-64 max-w-80 max-h-[70vh] overflow-y-auto">
+    <div className="py-2 min-w-64 max-w-80 max-h-[70vh] overflow-y-auto">
       {groups.map((group, gi) => {
         // Enrich dims with counts and active values, then bucket-sort within each group
         const enriched = group.dimensions.map(dim => {
@@ -651,11 +583,13 @@ function DimSection({
 
   return (
     <div>
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={() => !allDisabled && setExpanded(e => !e)}
         disabled={allDisabled}
         className={[
-          'w-full flex items-center justify-between px-3 py-1.5 transition-colors group',
+          'group h-auto w-full justify-between rounded-none border-0 px-3 py-1.5 font-normal',
           allDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800/40',
         ].join(' ')}
       >
@@ -671,14 +605,13 @@ function DimSection({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-neutral-600">{totalCount}</span>
-          <svg
-            className={`w-3 h-3 transition-all ${allDisabled ? 'text-neutral-700' : 'text-neutral-600 group-hover:text-neutral-400'} ${expanded ? 'rotate-180' : ''}`}
-            viewBox="0 0 12 12" fill="currentColor"
-          >
-            <path d="M6 8L1 3h10L6 8z" />
-          </svg>
+          <Icon
+            name="ChevronDown"
+            size="sm"
+            className={`h-3 w-3 transition-all ${allDisabled ? 'text-neutral-700' : 'text-neutral-600 group-hover:text-neutral-400'} ${expanded ? 'rotate-180' : ''}`}
+          />
         </div>
-      </button>
+      </Button>
 
       {expanded && !allDisabled && (
         <div className="pb-1">
@@ -687,12 +620,14 @@ function DimSection({
             const isActive = active.includes(val)
             const disabled = count === 0 && !isActive
             return (
-              <button
+              <Button
                 key={val}
+                variant="ghost"
+                size="xs"
                 onClick={() => !disabled && onToggle(val)}
                 disabled={disabled}
                 className={[
-                  'w-full flex items-center gap-2 px-4 py-1 text-xs transition-colors',
+                  'h-auto w-full justify-start gap-2 rounded-none border-0 px-4 py-1 font-normal',
                   disabled
                     ? 'text-neutral-700 cursor-not-allowed opacity-50'
                     : isActive
@@ -705,16 +640,14 @@ function DimSection({
                   isActive ? 'bg-violet-500 border-violet-500' : 'border-neutral-600',
                 ].join(' ')}>
                   {isActive && (
-                    <svg viewBox="0 0 10 10" className="w-2 h-2 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <Icon name="Check" size="sm" className="h-2 w-2 text-white" />
                   )}
                 </span>
                 <span className="flex-1 truncate">{val}</span>
                 <span className={`text-[10px] tabular-nums ${count === 0 ? 'text-neutral-800' : 'text-neutral-600'}`}>
                   {count}
                 </span>
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -737,7 +670,6 @@ function FilterPill({
   counts: Record<string, number>
 }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
   const activeCount = active.length
   const allDisabled = options.every(o => (counts[o.value] ?? 0) === 0 && !active.includes(o.value))
@@ -750,46 +682,50 @@ function FilterPill({
   ]
 
   return (
-    <div ref={ref}>
-      <button
-        onClick={() => !allDisabled && setOpen(o => !o)}
-        disabled={allDisabled}
-        className={[
-          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-colors',
-          allDisabled
-            ? 'border-neutral-800 text-neutral-600 bg-neutral-800/20 cursor-not-allowed opacity-50'
-            : activeCount
-              ? 'border-blue-500/70 text-blue-300 bg-blue-900/20'
-              : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
-        ].join(' ')}
-      >
-        <span>{label}</span>
-        {activeCount > 0 && (
-          <span className="bg-blue-500 text-white rounded-full px-1.5 text-[10px] font-semibold leading-4">
-            {activeCount}
-          </span>
-        )}
-        <svg
-          className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`}
-          viewBox="0 0 12 12" fill="currentColor"
+    <Popover.Root open={open && !allDisabled} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <Button
+          variant="secondary"
+          size="xs"
+          disabled={allDisabled}
+          className={[
+            'rounded-lg px-2.5 py-1.5',
+            allDisabled
+              ? 'border-neutral-800 text-neutral-600 bg-neutral-800/20 cursor-not-allowed opacity-50'
+              : activeCount
+                ? 'border-blue-500/70 text-blue-300 bg-blue-900/20'
+                : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+          ].join(' ')}
         >
-          <path d="M6 8L1 3h10L6 8z" />
-        </svg>
-      </button>
+          <span>{label}</span>
+          {activeCount > 0 && (
+            <span className="bg-blue-500 text-white rounded-full px-1.5 text-[10px] font-semibold leading-4">
+              {activeCount}
+            </span>
+          )}
+          <Icon
+            name="ChevronDown"
+            size="sm"
+            className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </Button>
+      </Popover.Trigger>
 
-      <Popover anchorRef={ref} open={open && !allDisabled} onClose={() => setOpen(false)}>
-        <div className="bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl py-1.5 min-w-40">
+      <Popover.Content align="start" className="min-w-40 rounded-xl border-neutral-800 bg-neutral-950 p-0 shadow-2xl">
+        <div className="py-1.5">
           {sortedOptions.map(opt => {
             const count = counts[opt.value] ?? 0
             const isActive = active.includes(opt.value)
             const disabled = count === 0 && !isActive
             return (
-              <button
+              <Button
                 key={opt.value}
+                variant="ghost"
+                size="xs"
                 onClick={() => !disabled && onToggle(opt.value)}
                 disabled={disabled}
                 className={[
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
+                  'h-auto w-full justify-start gap-2 rounded-none border-0 px-3 py-1.5 font-normal',
                   disabled
                     ? 'text-neutral-700 cursor-not-allowed opacity-50'
                     : isActive
@@ -802,20 +738,18 @@ function FilterPill({
                   isActive ? 'bg-blue-500 border-blue-500' : 'border-neutral-600',
                 ].join(' ')}>
                   {isActive && (
-                    <svg viewBox="0 0 10 10" className="w-2 h-2 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <Icon name="Check" size="sm" className="h-2 w-2 text-white" />
                   )}
                 </span>
                 <span className="flex-1 capitalize">{opt.label}</span>
                 <span className={`text-[10px] tabular-nums ${count === 0 ? 'text-neutral-700' : 'text-neutral-500'}`}>
                   {count}
                 </span>
-              </button>
+              </Button>
             )
           })}
         </div>
-      </Popover>
-    </div>
+      </Popover.Content>
+    </Popover.Root>
   )
 }

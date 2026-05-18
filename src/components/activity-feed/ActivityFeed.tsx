@@ -9,6 +9,7 @@ import { ActivityFilters } from './ActivityFilters'
 import { ActivityRow } from './ActivityRow'
 import { ViewHelpHeader } from '../shared/ViewHelpHeader'
 import { WORKFLOW_VIEW_HELP } from '../shared/workflowViewHelp'
+import { Button } from '../ui/Button'
 
 export function ActivityFeed() {
   const project = useActiveProject()
@@ -71,12 +72,14 @@ export function ActivityFeed() {
           </div>
         )}
         {!autoFollow && (
-          <button
+          <Button
+            variant="primary"
+            size="xs"
             onClick={() => { setAutoFollow(true); scrollToBottom() }}
-            className="absolute right-4 bottom-4 rounded bg-blue-600 px-2 py-1 text-xs text-white shadow-lg"
+            className="absolute right-4 bottom-4 shadow-lg"
           >
             Jump to latest
-          </button>
+          </Button>
         )}
       </div>
     </div>

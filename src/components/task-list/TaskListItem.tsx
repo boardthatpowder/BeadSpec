@@ -1,6 +1,8 @@
 import type { Task } from '../../bindings'
 import type { WorkerProvenance } from '../../lib/worker-findings'
 import { parsePausedNote } from '../../lib/parsePausedNote'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 export const STATUS_DOT: Record<string, string> = {
   open:        'bg-neutral-500',
@@ -68,12 +70,14 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
   const pauseReason = parsePausedNote(task.notes ?? task.description ?? null) ?? undefined
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="md"
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       style={{ fontSize: 'var(--font-size)' }}
       className={[
-        'w-full h-full text-left px-3 flex items-center gap-2.5 transition-all border-b border-neutral-800/40',
+        'w-full h-full justify-start rounded-none border-0 border-b border-neutral-800/40 px-3 text-left font-normal transition-all',
         isActive
           ? 'bg-blue-950/30 border-l-2 border-l-blue-500'
           : isSelected
@@ -92,8 +96,13 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
           <span className={`text-xs truncate flex-1 ${isActive ? 'text-neutral-100' : 'text-neutral-300'}`}>
             {task.title}
           </span>
-          <span title={pauseReason} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? STATUS_BADGE_PAUSED : STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>
-            {isPaused ? '⏸ paused' : task.status.replace('_', ' ')}
+          <span title={pauseReason} className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? STATUS_BADGE_PAUSED : STATUS_BADGE[task.status] ?? 'bg-neutral-800 text-neutral-400'}`}>
+            {isPaused ? (
+              <>
+                <Icon name="Pause" size="sm" className="h-2.5 w-2.5" />
+                paused
+              </>
+            ) : task.status.replace('_', ' ')}
           </span>
         </div>
         {hasMetadata && (
@@ -133,6 +142,6 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
       <span className={`text-xs flex-shrink-0 tabular-nums ${PRIORITY_STYLE[task.priority] ?? 'text-neutral-600'}`}>
         P{task.priority}
       </span>
-    </button>
+    </Button>
   )
 }

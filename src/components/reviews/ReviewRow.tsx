@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReviewEntry } from '../../bindings'
+import { Button } from '../ui/Button'
 import { ReviewMarkdownViewer } from './ReviewMarkdownViewer'
 
 const KIND_CLASSES: Record<string, string> = {
@@ -17,9 +18,11 @@ export function ReviewRow({ review }: { review: ReviewEntry }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="rounded border border-neutral-800 bg-neutral-950/40">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen(v => !v)}
-        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+        className="flex h-auto w-full items-center justify-between gap-3 rounded-none px-3 py-2 text-left font-normal"
       >
         <span className="min-w-0">
           <span className="block truncate text-sm text-neutral-300">{review.title}</span>
@@ -32,7 +35,7 @@ export function ReviewRow({ review }: { review: ReviewEntry }) {
         <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${KIND_CLASSES[review.kind_raw] ?? 'border-neutral-700 bg-neutral-900 text-neutral-400'}`}>
           {review.kind_raw}
         </span>
-      </button>
+      </Button>
       {open && <ReviewMarkdownViewer body={review.body} />}
     </div>
   )

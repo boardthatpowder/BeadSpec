@@ -5,6 +5,7 @@ import { Tooltip } from '../ui/Tooltip'
 import { useActiveProject } from '../../hooks/useProject'
 import { useRufloAvailable } from '../memory-browser/useRufloAvailable'
 import { type TopLevelView, viewSelectionState } from './viewSelection'
+import { Button } from '../ui/Button'
 
 const ALL_VIEWS: { id: TopLevelView; label: string; description: string; feature?: 'openspec' | 'ruflo' }[] = [
   { id: 'all',     label: 'All',     description: 'All tasks across the project' },
@@ -42,17 +43,19 @@ export function ViewSwitcher() {
       <div className="flex w-max items-center gap-1 rounded-lg bg-neutral-900/70 p-0.5">
       {views.map(v => (
         <Tooltip key={v.id} label={v.label} description={v.description}>
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => setState(viewSelectionState(v.id))}
             className={[
-              'whitespace-nowrap px-2.5 py-1 text-xs rounded-md transition-colors font-medium',
+              'h-auto whitespace-nowrap border-0 px-2.5 py-1',
               activeView === v.id
                 ? 'bg-neutral-700 text-neutral-100'
                 : 'text-neutral-500 hover:text-neutral-300',
             ].join(' ')}
           >
             {v.label}
-          </button>
+          </Button>
         </Tooltip>
       ))}
       </div>

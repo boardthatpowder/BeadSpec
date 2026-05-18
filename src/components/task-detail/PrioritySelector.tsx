@@ -3,6 +3,7 @@ import type { TaskDetail } from '../../bindings'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../ui/Toast'
 import { Tooltip } from '../ui/Tooltip'
+import { Button } from '../ui/Button'
 
 interface Props {
   task: TaskDetail
@@ -45,17 +46,19 @@ export function PrioritySelector({ task, project }: Props) {
         const active = p === task.priority
         return (
           <Tooltip key={p} label={PRIORITY_LABELS[p]}>
-            <button
+            <Button
+              variant={active ? 'secondary' : 'ghost'}
+              size="xs"
               onClick={() => select(p)}
               className={[
-                'text-xs px-2 py-0.5 rounded-full font-medium transition-colors',
+                'h-auto rounded-full px-2 py-0.5 text-xs',
                 active
                   ? 'bg-neutral-600 text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-300',
+                  : 'border-0 text-neutral-500 hover:text-neutral-300',
               ].join(' ')}
             >
               P{p}
-            </button>
+            </Button>
           </Tooltip>
         )
       })}

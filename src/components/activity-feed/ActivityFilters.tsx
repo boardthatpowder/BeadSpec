@@ -1,3 +1,5 @@
+import { Button } from '../ui/Button'
+
 const SOURCES = ['bd', 'hook', 'gitnexus'] as const
 
 export function ActivityFilters({
@@ -17,21 +19,29 @@ export function ActivityFilters({
         {SOURCES.map(source => {
           const active = activeKinds.includes(source)
           return (
-            <button
+            <Button
               key={source}
+              variant="secondary"
+              size="xs"
               onClick={() => onKindsChange(active ? activeKinds.filter(k => k !== source) : [...activeKinds, source])}
-              className={`rounded border px-2 py-1 text-xs ${active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-neutral-800 text-neutral-500'}`}
+              className={active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-neutral-800 text-neutral-500'}
             >
               {source}
-            </button>
+            </Button>
           )
         })}
       </div>
       <div className="flex items-center gap-2">
         {(['hour', 'today', 'week'] as const).map(r => (
-          <button key={r} onClick={() => onRangeChange(r)} className={`rounded px-2 py-1 text-xs ${range === r ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500'}`}>
+          <Button
+            key={r}
+            variant="ghost"
+            size="xs"
+            onClick={() => onRangeChange(r)}
+            className={range === r ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500'}
+          >
             {r === 'hour' ? 'Last hour' : r === 'today' ? 'Today' : 'Week'}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

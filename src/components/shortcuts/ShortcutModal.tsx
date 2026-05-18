@@ -3,6 +3,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useModifierLabel } from './ShortcutProvider'
 import { commands } from '../../bindings'
 import type { ShortcutStatus } from '../../bindings'
+import { Dialog } from '../ui/Dialog'
 
 interface ShortcutEntry {
   keys: string     // e.g. "⌘K" or "Ctrl+K" — use {mod} as placeholder
@@ -14,7 +15,7 @@ const SHORTCUTS: ShortcutEntry[] = [
   { group: 'Navigation', keys: '{mod}+K', description: 'Open command palette' },
   { group: 'Navigation', keys: 'J', description: 'Move selection down (focus only)' },
   { group: 'Navigation', keys: 'K', description: 'Move selection up (focus only)' },
-  { group: 'Navigation', keys: '↓ / ↑', description: 'Navigate list (opens preview tab)' },
+  { group: 'Navigation', keys: 'Down / Up', description: 'Navigate list (opens preview tab)' },
   { group: 'Navigation', keys: 'Enter', description: 'Pin focused task as a tab' },
   { group: 'Navigation', keys: 'Backspace', description: 'Navigate back (dep graph)' },
   { group: 'Task Actions', keys: 'Space', description: 'Quick status change' },
@@ -49,8 +50,6 @@ export function ShortcutModal() {
     }).catch(() => {/* ignore */})
   }, [open])
 
-  if (!open) return null
-
   const groups = Array.from(new Set(SHORTCUTS.map(s => s.group)))
 
   // Format CmdOrCtrl+Shift+N → {mod}+Shift+N for display
@@ -58,15 +57,9 @@ export function ShortcutModal() {
     s.replace(/CmdOrCtrl/g, mod).replace(/CommandOrControl/g, mod)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={() => setOpen(false)}
-    >
-      <div
-        className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-6 w-96 max-h-[80vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        <h2 className="text-neutral-100 font-semibold mb-4 text-sm">Keyboard Shortcuts</h2>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Content className="w-96 max-h-[80vh] overflow-y-auto p-6">
+        <Dialog.Header className="border-0 px-0 py-0 mb-4 text-sm">Keyboard Shortcuts</Dialog.Header>
         {groups.map(group => (
           <div key={group} className="mb-4">
             <div className="text-neutral-500 text-xs uppercase tracking-wider mb-2">{group}</div>
@@ -102,7 +95,7 @@ export function ShortcutModal() {
         </div>
 
         <p className="text-neutral-600 text-xs mt-4 text-center">Press ? or Esc to close</p>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }

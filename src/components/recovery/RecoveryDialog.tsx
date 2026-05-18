@@ -6,6 +6,9 @@ import { homeDir } from '@tauri-apps/api/path'
 import { commands, unwrap } from '../../ipc'
 import type { HealthReport, OrphanInfo } from '../../bindings'
 import { useRecoveryStore } from './recoveryStore'
+import { Dialog } from '../ui/Dialog'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 // ── Public component ──────────────────────────────────────────────────────────
 
@@ -20,33 +23,17 @@ export function RecoveryDialog() {
     return () => { unlisten.then(fn => fn()) }
   }, [setReport])
 
-  // Escape key dismisses — emergency exit if buttons stop working.
-  useEffect(() => {
-    if (!report) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') clearReport()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [report, clearReport])
-
-  if (!report) return null
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="recovery-title"
-      style={{ zIndex: 9999 }}
-      className="fixed inset-0 bg-black/60 flex items-center justify-center"
-      onClick={(e) => { if (e.target === e.currentTarget) clearReport() }}
-    >
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl w-[560px] max-h-[80vh] flex flex-col">
-        <Header onDismiss={clearReport} />
-        <Body report={report} />
-        <Footer report={report} onDismiss={clearReport} />
-      </div>
-    </div>
+    <Dialog.Root open={!!report} onOpenChange={(open) => { if (!open) clearReport() }}>
+      {report && (
+        <Dialog.Content className="z-[9999] w-[560px] max-h-[80vh] rounded-lg p-0 flex flex-col">
+          <Dialog.Header className="sr-only">Dolt Server Recovery Required</Dialog.Header>
+          <Header onDismiss={clearReport} />
+          <Body report={report} />
+          <Footer report={report} onDismiss={clearReport} />
+        </Dialog.Content>
+      )}
+    </Dialog.Root>
   )
 }
 
@@ -64,13 +51,15 @@ function Header({ onDismiss }: { onDismiss: () => void }) {
           recovered automatically. Choose an action below.
         </p>
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         aria-label="Close"
         onClick={onDismiss}
-        className="ml-4 px-2 py-1 text-neutral-400 hover:text-neutral-100 transition-colors"
+        className="ml-4 h-auto border-0 px-2 py-1 text-neutral-400 hover:text-neutral-100"
       >
-        ×
-      </button>
+        <Icon name="X" size="sm" />
+      </Button>
     </div>
   )
 }
@@ -207,33 +196,41 @@ function Footer({ report, onDismiss }: { report: HealthReport; onDismiss: () => 
 
   return (
     <div className="px-6 py-4 border-t border-neutral-800 flex gap-2 justify-end">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleOpenLog}
-        className="px-3 py-1.5 text-sm text-neutral-400 hover:text-neutral-200 transition-colors"
+        className="text-neutral-400 hover:text-neutral-200"
       >
         Open recovery log
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleQuit}
-        className="px-3 py-1.5 text-sm text-neutral-400 hover:text-neutral-200 transition-colors"
+        className="text-neutral-400 hover:text-neutral-200"
       >
         Quit app
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={handleRetry}
         disabled={busy !== null}
-        className="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-neutral-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
+        className="disabled:cursor-wait"
       >
         {busy === 'retry' ? 'Retrying…' : 'Retry'}
-      </button>
+      </Button>
       {!isSpawnFailure && (
-        <button
+        <Button
+          variant="danger"
+          size="sm"
           onClick={handleForce}
           disabled={busy !== null}
-          className="px-3 py-1.5 text-sm bg-red-900/80 hover:bg-red-800 text-red-200 rounded border border-red-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
+          className="border-red-700 bg-red-900/80 text-red-200 hover:bg-red-800 disabled:cursor-wait"
         >
           {busy === 'force' ? 'Killing…' : 'Force kill & retry'}
-        </button>
+        </Button>
       )}
     </div>
   )

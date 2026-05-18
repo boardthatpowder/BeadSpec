@@ -4,6 +4,7 @@ import { commands, unwrap } from '../../ipc'
 import type { GitRefs, GitnexusImpactReport, TaskDetail } from '../../bindings'
 import { extractDiffSymbols } from './extractDiffSymbols'
 import { useAppState } from '../../contexts/HashStateContext'
+import { Button } from '../ui/Button'
 
 const RISK_CLASS: Record<string, string> = {
   Low: 'bg-neutral-800 text-neutral-300 border-neutral-700',
@@ -69,25 +70,28 @@ export function ImpactPanel({ task, project }: { task: TaskDetail; project: stri
             <div className="text-sm font-medium text-neutral-200">GitNexus Impact</div>
             <div className="text-xs text-neutral-500">Run upstream impact for a symbol touched by this task.</div>
           </div>
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={() => lastSymbol && run(lastSymbol)}
             disabled={!lastSymbol || loading}
-            className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-40"
           >
             Refresh
-          </button>
+          </Button>
         </div>
 
         {candidates.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {candidates.map(candidate => (
-              <button
+              <Button
                 key={candidate}
+                variant="secondary"
+                size="xs"
                 onClick={() => { setSymbol(candidate); run(candidate) }}
-                className="rounded border border-blue-900/60 bg-blue-950/30 px-2 py-1 text-xs font-mono text-blue-300 hover:bg-blue-900/40"
+                className="border-blue-900/60 bg-blue-950/30 font-mono text-blue-300 hover:bg-blue-900/40"
               >
                 {candidate}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -99,9 +103,9 @@ export function ImpactPanel({ task, project }: { task: TaskDetail; project: stri
             placeholder="Symbol name"
             className="min-w-0 flex-1 rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-blue-700"
           />
-          <button disabled={loading || !symbol.trim()} className="rounded bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-40">
+          <Button variant="primary" size="md" disabled={loading || !symbol.trim()}>
             {loading ? 'Running…' : 'Run'}
-          </button>
+          </Button>
         </form>
       </div>
 

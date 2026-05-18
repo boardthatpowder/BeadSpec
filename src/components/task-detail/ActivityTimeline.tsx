@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { commands, unwrap } from '../../ipc'
 import type { HistoryEntry, DoltRevision } from '../../bindings'
 import { listen } from '@tauri-apps/api/event'
-import { IconButton } from '../ui/IconButton'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 import { interleaveByTimestamp } from '../../lib/interleave'
 import { DoltRevisionEntry } from './DoltRevisionEntry'
 
@@ -20,7 +21,15 @@ function DiffPanel({ entryA, entryB, onClose }: {
     <div className="mx-4 mb-4 p-3 bg-neutral-800 border border-neutral-700 rounded-lg">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium text-neutral-400">Changes between selected entries</span>
-        <IconButton label="Close" onClick={onClose} className="text-xs text-neutral-600 hover:text-neutral-300">✕</IconButton>
+        <Button
+          variant="ghost"
+          size="xs"
+          aria-label="Close"
+          onClick={onClose}
+          className="h-auto border-0 px-1 py-0 text-neutral-600 hover:text-neutral-300"
+        >
+          <Icon name="X" size="sm" />
+        </Button>
       </div>
       <div className="space-y-2">
         {[entryA, entryB].map((entry, i) => (
@@ -136,16 +145,18 @@ export function ActivityTimeline({ taskId, project, activeTab }: Props) {
                   <span className="text-xs text-neutral-600">
                     {new Date(entry.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <button
+                  <Button
+                    variant={isSelected ? 'primary' : 'ghost'}
+                    size="xs"
                     onClick={() => toggleSelect(entry.id)}
                     className={`ml-auto text-xs px-1.5 py-0.5 rounded transition-colors ${
                       isSelected
                         ? 'bg-blue-600 text-white'
-                        : 'text-neutral-600 hover:text-neutral-400 hover:bg-neutral-700'
+                        : 'border-0 text-neutral-600 hover:text-neutral-400 hover:bg-neutral-700'
                     }`}
                   >
                     {isSelected ? 'Selected' : 'Compare'}
-                  </button>
+                  </Button>
                 </div>
                 {entry.entry_type === 'comment' ? (
                   <div className="mt-1 text-sm text-neutral-300 whitespace-pre-wrap">{entry.body}</div>

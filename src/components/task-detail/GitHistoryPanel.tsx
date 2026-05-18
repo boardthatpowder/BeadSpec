@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { GitRefs } from '../../bindings'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 
 interface Props {
   gitRefs: GitRefs | undefined
@@ -40,21 +42,20 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
   return (
     <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 overflow-hidden">
       {/* Section header */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-neutral-800/30 transition-colors"
+        className="h-auto w-full justify-between rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/30"
       >
         <span className="text-xs font-medium text-neutral-400">{headerLabel}</span>
-        <svg
+        <Icon
+          name="ChevronDown"
+          size="sm"
           className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
           strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+        />
+      </Button>
 
       {open && (
         <div className="border-t border-neutral-800/60">
@@ -72,10 +73,7 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
                       key={branch}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-400 border border-neutral-700"
                     >
-                      {/* git branch icon */}
-                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 3v12m0 0a3 3 0 100 6 3 3 0 000-6zm0 0h6a3 3 0 100-6H6" />
-                      </svg>
+                      <Icon name="GitBranch" size="sm" className="h-2.5 w-2.5" strokeWidth={2} />
                       {branch}
                     </span>
                   ))}

@@ -4,6 +4,8 @@ import { commands, unwrap } from "../../ipc";
 import { IconButton } from "../ui/IconButton";
 import { useActiveProject } from "../../hooks/useProject";
 import { useToast } from "../ui/Toast";
+import { Button } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 
 interface QuickCreateState {
   title: string;
@@ -71,7 +73,7 @@ export function TrayPopover() {
           onClick={() => setOpen(false)}
           className="text-neutral-500 hover:text-neutral-300 text-xs"
         >
-          ✕
+          <Icon name="X" size="sm" />
         </IconButton>
       </div>
 
@@ -104,25 +106,29 @@ export function TrayPopover() {
             <option value={3}>P3 Medium</option>
             <option value={4}>P4 Low</option>
           </select>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={createTask}
             disabled={creating || !form.title.trim()}
-            className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs py-1.5 rounded-lg transition-colors"
+            className="flex-1"
           >
             {creating ? "…" : "Create"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <button
+      <Button
+        variant="link"
+        size="xs"
         onClick={() => {
           commands.focusMainWindow();
           setOpen(false);
         }}
-        className="w-full text-center text-xs text-blue-400 hover:text-blue-300 transition-colors py-1"
+        className="h-auto w-full py-1 text-blue-400 hover:text-blue-300"
       >
         Open BeadSpec →
-      </button>
+      </Button>
     </div>
   );
 }

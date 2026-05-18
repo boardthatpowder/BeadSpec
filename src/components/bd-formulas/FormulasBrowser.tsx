@@ -5,6 +5,8 @@ import { useActiveProject } from '../../hooks/useProject'
 import { renderWithChips } from '../shared/issueChips'
 import { parseFormulaList } from './types'
 import type { Formula } from './types'
+import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 import { PourConfirmDialog } from './PourConfirmDialog'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -40,7 +42,9 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
             <p className="text-xs text-neutral-400 mt-0.5 leading-4">{formula.description}</p>
           )}
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="xs"
           onClick={() => onPour(formula.name)}
           disabled={isPouring}
           className={[
@@ -51,7 +55,7 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
           ].join(' ')}
         >
           {isPouring && ownResult === null ? 'Waiting…' : 'Pour'}
-        </button>
+        </Button>
       </div>
 
       {/* Pour output */}
@@ -62,17 +66,13 @@ function FormulaCard({ formula, isPouring, pourResult, onPour }: FormulaCardProp
         ].join(' ')}>
           {failed && (
             <div className="flex items-center gap-1.5 mb-2">
-              <svg className="w-3.5 h-3.5 text-red-400 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z" />
-              </svg>
+              <Icon name="X" size="sm" className="flex-shrink-0 text-red-400" />
               <span className="text-[10px] text-red-400 font-medium">Pour failed (exit {ownResult.output.exit_code})</span>
             </div>
           )}
           {succeeded && (
             <div className="flex items-center gap-1.5 mb-2">
-              <svg className="w-3.5 h-3.5 text-green-400 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" />
-              </svg>
+              <Icon name="Check" size="sm" className="flex-shrink-0 text-green-400" />
               <span className="text-[10px] text-green-400 font-medium">Pour succeeded</span>
             </div>
           )}
@@ -187,7 +187,9 @@ export function FormulasBrowser() {
           <h2 className="text-base font-semibold text-neutral-100">Formulas</h2>
           <p className="text-xs text-neutral-500 mt-0.5">Pour bd formulas into the connected project</p>
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="xs"
           onClick={() => { setHasLoaded(false) }}
           disabled={isLoading}
           className={[
@@ -198,7 +200,7 @@ export function FormulasBrowser() {
           ].join(' ')}
         >
           {isLoading ? 'Loading…' : 'Refresh'}
-        </button>
+        </Button>
       </div>
 
       {/* Body */}
@@ -210,9 +212,7 @@ export function FormulasBrowser() {
         ) : bdNotFound ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-12 h-12 rounded-full bg-amber-900/30 border border-amber-800/40 flex items-center justify-center">
-              <svg className="w-6 h-6 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-              </svg>
+              <Icon name="TriangleAlert" size="lg" className="text-amber-400" />
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-neutral-200">bd CLI not configured</p>
@@ -224,9 +224,7 @@ export function FormulasBrowser() {
         ) : rawErrorOutput ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-4 py-3 bg-red-900/20 border border-red-800/40 rounded-lg">
-              <svg className="w-4 h-4 text-red-400 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z" />
-              </svg>
+              <Icon name="X" size="md" className="flex-shrink-0 text-red-400" />
               <span className="text-xs text-red-300 font-medium">Formula list unavailable</span>
             </div>
             <pre className="text-xs text-neutral-400 whitespace-pre-wrap font-mono bg-neutral-900 border border-neutral-800 rounded-lg p-4 max-h-48 overflow-y-auto">

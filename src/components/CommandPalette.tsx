@@ -4,6 +4,9 @@ import { commands, unwrap } from '../ipc'
 import { useShortcut } from './shortcuts/ShortcutProvider'
 import { useAppState } from '../contexts/HashStateContext'
 import { useActiveProject } from '../hooks/useProject'
+import { Dialog } from './ui/Dialog'
+import { Button } from './ui/Button'
+import { Icon } from './ui/Icon'
 
 interface Result {
   type: 'task' | 'action' | 'view'
@@ -93,32 +96,24 @@ export function CommandPalette() {
     allResults[selected]?.action()
   }
 
-  if (!open) return null
-
   const groupLabel = (type: Result['type']) =>
     type === 'task' ? 'Tasks' : type === 'action' ? 'Actions' : 'Views'
 
   const groups = ['action', 'view', 'task'] as const
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/60 backdrop-blur-sm"
-      onClick={close}
-    >
-      <div
-        className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl w-[560px] overflow-hidden"
-        onClick={e => e.stopPropagation()}
+    <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) close() }}>
+      <Dialog.Content
+        aria-label="Command palette"
+        className="top-24 w-[560px] max-w-[calc(100vw-2rem)] -translate-y-0 p-0"
         onKeyDown={e => {
-          if (e.key === 'Escape') close()
           if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, allResults.length - 1)) }
           if (e.key === 'ArrowUp') { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)) }
           if (e.key === 'Enter') { e.preventDefault(); runSelected() }
         }}
       >
         <div className="flex items-center px-4 border-b border-neutral-800">
-          <svg className="w-4 h-4 text-neutral-500 mr-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="6.5" cy="6.5" r="4.5"/><path d="m10.5 10.5 3 3"/>
-          </svg>
+          <Icon name="Search" size="md" className="text-neutral-500 mr-3" />
           <input
             ref={inputRef}
             value={query}
@@ -143,18 +138,20 @@ export function CommandPalette() {
                 {group.map(r => {
                   const i = allResults.indexOf(r)
                   return (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       key={r.id}
                       onClick={r.action}
                       className={[
-                        'w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors',
+                        'h-auto w-full justify-start text-left px-4 py-2.5 gap-3 rounded-none border-0',
                         i === selected ? 'bg-blue-600/20 text-blue-300' : 'text-neutral-200 hover:bg-neutral-800',
                       ].join(' ')}
                       onMouseEnter={() => setSelected(i)}
                     >
                       <span className="flex-1">{r.label}</span>
                       {r.sub && <span className="text-xs text-neutral-500">{r.sub}</span>}
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
@@ -163,9 +160,9 @@ export function CommandPalette() {
         </div>
 
         <div className="px-4 py-2 border-t border-neutral-800 flex items-center gap-4 text-xs text-neutral-600">
-          <span>↑↓ navigate</span><span>↵ select</span><span>Esc close</span>
+          <span>Up/Down navigate</span><span>Enter select</span><span>Esc close</span>
         </div>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }

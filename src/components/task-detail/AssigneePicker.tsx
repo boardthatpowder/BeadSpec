@@ -4,6 +4,7 @@ import type { TaskDetail } from '../../bindings'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../ui/Toast'
 import { Tooltip } from '../ui/Tooltip'
+import { Button } from '../ui/Button'
 
 interface Props {
   task: TaskDetail
@@ -77,12 +78,14 @@ export function AssigneePicker({ task, project }: Props) {
 
   return (
     <Tooltip label="Edit assignee">
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={() => setEditing(true)}
-        className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+        className="h-auto border-0 px-0 py-0 text-xs font-normal text-neutral-500 hover:text-neutral-300"
       >
         {task.assignee ? `→ ${task.assignee}` : '+ assignee'}
-      </button>
+      </Button>
     </Tooltip>
   )
 }
