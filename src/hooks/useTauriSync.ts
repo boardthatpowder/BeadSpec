@@ -38,6 +38,9 @@ export function useTauriSync(activeProject?: string) {
           queryKey: ["tasks", project],
           exact: false,
         });
+        queryClient.invalidateQueries({
+          queryKey: ["worker-findings", project],
+        });
       },
     );
 
@@ -51,6 +54,9 @@ export function useTauriSync(activeProject?: string) {
         queryClient.invalidateQueries({
           queryKey: ["tasks", project],
           exact: false,
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["worker-findings", project],
         });
       },
     );
