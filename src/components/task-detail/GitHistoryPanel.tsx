@@ -40,27 +40,27 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
     : 'Git history'
 
   return (
-    <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 overflow-hidden">
+    <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 overflow-hidden">
       {/* Section header */}
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setOpen(o => !o)}
-        className="h-auto w-full justify-between rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/30"
+        className="h-auto w-full justify-between rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-[--color-surface-hi]/30"
       >
-        <span className="text-xs font-medium text-neutral-400">{headerLabel}</span>
+        <span className="text-xs font-medium text-[--color-fg-muted]">{headerLabel}</span>
         <Icon
           name="ChevronDown"
           size="sm"
-          className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-[--color-fg-subtle] transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
           strokeWidth={2}
         />
       </Button>
 
       {open && (
-        <div className="border-t border-neutral-800/60">
+        <div className="border-t border-[--color-border]/60">
           {isLoading && (
-            <div className="px-4 py-3 text-xs text-neutral-600">Loading…</div>
+            <div className="px-4 py-3 text-xs text-[--color-fg-subtle]">Loading…</div>
           )}
 
           {!isLoading && gitRefs && (
@@ -71,7 +71,7 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
                   {gitRefs.branches.map(branch => (
                     <span
                       key={branch}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-400 border border-neutral-700"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[--color-surface-hi] text-[--color-fg-muted] border border-[--color-border-strong]"
                     >
                       <Icon name="GitBranch" size="sm" className="h-2.5 w-2.5" strokeWidth={2} />
                       {branch}
@@ -82,7 +82,7 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
 
               {/* Commit list */}
               {gitRefs.commits.length === 0 ? (
-                <div className="px-4 py-3 text-xs text-neutral-600 italic">No commits reference this issue</div>
+                <div className="px-4 py-3 text-xs text-[--color-fg-subtle] italic">No commits reference this issue</div>
               ) : (
                 <div className="divide-y divide-neutral-800/40">
                   {gitRefs.commits.map(commit => (
@@ -91,8 +91,8 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
                         {abbrevHash(commit.hash)}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-neutral-300 truncate">{commit.subject}</div>
-                        <div className="text-[10px] text-neutral-600 mt-0.5">{formatCommitDate(commit.date)}</div>
+                        <div className="text-xs text-[--color-fg-muted] truncate">{commit.subject}</div>
+                        <div className="text-[10px] text-[--color-fg-subtle] mt-0.5">{formatCommitDate(commit.date)}</div>
                       </div>
                     </div>
                   ))}
@@ -102,7 +102,7 @@ export function GitHistoryPanel({ gitRefs, isLoading }: Props) {
           )}
 
           {!isLoading && !gitRefs && (
-            <div className="px-4 py-3 text-xs text-neutral-600 italic">No commits reference this issue</div>
+            <div className="px-4 py-3 text-xs text-[--color-fg-subtle] italic">No commits reference this issue</div>
           )}
         </div>
       )}

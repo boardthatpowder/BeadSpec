@@ -50,26 +50,26 @@ export function CommentsSection({ taskId, project }: Props) {
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-neutral-800">
-      <div className="text-xs text-neutral-500 uppercase tracking-wider mb-3">Comments</div>
+    <div className="mt-4 pt-4 border-t border-[--color-border]">
+      <div className="text-xs text-[--color-fg-subtle] uppercase tracking-wider mb-3">Comments</div>
 
       {comments.length === 0 && (
-        <p className="text-sm text-neutral-600 italic mb-3">No comments yet</p>
+        <p className="text-sm text-[--color-fg-subtle] italic mb-3">No comments yet</p>
       )}
 
       {comments.map(c => (
         <div key={c.id} className="flex gap-3 mb-3">
-          <div className="w-6 h-6 rounded-full bg-neutral-700 flex-shrink-0 flex items-center justify-center text-xs text-neutral-300 font-medium">
+          <div className="w-6 h-6 rounded-full bg-[--color-surface-hi] flex-shrink-0 flex items-center justify-center text-xs text-[--color-fg-muted] font-medium">
             {c.actor?.[0]?.toUpperCase() ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-xs font-medium text-neutral-300">{c.actor}</span>
-              <span className="text-xs text-neutral-600">
+              <span className="text-xs font-medium text-[--color-fg-muted]">{c.actor}</span>
+              <span className="text-xs text-[--color-fg-subtle]">
                 {formatAbsolute(c.timestamp)}
               </span>
             </div>
-            <div className="text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed bg-neutral-800/50 rounded-lg px-3 py-2">
+            <div className="text-sm text-[--color-fg-muted] whitespace-pre-wrap leading-relaxed bg-[--color-surface-hi]/50 rounded-lg px-3 py-2">
               {c.body}
             </div>
           </div>
@@ -81,11 +81,11 @@ export function CommentsSection({ taskId, project }: Props) {
         <div
           onClick={() => editor?.commands.focus()}
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
-          className="relative flex-1 min-h-12 max-h-32 overflow-y-auto bg-neutral-800 border border-neutral-700 focus-within:border-blue-500 rounded-lg px-3 py-2 text-sm text-neutral-200 cursor-text transition-colors"
+          className="relative flex-1 min-h-12 max-h-32 overflow-y-auto bg-[--color-surface-hi] border border-[--color-border-strong] focus-within:border-blue-500 rounded-lg px-3 py-2 text-sm text-[--color-fg] cursor-text transition-colors"
         >
           <EditorContent editor={editor} />
           {editor?.isEmpty && (
-            <div className="text-neutral-600 pointer-events-none absolute top-2 left-3">
+            <div className="text-[--color-fg-subtle] pointer-events-none absolute top-2 left-3">
               Add a comment… (⌘Enter to submit)
             </div>
           )}

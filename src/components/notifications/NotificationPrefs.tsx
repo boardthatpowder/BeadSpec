@@ -12,7 +12,7 @@ export function NotificationPrefsPanel() {
 
   return (
     <div className="p-4 flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-neutral-200">Notifications</h3>
+      <h3 className="text-sm font-semibold text-[--color-fg]">Notifications</h3>
 
       <Toggle
         label="Global mute"
@@ -54,8 +54,8 @@ function Toggle({ label, description, checked, onChange }: {
   return (
     <label className="flex items-center justify-between py-2 cursor-pointer group">
       <div>
-        <div className="text-sm text-neutral-200">{label}</div>
-        <div className="text-xs text-neutral-500">{description}</div>
+        <div className="text-sm text-[--color-fg]">{label}</div>
+        <div className="text-xs text-[--color-fg-subtle]">{description}</div>
       </div>
       <Button
         variant="ghost"
@@ -65,7 +65,7 @@ function Toggle({ label, description, checked, onChange }: {
         onClick={() => onChange(!checked)}
         className={[
           'w-10 h-6 rounded-full transition-colors flex-shrink-0',
-          checked ? 'bg-blue-500' : 'bg-neutral-700',
+          checked ? 'bg-blue-500' : 'bg-[--color-surface-hi]',
         ].join(' ')}
       >
         <span

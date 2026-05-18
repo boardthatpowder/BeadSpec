@@ -51,9 +51,9 @@ export function MemoryTrajectoryTab({ taskId, title }: { taskId: string; title: 
 
   const entries = useMemo(() => (state.entries ?? []).slice().sort((a, b) => (parseTrajectoryKey(b.key)?.ts ?? 0) - (parseTrajectoryKey(a.key)?.ts ?? 0)), [state.entries])
 
-  if (state.loading) return <div className="px-4 py-3 text-xs text-neutral-600">Loading…</div>
+  if (state.loading) return <div className="px-4 py-3 text-xs text-[--color-fg-subtle]">Loading…</div>
   if (state.error) return <div className="px-4 py-3 text-xs text-red-400">Could not load memories</div>
-  if (entries.length === 0) return <div className="px-4 py-3 text-xs text-neutral-600">No trajectory memories yet. Work through openspec-beads-work to create trajectory entries.</div>
+  if (entries.length === 0) return <div className="px-4 py-3 text-xs text-[--color-fg-subtle]">No trajectory memories yet. Work through openspec-beads-work to create trajectory entries.</div>
 
   return (
     <div className="divide-y divide-neutral-800/40">
@@ -71,13 +71,13 @@ export function MemoryTrajectoryTab({ taskId, title }: { taskId: string; title: 
               else next.add(idx)
               return next
             })}
-            className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-neutral-800/20"
+            className="h-auto w-full justify-start rounded-none border-0 px-4 py-3 text-left font-normal hover:bg-[--color-surface-hi]/20"
           >
             <div className="flex items-center gap-2">
-              <span title={parsed.ts ? new Date(parsed.ts * 1000).toISOString() : undefined} className="text-xs text-neutral-500">{parsed.ts ? formatRelative(parsed.ts * 1000) : 'unknown'}</span>
+              <span title={parsed.ts ? new Date(parsed.ts * 1000).toISOString() : undefined} className="text-xs text-[--color-fg-subtle]">{parsed.ts ? formatRelative(parsed.ts * 1000) : 'unknown'}</span>
               <span className={`rounded border px-1.5 py-0.5 text-[10px] ${outcomeChipClass(parsed.outcome)}`}>{parsed.outcome ?? 'unknown'}</span>
             </div>
-            <div className="mt-1 whitespace-pre-wrap text-xs text-neutral-400">{open ? entry.preview : entry.preview.slice(0, 120)}</div>
+            <div className="mt-1 whitespace-pre-wrap text-xs text-[--color-fg-muted]">{open ? entry.preview : entry.preview.slice(0, 120)}</div>
           </Button>
         )
       })}

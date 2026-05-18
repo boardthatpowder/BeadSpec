@@ -25,8 +25,9 @@ import { ReviewsHealthTab } from '../health/ReviewsHealthTab'
 import { RefreshButton } from './RefreshButton'
 import { SettingsButton } from './SettingsButton'
 import { HelpButton } from './HelpButton'
-import { useFeatureFlag, useSettings } from '../../contexts/SettingsContext'
+import { useSettings } from '../../contexts/SettingsContext'
 import { useActiveProject } from '../../hooks/useProject'
+import { useThemeEffect } from '../../lib/theme'
 import type { Task } from '../../bindings'
 import { Icon } from '../ui/Icon'
 import { Tabs } from '../ui/Tabs'
@@ -37,6 +38,8 @@ export function AppLayout() {
   const [isNarrow, setIsNarrow] = useState(() => window.innerWidth < 800)
   const dragging = useRef(false)
   const { state } = useAppState()
+  const { settings } = useSettings()
+  useThemeEffect(settings.theme)
 
   // Task 9.2 — mount workspace shortcuts once at the layout root.
   useWorkspaceShortcuts()
@@ -74,18 +77,18 @@ export function AppLayout() {
   }, [saveWidth])
   const onMouseUp = useCallback(() => { dragging.current = false }, [])
 
-  const openspecEnabled = useFeatureFlag('openspec')
+  const openspecEnabled = settings.features.openspec
   const isHealthView = state.view === 'health'
   const isChangesView = state.view === 'changes'
   const isActivityView = state.view === 'activity'
   const isProcessesView = state.view === 'processes'
   const isMemoryView = state.view === 'memory'
 
-  if (!isLoaded) return <div className="h-screen w-screen bg-neutral-950" />
+  if (!isLoaded) return <div className="h-screen w-screen bg-[--color-bg]" />
 
   return (
     <div
-      className="flex flex-col h-screen w-screen overflow-hidden bg-neutral-950 text-neutral-100"
+      className="flex flex-col h-screen w-screen overflow-hidden bg-[--color-bg] text-[--color-fg]"
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
@@ -113,13 +116,13 @@ export function AppLayout() {
         ) : (
           <div className="flex flex-1 overflow-hidden">
             {isNarrow ? (
-              <div className="w-12 flex-shrink-0 border-r border-neutral-800 bg-neutral-900 flex flex-col items-center py-3">
-                <span className="text-neutral-400 text-lg">≡</span>
+              <div className="w-12 flex-shrink-0 border-r border-[--color-border] bg-[--color-surface] flex flex-col items-center py-3">
+                <span className="text-[--color-fg-muted] text-lg">≡</span>
               </div>
             ) : (
               <>
                 <div
-                  className="flex-shrink-0 overflow-hidden border-r border-neutral-800"
+                  className="flex-shrink-0 overflow-hidden border-r border-[--color-border]"
                   style={{ width: `${leftWidth}%` }}
                 >
                   <TaskListPanel />
@@ -138,7 +141,7 @@ export function AppLayout() {
 
 function TopBar() {
   return (
-    <div className="flex-shrink-0 border-b border-neutral-800/80 bg-neutral-950">
+    <div className="flex-shrink-0 border-b border-[--color-border]/80 bg-[--color-bg]">
       <div className="flex min-h-12 items-center gap-3 px-4 py-2">
         {/* Brand + project */}
         <div className="flex min-w-0 items-center gap-3 flex-shrink-0">
@@ -148,7 +151,7 @@ function TopBar() {
             </div>
             <span className="text-sm font-semibold text-white tracking-tight">BeadSpec</span>
           </div>
-          <div className="w-px h-5 bg-neutral-800" />
+          <div className="w-px h-5 bg-[--color-surface-hi]" />
           <ProjectSwitcher />
         </div>
 
@@ -166,7 +169,7 @@ function TopBar() {
           <SettingsButton />
         </div>
       </div>
-      <div className="border-t border-neutral-900 px-4 py-1.5">
+      <div className="border-t border-[--color-border] px-4 py-1.5">
         <ViewSwitcher />
       </div>
     </div>
@@ -231,7 +234,7 @@ function DetailPanel() {
 function ResizableDivider({ onMouseDown }: { onMouseDown: () => void }) {
   return (
     <div
-      className="w-1 flex-shrink-0 bg-neutral-800/50 hover:bg-blue-500/60 cursor-col-resize transition-colors"
+      className="w-1 flex-shrink-0 bg-[--color-surface-hi]/50 hover:bg-blue-500/60 cursor-col-resize transition-colors"
       onMouseDown={onMouseDown}
     />
   )

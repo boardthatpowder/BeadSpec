@@ -19,8 +19,8 @@ export function ReviewsSection({ project, labels }: { project: string; labels: s
   })
   if (!query.data?.length) return null
   return (
-    <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4">
-      <div className="mb-2 text-xs font-medium text-neutral-400">Reviews</div>
+    <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 p-4">
+      <div className="mb-2 text-xs font-medium text-[--color-fg-muted]">Reviews</div>
       <div className="space-y-2">
         {query.data.map(review => <ReviewRow key={review.key} review={review} />)}
       </div>

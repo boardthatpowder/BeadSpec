@@ -36,13 +36,13 @@ function SettingsContent({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 flex-shrink-0">
-        <h2 className="text-base font-semibold text-neutral-100">Settings</h2>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[--color-border] flex-shrink-0">
+        <h2 className="text-base font-semibold text-[--color-fg]">Settings</h2>
         <Button
           variant="ghost"
           size="xs"
           onClick={onClose}
-          className="h-auto border-0 px-1 text-neutral-500 hover:text-neutral-300"
+          className="h-auto border-0 px-1 text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
           aria-label="Close settings"
         >
           <Icon name="X" size="sm" />
@@ -62,8 +62,8 @@ function SettingsContent({ onClose }: { onClose: () => void }) {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="px-6 py-3 border-b border-neutral-800">
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-neutral-500">{title}</h3>
+    <div className="px-6 py-3 border-b border-[--color-border]">
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-[--color-fg-subtle]">{title}</h3>
     </div>
   )
 }
@@ -77,8 +77,8 @@ function ToggleRow({
   return (
     <div className="flex items-center justify-between px-6 py-3">
       <div>
-        <div className="text-sm text-neutral-200">{label}</div>
-        {description && <div className="text-xs text-neutral-500 mt-0.5">{description}</div>}
+        <div className="text-sm text-[--color-fg]">{label}</div>
+        {description && <div className="text-xs text-[--color-fg-subtle] mt-0.5">{description}</div>}
       </div>
       <Button
         variant="ghost"
@@ -88,7 +88,7 @@ function ToggleRow({
         onClick={() => onChange(!checked)}
         className={[
           'w-10 h-6 rounded-full border-0 p-0 transition-colors flex-shrink-0',
-          checked ? 'bg-blue-600' : 'bg-neutral-700',
+          checked ? 'bg-blue-600' : 'bg-[--color-surface-hi]',
         ].join(' ')}
       >
         <span
@@ -127,7 +127,7 @@ function FeaturesSection({ settings, updateSettings }: SectionProps) {
   )
 }
 
-const INPUT_CLASS = 'w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-1.5 text-sm text-neutral-200 font-mono placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors'
+const INPUT_CLASS = 'w-full bg-[--color-surface-hi] border border-[--color-border-strong] rounded px-3 py-1.5 text-sm text-[--color-fg] font-mono placeholder:text-[--color-fg-subtle] focus:outline-none focus:border-neutral-500 transition-colors'
 
 function BinaryPathsSection({ settings, updateSettings }: SectionProps) {
   const { binaryPaths } = settings
@@ -140,7 +140,7 @@ function BinaryPathsSection({ settings, updateSettings }: SectionProps) {
       <div className="px-6 py-4 grid grid-cols-2 gap-4">
         {(['bd', 'openspec', 'ruflo'] as const).map(key => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="text-xs text-neutral-400 font-mono">{key}</span>
+            <span className="text-xs text-[--color-fg-muted] font-mono">{key}</span>
             <input
               type="text"
               value={binaryPaths[key]}
@@ -151,7 +151,7 @@ function BinaryPathsSection({ settings, updateSettings }: SectionProps) {
           </label>
         ))}
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-400 font-mono">dolt</span>
+          <span className="text-xs text-[--color-fg-muted] font-mono">dolt</span>
           <input
             type="text"
             value={binaryPaths.dolt}
@@ -159,7 +159,7 @@ function BinaryPathsSection({ settings, updateSettings }: SectionProps) {
             placeholder="auto-detect"
             className={INPUT_CLASS}
           />
-          <span className="text-xs text-neutral-600">Path changes require app restart</span>
+          <span className="text-xs text-[--color-fg-subtle]">Path changes require app restart</span>
         </label>
       </div>
     </div>
@@ -172,7 +172,7 @@ function IdentitySection({ settings, updateSettings }: SectionProps) {
       <SectionHeader title="Identity" />
       <div className="px-6 py-4">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-400">Actor (your username)</span>
+          <span className="text-xs text-[--color-fg-muted]">Actor (your username)</span>
           <input
             type="text"
             value={settings.actor}
@@ -208,7 +208,7 @@ function QuickCaptureSection({ settings, updateSettings }: SectionProps) {
       <SectionHeader title="Quick Capture" />
       <div className="px-6 py-4 flex flex-col gap-1">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-400">Shortcut</span>
+          <span className="text-xs text-[--color-fg-muted]">Shortcut</span>
           <input
             type="text"
             value={shortcut}
@@ -230,13 +230,40 @@ const DENSITY_OPTIONS: { value: AppSettings['density']; label: string }[] = [
   { value: 'comfortable', label: 'Comfortable' },
 ]
 
+const THEME_OPTIONS: { value: AppSettings['theme']; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light',  label: 'Light' },
+  { value: 'dark',   label: 'Dark' },
+]
+
 function AppearanceSection({ settings, updateSettings }: SectionProps) {
   return (
     <div>
       <SectionHeader title="Appearance" />
       <div className="px-6 py-4 flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <span className="text-xs text-neutral-400">Density</span>
+          <span className="text-xs text-[--color-fg-muted]">Theme</span>
+          <div className="flex items-center gap-2">
+            {THEME_OPTIONS.map(opt => (
+              <Button
+                variant="secondary"
+                size="sm"
+                key={opt.value}
+                onClick={() => updateSettings({ theme: opt.value })}
+                className={[
+                  'h-auto flex-1 py-1.5 text-xs',
+                  settings.theme === opt.value
+                    ? 'bg-blue-600 border-blue-500 text-white'
+                    : 'bg-[--color-surface-hi] border-[--color-border-strong] text-[--color-fg-muted] hover:text-[--color-fg] hover:border-neutral-500',
+                ].join(' ')}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs text-[--color-fg-muted]">Density</span>
           <div className="flex items-center gap-2">
             {DENSITY_OPTIONS.map(opt => (
               <Button
@@ -248,7 +275,7 @@ function AppearanceSection({ settings, updateSettings }: SectionProps) {
                   'h-auto flex-1 py-1.5 text-xs',
                   settings.density === opt.value
                     ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500',
+                    : 'bg-[--color-surface-hi] border-[--color-border-strong] text-[--color-fg-muted] hover:text-[--color-fg] hover:border-neutral-500',
                 ].join(' ')}
               >
                 {opt.label}
@@ -258,8 +285,8 @@ function AppearanceSection({ settings, updateSettings }: SectionProps) {
         </div>
         <label className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-neutral-400">Zoom</span>
-            <span className="text-xs text-neutral-500 font-mono">{settings.zoom.toFixed(1)}x</span>
+            <span className="text-xs text-[--color-fg-muted]">Zoom</span>
+            <span className="text-xs text-[--color-fg-subtle] font-mono">{settings.zoom.toFixed(1)}x</span>
           </div>
           <input
             type="range"
@@ -296,7 +323,7 @@ function TooltipsSection({ settings, updateSettings }: SectionProps) {
       />
       {tooltips.enabled && (
         <div className="px-6 py-3 flex flex-col gap-2">
-          <span className="text-xs text-neutral-400">Hover delay</span>
+          <span className="text-xs text-[--color-fg-muted]">Hover delay</span>
           <div className="flex items-center gap-2">
             {DELAY_OPTIONS.map(opt => (
               <Button
@@ -308,7 +335,7 @@ function TooltipsSection({ settings, updateSettings }: SectionProps) {
                   'h-auto flex-1 py-1.5 text-xs',
                   tooltips.delayMs === opt.value
                     ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500',
+                    : 'bg-[--color-surface-hi] border-[--color-border-strong] text-[--color-fg-muted] hover:text-[--color-fg] hover:border-neutral-500',
                 ].join(' ')}
               >
                 {opt.label}

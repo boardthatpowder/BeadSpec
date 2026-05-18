@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (error) {
       if (this.props.fallback) return this.props.fallback(error, this.reset)
       return (
-        <div className="flex flex-col items-center justify-center gap-3 h-full w-full bg-neutral-950 p-6">
+        <div className="flex flex-col items-center justify-center gap-3 h-full w-full bg-[--color-bg] p-6">
           <div className="text-red-400 text-sm font-mono max-w-lg text-center break-all">
             {error.message || String(error)}
           </div>
@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
             variant="secondary"
             size="xs"
             onClick={this.reset}
-            className="bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+            className="bg-[--color-surface-hi] text-[--color-fg-muted] hover:bg-[--color-surface-hi]"
           >
             Reset
           </Button>

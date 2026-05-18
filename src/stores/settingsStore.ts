@@ -27,11 +27,14 @@ export interface TooltipPrefs {
   delayMs: number
 }
 
+export type ThemeMode = 'system' | 'dark' | 'light'
+
 export interface AppSettings {
   features: FeatureFlags
   binaryPaths: BinaryPaths
   actor: string
   quickCaptureShortcut: string
+  theme: ThemeMode
   density: 'compact' | 'default' | 'comfortable'
   zoom: number
   notificationPrefs: NotificationPrefs
@@ -43,6 +46,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   binaryPaths: { bd: '', openspec: '', ruflo: '', dolt: '' },
   actor: 'me',
   quickCaptureShortcut: 'CmdOrCtrl+Shift+N',
+  theme: 'system',
   density: 'default',
   zoom: 1.0,
   notificationPrefs: { assignment: true, unblock: true, comment: true, globalMute: false },

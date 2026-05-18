@@ -40,7 +40,7 @@ export function ViewSwitcher() {
 
   return (
     <nav aria-label="Main views" className="min-w-0 overflow-x-auto">
-      <div className="flex w-max items-center gap-1 rounded-lg bg-neutral-900/70 p-0.5">
+      <div className="flex w-max items-center gap-1 rounded-lg bg-[--color-surface]/70 p-0.5">
       {views.map(v => (
         <Tooltip key={v.id} label={v.label} description={v.description}>
           <Button
@@ -50,8 +50,8 @@ export function ViewSwitcher() {
             className={[
               'h-auto whitespace-nowrap border-0 px-2.5 py-1',
               activeView === v.id
-                ? 'bg-neutral-700 text-neutral-100'
-                : 'text-neutral-500 hover:text-neutral-300',
+                ? 'bg-[--color-surface-hi] text-[--color-fg]'
+                : 'text-[--color-fg-subtle] hover:text-[--color-fg-muted]',
             ].join(' ')}
           >
             {v.label}

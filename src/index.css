@@ -20,6 +20,24 @@
   --font-sans: 'InterVariable', sans-serif;
 }
 
+[data-theme="light"] {
+  --color-bg: var(--color-white);
+  --color-surface: var(--color-neutral-50);
+  --color-surface-hi: var(--color-neutral-100);
+  --color-surface-overlay: color-mix(in srgb, var(--color-neutral-100) 90%, transparent);
+  --color-border: var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-300);
+  --color-fg: var(--color-neutral-900);
+  --color-fg-muted: var(--color-neutral-600);
+  --color-fg-subtle: var(--color-neutral-500);
+  --color-accent: var(--color-blue-600);
+  --color-accent-fg: var(--color-white);
+  --color-success: var(--color-green-600);
+  --color-warning: var(--color-amber-600);
+  --color-danger: var(--color-red-600);
+  --color-info: var(--color-blue-500);
+}
+
 :root {
   color: var(--color-fg);
   background: var(--color-bg);

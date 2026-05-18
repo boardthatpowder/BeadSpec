@@ -24,7 +24,7 @@ export function ActivityFilters({
               variant="secondary"
               size="xs"
               onClick={() => onKindsChange(active ? activeKinds.filter(k => k !== source) : [...activeKinds, source])}
-              className={active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-neutral-800 text-neutral-500'}
+              className={active ? 'border-blue-800 bg-blue-950/30 text-blue-300' : 'border-[--color-border] text-[--color-fg-subtle]'}
             >
               {source}
             </Button>
@@ -38,7 +38,7 @@ export function ActivityFilters({
             variant="ghost"
             size="xs"
             onClick={() => onRangeChange(r)}
-            className={range === r ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500'}
+            className={range === r ? 'bg-[--color-surface-hi] text-[--color-fg]' : 'text-[--color-fg-subtle]'}
           >
             {r === 'hour' ? 'Last hour' : r === 'today' ? 'Today' : 'Week'}
           </Button>

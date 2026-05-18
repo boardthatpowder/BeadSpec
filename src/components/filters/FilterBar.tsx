@@ -40,7 +40,7 @@ const CLUSTER_CHIP_COLORS: Record<string, string> = {
   Workflow: 'bg-blue-900/50 text-blue-300 border-blue-700/50',
   People:   'bg-teal-900/50 text-teal-300 border-teal-700/50',
   Triage:   'bg-rose-900/50 text-rose-300 border-rose-700/50',
-  '':       'bg-neutral-800/80 text-neutral-300 border-neutral-700/50',
+  '':       'bg-[--color-surface-hi]/80 text-[--color-fg-muted] border-[--color-border-strong]/50',
 }
 
 // Determine which cluster a dimension key belongs to
@@ -134,7 +134,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
             'rounded-lg px-2.5 py-1.5',
             isActive
               ? 'border-emerald-500/70 text-emerald-300 bg-emerald-900/20'
-              : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+              : 'border-[--color-border-strong]/50 text-[--color-fg-muted] hover:border-neutral-500 hover:text-[--color-fg-muted] bg-[--color-surface-hi]/20',
           ].join(' ')}
         >
           <Icon name="Group" size="sm" className="h-3 w-3" />
@@ -152,7 +152,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
         </Button>
       </Popover.Trigger>
 
-      <Popover.Content align="start" className="min-w-44 rounded-xl border-neutral-800 bg-neutral-950 p-0 shadow-2xl">
+      <Popover.Content align="start" className="min-w-44 rounded-xl border-[--color-border] bg-[--color-bg] p-0 shadow-2xl">
         <div className="py-1.5">
           {/* None option */}
           <Button
@@ -163,7 +163,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
               'h-auto w-full justify-start gap-2 rounded-none border-0 px-3 py-1.5 font-normal',
               config === null
                 ? 'text-emerald-300 bg-emerald-900/20'
-                : 'text-neutral-300 hover:bg-neutral-800/40',
+                : 'text-[--color-fg-muted] hover:bg-[--color-surface-hi]/40',
             ].join(' ')}
           >
             <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${config === null ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-600'}`}>
@@ -175,9 +175,9 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
           </Button>
 
           {/* Divider: By field */}
-          <div className="mx-3 my-1 border-t border-neutral-800/60" />
+          <div className="mx-3 my-1 border-t border-[--color-border]/60" />
           <div className="px-3 pb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-600">By field</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[--color-fg-subtle]">By field</span>
           </div>
           {[...GROUP_BY_FIELD_OPTIONS].sort((a, b) => {
             const selA = config?.type === 'field' && `field:${config.field}` === a.value
@@ -205,7 +205,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
                   isSelected
                     ? 'text-emerald-300 bg-emerald-900/20'
                     : eligible
-                      ? 'text-neutral-300 hover:bg-neutral-800/40'
+                      ? 'text-[--color-fg-muted] hover:bg-[--color-surface-hi]/40'
                       : 'text-neutral-700 cursor-not-allowed opacity-50',
                 ].join(' ')}
               >
@@ -220,12 +220,12 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
           })}
 
           {/* Divider: By label prefix */}
-          <div className="mx-3 my-1 border-t border-neutral-800/60" />
+          <div className="mx-3 my-1 border-t border-[--color-border]/60" />
           <div className="px-3 pb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-600">By label prefix</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[--color-fg-subtle]">By label prefix</span>
           </div>
           {allLabelPrefixes.length === 0 ? (
-            <div className="px-3 py-1.5 text-xs text-neutral-600 cursor-not-allowed opacity-50">
+            <div className="px-3 py-1.5 text-xs text-[--color-fg-subtle] cursor-not-allowed opacity-50">
               No label prefixes found
             </div>
           ) : (
@@ -255,7 +255,7 @@ function GroupByDropdown({ allTasks, visibleTasks }: GroupByDropdownProps) {
                     isSelected
                       ? 'text-emerald-300 bg-emerald-900/20'
                       : eligible
-                        ? 'text-neutral-300 hover:bg-neutral-800/40'
+                        ? 'text-[--color-fg-muted] hover:bg-[--color-surface-hi]/40'
                         : 'text-neutral-700 cursor-not-allowed opacity-50',
                   ].join(' ')}
                 >
@@ -346,7 +346,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
   }, [activeFilters])
 
   return (
-    <div className="flex-shrink-0 border-b border-neutral-800">
+    <div className="flex-shrink-0 border-b border-[--color-border]">
       {/* Row A: Scope + Search */}
       <div className="flex items-center gap-1.5 px-3 pt-2 pb-1">
         {/* Workspace scope chip — leftmost, only shown for git projects */}
@@ -378,8 +378,8 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
         )}
 
         {/* Search */}
-        <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-800/40 border border-neutral-700/50 focus-within:border-neutral-500 transition-colors">
-          <Icon name="Search" size="sm" className="h-3 w-3 text-neutral-500 flex-shrink-0" />
+        <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[--color-surface-hi]/40 border border-[--color-border-strong]/50 focus-within:border-neutral-500 transition-colors">
+          <Icon name="Search" size="sm" className="h-3 w-3 text-[--color-fg-subtle] flex-shrink-0" />
           <input
             id="filter-search"
             placeholder="Search…"
@@ -390,7 +390,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
               else delete updated.search
               setState({ filters: updated })
             }}
-            className="bg-transparent text-xs text-neutral-300 placeholder-neutral-600 outline-none flex-1 min-w-0"
+            className="bg-transparent text-xs text-[--color-fg-muted] placeholder-neutral-600 outline-none flex-1 min-w-0"
           />
         </div>
       </div>
@@ -426,7 +426,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
                   'rounded-lg px-2.5 py-1.5',
                   filtersOpen || activeSecondaryDimCount > 0
                     ? 'border-violet-500/70 text-violet-300 bg-violet-900/20'
-                    : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+                    : 'border-[--color-border-strong]/50 text-[--color-fg-muted] hover:border-neutral-500 hover:text-[--color-fg-muted] bg-[--color-surface-hi]/20',
                 ].join(' ')}
               >
                 <Icon name="ListFilter" size="sm" className="h-3 w-3" />
@@ -444,7 +444,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
               </Button>
             </Popover.Trigger>
 
-            <Popover.Content align="start" className="rounded-xl border-neutral-800 bg-neutral-950 p-0 shadow-2xl">
+            <Popover.Content align="start" className="rounded-xl border-[--color-border] bg-[--color-bg] p-0 shadow-2xl">
               <FiltersPopover
                 groups={groups}
                 activeFilters={activeFilters}
@@ -464,7 +464,7 @@ export function FilterBar({ allTasks, visibleTasks }: FilterBarProps) {
             variant="ghost"
             size="xs"
             onClick={clearAll}
-            className="ml-auto h-auto border-0 bg-transparent px-0 py-0 font-normal text-neutral-600 hover:bg-transparent hover:text-neutral-400"
+            className="ml-auto h-auto border-0 bg-transparent px-0 py-0 font-normal text-[--color-fg-subtle] hover:bg-transparent hover:text-[--color-fg-muted]"
           >
             <Icon name="X" size="sm" className="h-3 w-3" />
             Clear
@@ -530,7 +530,7 @@ function FiltersPopover({
           <div key={group.name || `ungrouped-${gi}`}>
             {group.name && (
               <div className="px-3 pt-2 pb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-600">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[--color-fg-subtle]">
                   {group.name}
                 </span>
               </div>
@@ -545,7 +545,7 @@ function FiltersPopover({
               />
             ))}
             {gi < groups.length - 1 && group.name && (
-              <div className="mx-3 my-1.5 border-t border-neutral-800/60" />
+              <div className="mx-3 my-1.5 border-t border-[--color-border]/60" />
             )}
           </div>
         )
@@ -590,11 +590,11 @@ function DimSection({
         disabled={allDisabled}
         className={[
           'group h-auto w-full justify-between rounded-none border-0 px-3 py-1.5 font-normal',
-          allDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800/40',
+          allDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[--color-surface-hi]/40',
         ].join(' ')}
       >
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium capitalize ${allDisabled ? 'text-neutral-600' : 'text-neutral-300'}`}>
+          <span className={`text-xs font-medium capitalize ${allDisabled ? 'text-[--color-fg-subtle]' : 'text-[--color-fg-muted]'}`}>
             {dim.key}
           </span>
           {active.length > 0 && (
@@ -604,11 +604,11 @@ function DimSection({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-neutral-600">{totalCount}</span>
+          <span className="text-[10px] text-[--color-fg-subtle]">{totalCount}</span>
           <Icon
             name="ChevronDown"
             size="sm"
-            className={`h-3 w-3 transition-all ${allDisabled ? 'text-neutral-700' : 'text-neutral-600 group-hover:text-neutral-400'} ${expanded ? 'rotate-180' : ''}`}
+            className={`h-3 w-3 transition-all ${allDisabled ? 'text-neutral-700' : 'text-[--color-fg-subtle] group-hover:text-[--color-fg-muted]'} ${expanded ? 'rotate-180' : ''}`}
           />
         </div>
       </Button>
@@ -632,7 +632,7 @@ function DimSection({
                     ? 'text-neutral-700 cursor-not-allowed opacity-50'
                     : isActive
                       ? 'text-violet-300 hover:bg-violet-900/20'
-                      : 'text-neutral-400 hover:bg-neutral-800/40',
+                      : 'text-[--color-fg-muted] hover:bg-[--color-surface-hi]/40',
                 ].join(' ')}
               >
                 <span className={[
@@ -644,7 +644,7 @@ function DimSection({
                   )}
                 </span>
                 <span className="flex-1 truncate">{val}</span>
-                <span className={`text-[10px] tabular-nums ${count === 0 ? 'text-neutral-800' : 'text-neutral-600'}`}>
+                <span className={`text-[10px] tabular-nums ${count === 0 ? 'text-neutral-800' : 'text-[--color-fg-subtle]'}`}>
                   {count}
                 </span>
               </Button>
@@ -691,10 +691,10 @@ function FilterPill({
           className={[
             'rounded-lg px-2.5 py-1.5',
             allDisabled
-              ? 'border-neutral-800 text-neutral-600 bg-neutral-800/20 cursor-not-allowed opacity-50'
+              ? 'border-[--color-border] text-[--color-fg-subtle] bg-[--color-surface-hi]/20 cursor-not-allowed opacity-50'
               : activeCount
                 ? 'border-blue-500/70 text-blue-300 bg-blue-900/20'
-                : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+                : 'border-[--color-border-strong]/50 text-[--color-fg-muted] hover:border-neutral-500 hover:text-[--color-fg-muted] bg-[--color-surface-hi]/20',
           ].join(' ')}
         >
           <span>{label}</span>
@@ -711,7 +711,7 @@ function FilterPill({
         </Button>
       </Popover.Trigger>
 
-      <Popover.Content align="start" className="min-w-40 rounded-xl border-neutral-800 bg-neutral-950 p-0 shadow-2xl">
+      <Popover.Content align="start" className="min-w-40 rounded-xl border-[--color-border] bg-[--color-bg] p-0 shadow-2xl">
         <div className="py-1.5">
           {sortedOptions.map(opt => {
             const count = counts[opt.value] ?? 0
@@ -730,7 +730,7 @@ function FilterPill({
                     ? 'text-neutral-700 cursor-not-allowed opacity-50'
                     : isActive
                       ? 'text-blue-300 hover:bg-blue-900/20'
-                      : 'text-neutral-300 hover:bg-neutral-800/40',
+                      : 'text-[--color-fg-muted] hover:bg-[--color-surface-hi]/40',
                 ].join(' ')}
               >
                 <span className={[
@@ -742,7 +742,7 @@ function FilterPill({
                   )}
                 </span>
                 <span className="flex-1 capitalize">{opt.label}</span>
-                <span className={`text-[10px] tabular-nums ${count === 0 ? 'text-neutral-700' : 'text-neutral-500'}`}>
+                <span className={`text-[10px] tabular-nums ${count === 0 ? 'text-neutral-700' : 'text-[--color-fg-subtle]'}`}>
                   {count}
                 </span>
               </Button>

@@ -36,12 +36,12 @@ export function TaskLinkChip({ id, title, fromTaskId }: TaskLinkChipProps) {
       onClick={handleClick}
       title={`${id} — ${title}`}
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono
-        bg-neutral-800/80 text-neutral-400 border border-neutral-700/50
-        hover:bg-neutral-700/80 hover:text-neutral-200 hover:border-neutral-600
+        bg-[--color-surface-hi]/80 text-[--color-fg-muted] border border-[--color-border-strong]/50
+        hover:bg-[--color-surface-hi]/80 hover:text-[--color-fg] hover:border-neutral-600
         transition-colors cursor-pointer leading-4 max-w-[200px] truncate"
     >
-      <span className="text-neutral-600 flex-shrink-0">{shortId}</span>
-      <span className="text-neutral-500 flex-shrink-0">·</span>
+      <span className="text-[--color-fg-subtle] flex-shrink-0">{shortId}</span>
+      <span className="text-[--color-fg-subtle] flex-shrink-0">·</span>
       <span className="truncate">{truncatedTitle}</span>
     </Button>
   )

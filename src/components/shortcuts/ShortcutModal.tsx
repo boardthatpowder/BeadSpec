@@ -62,11 +62,11 @@ export function ShortcutModal() {
         <Dialog.Header className="border-0 px-0 py-0 mb-4 text-sm">Keyboard Shortcuts</Dialog.Header>
         {groups.map(group => (
           <div key={group} className="mb-4">
-            <div className="text-neutral-500 text-xs uppercase tracking-wider mb-2">{group}</div>
+            <div className="text-[--color-fg-subtle] text-xs uppercase tracking-wider mb-2">{group}</div>
             {SHORTCUTS.filter(s => s.group === group).map(s => (
               <div key={s.keys} className="flex justify-between items-center py-1">
-                <span className="text-neutral-300 text-sm">{s.description}</span>
-                <kbd className="bg-neutral-800 border border-neutral-700 text-neutral-400 text-xs px-2 py-0.5 rounded font-mono">
+                <span className="text-[--color-fg-muted] text-sm">{s.description}</span>
+                <kbd className="bg-[--color-surface-hi] border border-[--color-border-strong] text-[--color-fg-muted] text-xs px-2 py-0.5 rounded font-mono">
                   {s.keys.replace('{mod}', mod)}
                 </kbd>
               </div>
@@ -76,16 +76,16 @@ export function ShortcutModal() {
 
         {/* Quick Capture global shortcut row */}
         <div className="mb-4">
-          <div className="text-neutral-500 text-xs uppercase tracking-wider mb-2">Global</div>
+          <div className="text-[--color-fg-subtle] text-xs uppercase tracking-wider mb-2">Global</div>
           <div className="flex justify-between items-center py-1 gap-2">
-            <span className="text-neutral-300 text-sm">Quick Capture</span>
+            <span className="text-[--color-fg-muted] text-sm">Quick Capture</span>
             <div className="flex items-center gap-2">
               {quickCaptureStatus && !quickCaptureStatus.available && (
                 <span className="bg-yellow-900/60 border border-yellow-700 text-yellow-400 text-xs px-1.5 py-0.5 rounded">
                   Unavailable — conflict with another app
                 </span>
               )}
-              <kbd className="bg-neutral-800 border border-neutral-700 text-neutral-400 text-xs px-2 py-0.5 rounded font-mono">
+              <kbd className="bg-[--color-surface-hi] border border-[--color-border-strong] text-[--color-fg-muted] text-xs px-2 py-0.5 rounded font-mono">
                 {quickCaptureStatus
                   ? formatShortcut(quickCaptureStatus.shortcut)
                   : `${mod}+Shift+N`}
@@ -94,7 +94,7 @@ export function ShortcutModal() {
           </div>
         </div>
 
-        <p className="text-neutral-600 text-xs mt-4 text-center">Press ? or Esc to close</p>
+        <p className="text-[--color-fg-subtle] text-xs mt-4 text-center">Press ? or Esc to close</p>
       </Dialog.Content>
     </Dialog.Root>
   )

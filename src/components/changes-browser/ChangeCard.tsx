@@ -50,21 +50,21 @@ function relativeTime(lastModified: string | null): string {
 function ProgressBar({ done, total, color = 'blue', label }: { done: number; total: number; color?: 'blue' | 'green'; label?: string }) {
   const barColor = color === 'green' ? 'bg-green-600' : 'bg-blue-500'
   if (total === 0) {
-    return <span className="text-xs text-neutral-600">No tasks yet</span>
+    return <span className="text-xs text-[--color-fg-subtle]">No tasks yet</span>
   }
   const pct = Math.round((done / total) * 100)
   return (
     <div className="flex items-center gap-2">
       {label && (
-        <span className="text-[10px] text-neutral-600 font-medium w-8 flex-shrink-0">{label}</span>
+        <span className="text-[10px] text-[--color-fg-subtle] font-medium w-8 flex-shrink-0">{label}</span>
       )}
-      <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-[--color-surface-hi] rounded-full overflow-hidden">
         <div
           className={`h-full ${barColor} rounded-full transition-all duration-300`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-[10px] text-neutral-500 font-mono flex-shrink-0">
+      <span className="text-[10px] text-[--color-fg-subtle] font-mono flex-shrink-0">
         {done}/{total}
       </span>
     </div>
@@ -97,8 +97,8 @@ function ArtifactLink({ label, present, change, artifact }: ArtifactLinkProps) {
       className={[
         'h-auto px-2 py-0.5 text-[10px] font-mono',
         present
-          ? 'border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500 cursor-pointer'
-          : 'border-neutral-800 text-neutral-700 cursor-not-allowed opacity-40',
+          ? 'border-[--color-border-strong] text-[--color-fg-muted] hover:text-[--color-fg] hover:border-neutral-500 cursor-pointer'
+          : 'border-[--color-border] text-neutral-700 cursor-not-allowed opacity-40',
       ].join(' ')}
     >
       {label}
@@ -189,14 +189,14 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
         'border rounded-xl px-4 py-3 flex flex-col gap-2.5 transition-colors',
         importedEpicId ? 'cursor-pointer' : '',
         change.is_archived
-          ? 'border-neutral-800 bg-neutral-900/40 opacity-70'
-          : 'border-neutral-800 bg-neutral-900/70 hover:border-neutral-700',
+          ? 'border-[--color-border] bg-[--color-surface]/40 opacity-70'
+          : 'border-[--color-border] bg-[--color-surface]/70 hover:border-[--color-border-strong]',
       ].join(' ')}
     >
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium text-neutral-200 truncate font-mono">
+          <span className="text-sm font-medium text-[--color-fg] truncate font-mono">
             {change.name}
           </span>
           <span className={`flex-shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${changeStatusClass(changeStatus)}`}>
@@ -212,12 +212,12 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
               imported → {importedEpicId}
             </Button>
           ) : (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800/60 text-neutral-600 flex-shrink-0">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[--color-surface-hi]/60 text-[--color-fg-subtle] flex-shrink-0">
               not imported
             </span>
           )}
         </div>
-        <span className="text-[11px] text-neutral-600 flex-shrink-0">
+        <span className="text-[11px] text-[--color-fg-subtle] flex-shrink-0">
           {relativeTime(change.last_modified)}
         </span>
       </div>
@@ -227,7 +227,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
         {progress ? (
           <ProgressBar done={progress.done} total={progress.total} label={beadsTotal > 0 ? 'spec' : undefined} />
         ) : (
-          <div className="h-1.5 bg-neutral-800 rounded-full animate-pulse" />
+          <div className="h-1.5 bg-[--color-surface-hi] rounded-full animate-pulse" />
         )}
         {beadsTotal > 0 && (
           <ProgressBar done={beadsDone} total={beadsTotal} color="green" label="beads" />
@@ -281,7 +281,7 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
       </div>
 
       {deps && (deps.upstream.length > 0 || deps.downstream.length > 0) && (
-        <div className="flex flex-col gap-1 pt-1 border-t border-neutral-800/60">
+        <div className="flex flex-col gap-1 pt-1 border-t border-[--color-border]/60">
           {deps.upstream.length > 0 && (
             <DependencyChipRow
               label="Blocked by"
@@ -330,7 +330,7 @@ function DependencyChipRow({ label, links, direction, changesBySlug, onOpenEpic 
       : 'bg-emerald-950/30 text-emerald-300 border border-emerald-900/40 hover:bg-emerald-950/60'
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[10px] text-neutral-600 font-medium w-14 flex-shrink-0">{label}</span>
+      <span className="text-[10px] text-[--color-fg-subtle] font-medium w-14 flex-shrink-0">{label}</span>
       <div className="flex items-center gap-1 flex-wrap">
         {links.map(link => {
           const target = changesBySlug.get(link.slug)

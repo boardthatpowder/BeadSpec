@@ -56,7 +56,7 @@ function StatusFilterPill({
           'h-auto gap-1.5 px-2.5 py-1.5',
           active.length > 0
             ? 'border-blue-500/70 text-blue-300 bg-blue-900/20'
-            : 'border-neutral-700/50 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 bg-neutral-800/20',
+            : 'border-[--color-border-strong]/50 text-[--color-fg-muted] hover:border-neutral-500 hover:text-[--color-fg-muted] bg-[--color-surface-hi]/20',
         ].join(' ')}
       >
         <span>Status</span>
@@ -69,7 +69,7 @@ function StatusFilterPill({
       </Button>
       </Popover.Trigger>
 
-      <Popover.Content align="start" className="py-1.5 min-w-40 bg-neutral-950">
+      <Popover.Content align="start" className="py-1.5 min-w-40 bg-[--color-bg]">
             {STATUS_OPTIONS.map(opt => {
               const isActive = active.includes(opt.value)
               const count = counts[opt.value] ?? 0
@@ -81,7 +81,7 @@ function StatusFilterPill({
                   onClick={() => onToggle(opt.value)}
                   className={[
                     'h-auto w-full justify-between gap-2 rounded-none border-0 px-3 py-1.5',
-                    isActive ? 'text-blue-300 hover:bg-blue-900/20' : 'text-neutral-300 hover:bg-neutral-800/40',
+                    isActive ? 'text-blue-300 hover:bg-blue-900/20' : 'text-[--color-fg-muted] hover:bg-[--color-surface-hi]/40',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ function StatusFilterPill({
                     </span>
                     <span>{opt.label}</span>
                   </div>
-                  <span className="text-neutral-600 font-mono">{count}</span>
+                  <span className="text-[--color-fg-subtle] font-mono">{count}</span>
                 </Button>
               )
             })}
@@ -129,11 +129,11 @@ function ArchivedSection({
           name="ChevronRight"
           size="sm"
           className={[
-            'text-neutral-600 transition-transform flex-shrink-0',
+            'text-[--color-fg-subtle] transition-transform flex-shrink-0',
             collapsed ? '' : 'rotate-90',
           ].join(' ')}
         />
-        <span className="text-xs font-medium text-neutral-500 group-hover:text-neutral-400 transition-colors">
+        <span className="text-xs font-medium text-[--color-fg-subtle] group-hover:text-[--color-fg-muted] transition-colors">
           {changes.length} archived {changes.length === 1 ? 'change' : 'changes'}
         </span>
       </Button>
@@ -235,11 +235,11 @@ export function ChangesBrowser() {
     return (
       <div className="h-full flex items-center justify-center px-6">
         <div className="text-center">
-          <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mx-auto mb-3">
-            <Icon name="FileText" size="lg" className="text-neutral-600" />
+          <div className="w-10 h-10 rounded-full bg-[--color-surface-hi] flex items-center justify-center mx-auto mb-3">
+            <Icon name="FileText" size="lg" className="text-[--color-fg-subtle]" />
           </div>
-          <p className="text-sm font-medium text-neutral-400">No project connected</p>
-          <p className="text-xs text-neutral-600 mt-1">Connect a project to see its OpenSpec changes</p>
+          <p className="text-sm font-medium text-[--color-fg-muted]">No project connected</p>
+          <p className="text-xs text-[--color-fg-subtle] mt-1">Connect a project to see its OpenSpec changes</p>
         </div>
       </div>
     )
@@ -257,11 +257,11 @@ export function ChangesBrowser() {
     return (
       <div className="h-full flex items-center justify-center px-6">
         <div className="text-center">
-          <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mx-auto mb-3">
-            <Icon name="FileText" size="lg" className="text-neutral-600" />
+          <div className="w-10 h-10 rounded-full bg-[--color-surface-hi] flex items-center justify-center mx-auto mb-3">
+            <Icon name="FileText" size="lg" className="text-[--color-fg-subtle]" />
           </div>
-          <p className="text-sm font-medium text-neutral-400">No OpenSpec changes found</p>
-          <p className="text-xs text-neutral-600 mt-1">Run <code className="font-mono bg-neutral-800 px-1 rounded">openspec new change</code> to create one</p>
+          <p className="text-sm font-medium text-[--color-fg-muted]">No OpenSpec changes found</p>
+          <p className="text-xs text-[--color-fg-subtle] mt-1">Run <code className="font-mono bg-[--color-surface-hi] px-1 rounded">openspec new change</code> to create one</p>
         </div>
       </div>
     )
@@ -272,10 +272,10 @@ export function ChangesBrowser() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[--color-border] flex-shrink-0">
         <div>
-          <h2 className="text-base font-semibold text-neutral-100">OpenSpec Changes</h2>
-          <p className="text-xs text-neutral-500 mt-0.5">
+          <h2 className="text-base font-semibold text-[--color-fg]">OpenSpec Changes</h2>
+          <p className="text-xs text-[--color-fg-subtle] mt-0.5">
             {changes.filter(c => !c.is_archived).length} active {changes.filter(c => !c.is_archived).length === 1 ? 'change' : 'changes'}
           </p>
         </div>
@@ -285,17 +285,17 @@ export function ChangesBrowser() {
       </div>
 
       {/* Filter row */}
-      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-neutral-800 flex-shrink-0">
-        <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-800/40 border border-neutral-700/50 focus-within:border-neutral-500 transition-colors">
-          <Icon name="Search" size="sm" className="text-neutral-500 flex-shrink-0" />
+      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-[--color-border] flex-shrink-0">
+        <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[--color-surface-hi]/40 border border-[--color-border-strong]/50 focus-within:border-neutral-500 transition-colors">
+          <Icon name="Search" size="sm" className="text-[--color-fg-subtle] flex-shrink-0" />
           <input
             placeholder="Search changes…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="bg-transparent text-xs text-neutral-300 placeholder-neutral-600 outline-none flex-1 min-w-0"
+            className="bg-transparent text-xs text-[--color-fg-muted] placeholder-neutral-600 outline-none flex-1 min-w-0"
           />
           {searchQuery && (
-            <IconButton label="Clear search" onClick={() => setSearchQuery('')} className="text-neutral-600 hover:text-neutral-400 transition-colors">
+            <IconButton label="Clear search" onClick={() => setSearchQuery('')} className="text-[--color-fg-subtle] hover:text-[--color-fg-muted] transition-colors">
               <Icon name="X" size="sm" />
             </IconButton>
           )}
@@ -306,7 +306,7 @@ export function ChangesBrowser() {
             variant="ghost"
             size="xs"
             onClick={() => { setSearchQuery(''); setStatusFilter([]) }}
-            className="h-auto border-0 text-neutral-600 hover:text-neutral-400"
+            className="h-auto border-0 text-[--color-fg-subtle] hover:text-[--color-fg-muted]"
           >
             <Icon name="X" size="sm" />
             Clear
@@ -318,7 +318,7 @@ export function ChangesBrowser() {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {activeChanges.length === 0 && archivedChanges.length === 0 && hasActiveFilter ? (
           <div className="flex items-center justify-center py-12">
-            <p className="text-sm text-neutral-600">No changes match your filters</p>
+            <p className="text-sm text-[--color-fg-subtle]">No changes match your filters</p>
           </div>
         ) : (
           <>

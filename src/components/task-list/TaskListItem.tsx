@@ -47,7 +47,7 @@ const LABEL_CHIP_COLORS: Record<string, string> = {
 
 export function labelChipClass(label: string): string {
   const prefix = label.split(':')[0]
-  return LABEL_CHIP_COLORS[prefix] ?? 'bg-neutral-800/60 text-neutral-500 border border-neutral-700/30'
+  return LABEL_CHIP_COLORS[prefix] ?? 'bg-[--color-surface-hi]/60 text-[--color-fg-subtle] border border-[--color-border-strong]/30'
 }
 
 interface TaskListItemProps {
@@ -74,14 +74,14 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
       onDoubleClick={onDoubleClick}
       style={{ fontSize: 'var(--font-size)' }}
       className={[
-        'w-full h-full justify-start rounded-none border-0 border-b border-neutral-800/40 px-3 text-left font-normal transition-all',
+        'w-full h-full justify-start rounded-none border-0 border-b border-[--color-border]/40 px-3 text-left font-normal transition-all',
         isActive
           ? 'bg-blue-950/30 border-l-2 border-l-blue-500'
           : isSelected
-            ? 'bg-neutral-800/50'
+            ? 'bg-[--color-surface-hi]/50'
             : isFocused
-              ? 'bg-neutral-800/20 border-l-2 border-l-neutral-600'
-              : 'hover:bg-neutral-800/20 hover:border-l-2 hover:border-l-neutral-700/50',
+              ? 'bg-[--color-surface-hi]/20 border-l-2 border-l-neutral-600'
+              : 'hover:bg-[--color-surface-hi]/20 hover:border-l-2 hover:border-l-neutral-700/50',
       ].join(' ')}
     >
       {/* Status dot */}
@@ -90,7 +90,7 @@ export function TaskListItem({ task, provenance, isActive, isFocused, isSelected
       {/* Main content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className={`text-xs truncate flex-1 ${isActive ? 'text-neutral-100' : 'text-neutral-300'}`}>
+          <span className={`text-xs truncate flex-1 ${isActive ? 'text-[--color-fg]' : 'text-[--color-fg-muted]'}`}>
             {task.title}
           </span>
           <span title={pauseReason} className={`inline-flex items-center gap-1 border text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isPaused ? statusBadgeClass('paused') : statusBadgeClass(task.status)}`}>

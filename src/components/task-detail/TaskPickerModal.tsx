@@ -30,28 +30,28 @@ export function TaskPickerModal({ onSelect, onClose }: Props) {
       <Dialog.Content className="w-96 p-0">
         <Dialog.Header className="sr-only">Select a task</Dialog.Header>
         <Dialog.Body className="p-0" autoFocus>
-          <div className="flex items-center px-4 border-b border-neutral-800">
-          <Icon name="Link2" size="sm" className="text-neutral-500 mr-2" />
+          <div className="flex items-center px-4 border-b border-[--color-border]">
+          <Icon name="Link2" size="sm" className="text-[--color-fg-subtle] mr-2" />
           <input
             autoFocus
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search tasks to reference…"
-            className="flex-1 py-3 bg-transparent text-sm text-neutral-200 placeholder-neutral-600 outline-none"
+            className="flex-1 py-3 bg-transparent text-sm text-[--color-fg] placeholder-neutral-600 outline-none"
           />
           </div>
           <div className="max-h-64 overflow-y-auto">
-            {!query && <div className="px-4 py-6 text-center text-sm text-neutral-600">Type to search tasks</div>}
+            {!query && <div className="px-4 py-6 text-center text-sm text-[--color-fg-subtle]">Type to search tasks</div>}
             {results.map(t => (
               <Button
                 key={t.id}
                 variant="ghost"
                 size="sm"
                 onClick={() => onSelect(t)}
-                className="h-auto w-full justify-start text-left px-4 py-2.5 hover:bg-neutral-800 gap-3 rounded-none border-0"
+                className="h-auto w-full justify-start text-left px-4 py-2.5 hover:bg-[--color-surface-hi] gap-3 rounded-none border-0"
               >
-                <span className="text-xs font-mono text-neutral-500 flex-shrink-0">{t.id}</span>
-                <span className="text-sm text-neutral-200 flex-1 truncate">{t.title}</span>
+                <span className="text-xs font-mono text-[--color-fg-subtle] flex-shrink-0">{t.id}</span>
+                <span className="text-sm text-[--color-fg] flex-1 truncate">{t.title}</span>
               </Button>
             ))}
           </div>

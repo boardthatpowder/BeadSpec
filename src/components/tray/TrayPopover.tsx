@@ -65,20 +65,20 @@ export function TrayPopover() {
   if (!open) return null;
 
   return (
-    <div className="fixed bottom-16 right-4 z-50 w-72 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4">
+    <div className="fixed bottom-16 right-4 z-50 w-72 bg-[--color-surface] border border-[--color-border-strong] rounded-xl shadow-2xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-neutral-200">BeadSpec</span>
+        <span className="text-sm font-semibold text-[--color-fg]">BeadSpec</span>
         <IconButton
           label="Close"
           onClick={() => setOpen(false)}
-          className="text-neutral-500 hover:text-neutral-300 text-xs"
+          className="text-[--color-fg-subtle] hover:text-[--color-fg-muted] text-xs"
         >
           <Icon name="X" size="sm" />
         </IconButton>
       </div>
 
       {openCount !== null && (
-        <div className="mb-3 text-sm text-neutral-400">
+        <div className="mb-3 text-sm text-[--color-fg-muted]">
           <span className="text-white font-semibold">{openCount}</span> open
           tasks
         </div>
@@ -91,7 +91,7 @@ export function TrayPopover() {
           onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
           onKeyDown={(e) => e.key === "Enter" && createTask()}
           placeholder="Quick create task…"
-          className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder-neutral-500 outline-none focus:border-blue-500 mb-2"
+          className="w-full bg-[--color-surface-hi] border border-[--color-border-strong] rounded-lg px-3 py-2 text-sm text-[--color-fg] placeholder-neutral-500 outline-none focus:border-blue-500 mb-2"
         />
         <div className="flex items-center gap-2">
           <select
@@ -99,7 +99,7 @@ export function TrayPopover() {
             onChange={(e) =>
               setForm((f) => ({ ...f, priority: Number(e.target.value) }))
             }
-            className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-300 outline-none"
+            className="bg-[--color-surface-hi] border border-[--color-border-strong] rounded px-2 py-1 text-xs text-[--color-fg-muted] outline-none"
           >
             <option value={1}>P1 Critical</option>
             <option value={2}>P2 High</option>

@@ -62,11 +62,11 @@ export function ImpactPanel({ task, project }: { task: TaskDetail; project: stri
 
   return (
     <div className="p-5 space-y-4">
-      <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4">
+      <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-medium text-neutral-200">GitNexus Impact</div>
-            <div className="text-xs text-neutral-500">Run upstream impact for a symbol touched by this task.</div>
+            <div className="text-sm font-medium text-[--color-fg]">GitNexus Impact</div>
+            <div className="text-xs text-[--color-fg-subtle]">Run upstream impact for a symbol touched by this task.</div>
           </div>
           <Button
             variant="secondary"
@@ -99,7 +99,7 @@ export function ImpactPanel({ task, project }: { task: TaskDetail; project: stri
             value={symbol}
             onChange={e => setSymbol(e.target.value)}
             placeholder="Symbol name"
-            className="min-w-0 flex-1 rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-blue-700"
+            className="min-w-0 flex-1 rounded border border-[--color-border] bg-[--color-bg] px-3 py-2 text-sm text-[--color-fg] outline-none focus:border-blue-700"
           />
           <Button variant="primary" size="md" disabled={loading || !symbol.trim()}>
             {loading ? 'Running…' : 'Run'}
@@ -129,36 +129,36 @@ function Callout({ tone, children }: { tone: 'neutral' | 'error' | 'warn'; child
     ? 'border-red-900/50 bg-red-950/30 text-red-300'
     : tone === 'warn'
       ? 'border-amber-900/50 bg-amber-950/30 text-amber-300'
-      : 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
+      : 'border-[--color-border] bg-[--color-surface]/50 text-[--color-fg-muted]'
   return <div className={`rounded border px-3 py-2 text-sm ${cls}`}>{children}</div>
 }
 
 function ImpactResult({ report }: { report: GitnexusImpactReport }) {
   return (
-    <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-4 space-y-4">
+    <div className="rounded-lg border border-[--color-border]/60 bg-[--color-surface]/30 p-4 space-y-4">
       {report.index_status === 'Stale' && <Callout tone="warn">GitNexus index appears stale. Results may miss recent edits.</Callout>}
       <div className="flex items-center gap-2">
-        <span className="font-mono text-sm text-neutral-200">{report.symbol}</span>
+        <span className="font-mono text-sm text-[--color-fg]">{report.symbol}</span>
         <span aria-label={`risk: ${report.risk}`} className={`rounded border px-2 py-0.5 text-xs ${riskClass(report.risk)}`}>
           {report.risk}
         </span>
-        <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">
+        <span className="rounded bg-[--color-surface-hi] px-2 py-0.5 text-xs text-[--color-fg-muted]">
           {report.affected_processes.length} processes
         </span>
       </div>
 
       <section>
-        <div className="mb-2 text-xs font-medium text-neutral-400">Upstream callers</div>
+        <div className="mb-2 text-xs font-medium text-[--color-fg-muted]">Upstream callers</div>
         {report.upstream_by_process.length === 0 ? (
-          <div className="text-xs text-neutral-600">No upstream callers reported.</div>
+          <div className="text-xs text-[--color-fg-subtle]">No upstream callers reported.</div>
         ) : report.upstream_by_process.map(group => (
-          <details key={group.process} className="mb-2 rounded border border-neutral-800/60 bg-neutral-950/40" open>
-            <summary className="cursor-pointer px-3 py-2 text-xs text-neutral-300">{group.process} ({group.callers.length})</summary>
-            <div className="border-t border-neutral-800/60 px-3 py-2 space-y-1">
+          <details key={group.process} className="mb-2 rounded border border-[--color-border]/60 bg-[--color-bg]/40" open>
+            <summary className="cursor-pointer px-3 py-2 text-xs text-[--color-fg-muted]">{group.process} ({group.callers.length})</summary>
+            <div className="border-t border-[--color-border]/60 px-3 py-2 space-y-1">
               {group.callers.map((caller, idx) => (
                 <div key={`${caller.name}-${idx}`} className="flex justify-between gap-3 text-xs">
-                  <span className="text-neutral-300">{caller.name}</span>
-                  <span className="truncate font-mono text-neutral-600">{caller.location}</span>
+                  <span className="text-[--color-fg-muted]">{caller.name}</span>
+                  <span className="truncate font-mono text-[--color-fg-subtle]">{caller.location}</span>
                 </div>
               ))}
             </div>
@@ -167,13 +167,13 @@ function ImpactResult({ report }: { report: GitnexusImpactReport }) {
       </section>
 
       <section>
-        <div className="mb-2 text-xs font-medium text-neutral-400">Downstream callees</div>
+        <div className="mb-2 text-xs font-medium text-[--color-fg-muted]">Downstream callees</div>
         {report.downstream.length === 0 ? (
-          <div className="text-xs text-neutral-600">No downstream callees reported.</div>
+          <div className="text-xs text-[--color-fg-subtle]">No downstream callees reported.</div>
         ) : report.downstream.map((callee, idx) => (
           <div key={`${callee.name}-${idx}`} className="flex justify-between gap-3 text-xs">
-            <span className="text-neutral-300">{callee.name}</span>
-            <span className="truncate font-mono text-neutral-600">{callee.location}</span>
+            <span className="text-[--color-fg-muted]">{callee.name}</span>
+            <span className="truncate font-mono text-[--color-fg-subtle]">{callee.location}</span>
           </div>
         ))}
       </section>

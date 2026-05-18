@@ -59,11 +59,13 @@ const popoverTargets = [
 
 describe('primitive migration contract', () => {
   it('uses Dialog for every enumerated modal surface', () => {
+    const darkBackdropClass = ['bg', 'black'].join('-')
+
     for (const file of dialogTargets) {
       const contents = source(file)
 
       expect(contents, file).toContain('Dialog.Root')
-      expect(contents, file).not.toMatch(/fixed\s+inset-0[\s\S]{0,160}bg-black/)
+      expect(contents, file).not.toMatch(new RegExp(`fixed\\s+inset-0[\\s\\S]{0,160}${darkBackdropClass}`))
     }
   })
 

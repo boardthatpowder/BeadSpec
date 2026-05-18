@@ -11,7 +11,7 @@ export function ReviewMarkdownViewer({ body }: { body: string }) {
   }, [body])
 
   return (
-    <div className="max-h-96 overflow-auto border-t border-neutral-800 p-3 text-sm text-neutral-400 select-text">
+    <div className="max-h-96 overflow-auto border-t border-[--color-border] p-3 text-sm text-[--color-fg-muted] select-text">
       <EditorContent editor={editor} className={EDITOR_CLASSES} />
     </div>
   )

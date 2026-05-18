@@ -21,7 +21,7 @@ export function TabContextMenu({ taskId, paneId, x, y, onDismiss }: TabContextMe
         variant="ghost"
         size="xs"
         onClick={() => { action(); onDismiss() }}
-        className="h-auto w-full justify-start rounded-none border-0 px-3 py-1.5 text-left text-sm font-normal text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100"
+        className="h-auto w-full justify-start rounded-none border-0 px-3 py-1.5 text-left text-sm font-normal text-[--color-fg-muted] hover:bg-[--color-surface-hi] hover:text-[--color-fg]"
       >
         {label}
       </Button>
@@ -41,13 +41,13 @@ export function TabContextMenu({ taskId, paneId, x, y, onDismiss }: TabContextMe
         side="bottom"
         sideOffset={0}
         onOpenAutoFocus={(event) => event.preventDefault()}
-        className="min-w-[180px] rounded border-neutral-700 bg-neutral-800 py-1 shadow-lg"
+        className="min-w-[180px] rounded border-[--color-border-strong] bg-[--color-surface-hi] py-1 shadow-lg"
       >
         {item('Close', () => closeTab(paneId, taskId))}
         {item('Close Others', () => closeOthers(paneId, taskId))}
         {item('Close to the Right', () => closeToRight(paneId, taskId))}
         {item('Close All', () => closeAll(paneId))}
-        <div className="my-1 border-t border-neutral-700" />
+        <div className="my-1 border-t border-[--color-border-strong]" />
         {item('Split Right', () => splitPane(paneId, 'horizontal'))}
         {item('Split Down', () => splitPane(paneId, 'vertical'))}
       </Popover.Content>
