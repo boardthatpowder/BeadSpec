@@ -9,7 +9,7 @@ export const SYMBOL_STOPLIST = new Set([
   'async', 'await', 'function', 'interface', 'props',
 ])
 
-const CANDIDATE_RE = /`([A-Za-z_][\w]*)`|\b([A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*[A-Z][A-Za-z0-9]*)\b|\b([A-Za-z]+_[A-Za-z0-9_]+)\b/g
+const CANDIDATE_RE = /`([A-Za-z_][\w]*)`|\b([A-Za-z][A-Za-z0-9]*[a-z][A-Za-z0-9]*[A-Z][A-Za-z0-9]*)\b|\b([A-Za-z]+_[A-Za-z0-9_]+)\b/g
 
 const CACHE_TTL_MS = 5 * 60 * 1000
 const CACHE_LIMIT = 200
