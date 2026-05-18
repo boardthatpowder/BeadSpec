@@ -43,3 +43,9 @@
 - [ ] 7.6 Open the per-task OpenSpec panel for a task linked to a change with delta specs — verify spec ids appear under "Specs" and clicking one opens as workspace tab
 - [ ] 7.7 Confirm existing task tab behavior (preview/pinned, reorder, split) is unaffected
 - [ ] 7.8 Check a change with no delta specs — verify no spec chips shown on card or panel
+
+## 8. Related document navigation
+
+- [x] 8.1 Add a pure helper that builds proposal/design/tasks/spec related-document entries from `ChangeInfo` and the current artifact path
+- [x] 8.2 Render related-document links at the top of `OpenSpecDocPanel`, highlighting the current document and disabling missing fixed artifacts
+- [x] 8.3 Verify clicking related docs uses `openDocTab` and preserves existing tab deduplication

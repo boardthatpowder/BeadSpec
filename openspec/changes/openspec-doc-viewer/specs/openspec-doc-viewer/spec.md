@@ -27,6 +27,27 @@ The system SHALL open any OpenSpec artifact (proposal, design, tasks, or delta-s
 
 ---
 
+### Requirement: OpenSpec doc tab shows related document navigation
+
+The system SHALL show links to the other documents for the same OpenSpec change while viewing any OpenSpec artifact tab, so users can move between proposal, design, tasks, and delta-spec files without returning to a change card or task panel.
+
+#### Scenario: User views an OpenSpec proposal tab
+- **WHEN** the user is viewing `proposal.md` for a change that also has `design.md`, `tasks.md`, and delta specs
+- **THEN** the doc tab SHALL show related links for `design.md`, `tasks.md`, and each `specs/<id>/spec.md`
+- **AND** the current `proposal.md` document SHALL be visibly marked as the current document
+
+#### Scenario: User clicks a related document link
+- **WHEN** the user clicks a related document link in an OpenSpec doc tab
+- **THEN** the linked document SHALL open via the existing workspace tab behavior
+- **AND** an already-open document tab SHALL be focused instead of duplicated
+
+#### Scenario: Fixed document is missing
+- **WHEN** a fixed artifact such as `design.md` does not exist for the change
+- **THEN** that document SHALL be shown in a muted disabled style
+- **AND** clicking it SHALL NOT attempt to open a missing tab
+
+---
+
 ### Requirement: Read-only markdown rendering in doc tab
 
 The system SHALL render the contents of an OpenSpec artifact tab as formatted markdown, with no editing capability.
