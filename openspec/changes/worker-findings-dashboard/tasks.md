@@ -20,8 +20,8 @@
 
 ## 4. Frontend helper
 
-- [ ] 4.1 Add `src/lib/worker-findings.ts` exporting `parseWorkerProvenance(notes: string | null | undefined): { worker: string; firstLine: string } | null` using the same anchored regex as the Rust helper. Document the coupling to `on-finding.sh` and to `parse_worker_from_notes`.
-- [ ] 4.2 Add a unit test under `src/lib/__tests__/worker-findings.test.ts` mirroring the Rust cases from task 2.1 plus a `null` / `undefined` / empty-string trio.
+- [x] 4.1 Add `src/lib/worker-findings.ts` exporting `parseWorkerProvenance(notes: string | null | undefined): { worker: string; firstLine: string } | null` using the same anchored regex as the Rust helper. Document the coupling to `on-finding.sh` and to `parse_worker_from_notes`.
+- [x] 4.2 Add a unit test under `src/lib/__tests__/worker-findings.test.ts` mirroring the Rust cases from task 2.1 plus a `null` / `undefined` / empty-string trio.
 
 ## 5. TaskListItem chip
 
