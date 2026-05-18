@@ -16,7 +16,7 @@
 ## 3. IPC + bindings
 
 - [x] 3.1 Run `bun tauri build` (or the existing specta codegen script) to regenerate `src/bindings.ts` with `WorkerFinding` and the `listWorkerFindings` command stub.
-- [ ] 3.2 Add `listWorkerFindings(projectPath: string): Promise<WorkerFinding[]>` wrapper in `src/ipc.ts` using the existing `unwrap(commands.listWorkerFindings(projectPath))` idiom.
+- [x] 3.2 Add `listWorkerFindings(projectPath: string): Promise<WorkerFinding[]>` wrapper in `src/ipc.ts` using the existing `unwrap(commands.listWorkerFindings(projectPath))` idiom.
 
 ## 4. Frontend helper
 

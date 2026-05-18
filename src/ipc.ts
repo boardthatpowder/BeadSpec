@@ -2,7 +2,7 @@
 // Import 'commands' from here instead of using raw invoke().
 export { commands } from './bindings'
 import { commands } from './bindings'
-import type { ChangeBeadsProgress, ChangeDependencies, ChangeInfo, ChangeProgress, CommandOutput, ValidationResult } from './bindings'
+import type { ChangeBeadsProgress, ChangeDependencies, ChangeInfo, ChangeProgress, CommandOutput, ValidationResult, WorkerFinding } from './bindings'
 
 export async function unwrap<T>(
   result: Promise<{ status: 'ok'; data: T } | { status: 'error'; error: string }>
@@ -39,4 +39,8 @@ export function runOpenspecValidate(projectPath: string, change: string): Promis
 
 export function importChangeToBeads(projectPath: string, change: string): Promise<CommandOutput> {
   return unwrap(commands.importChangeToBeads(projectPath, change))
+}
+
+export function listWorkerFindings(projectPath: string): Promise<WorkerFinding[]> {
+  return unwrap(commands.listWorkerFindings(projectPath))
 }
