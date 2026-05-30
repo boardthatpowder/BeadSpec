@@ -68,7 +68,6 @@ Implement tasks from an OpenSpec change.
 
    For each pending task:
    - Show which task is being worked on
-   - Before modifying any symbol, run `mcp__gitnexus__impact({target: "symbolName", direction: "upstream"})` and report blast radius. Do not proceed if risk is HIGH or CRITICAL without user confirmation.
    - Make the code changes required
    - Keep changes minimal and focused
    - Mark task complete in the tasks file: `- [ ]` → `- [x]`

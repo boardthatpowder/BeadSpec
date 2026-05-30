@@ -1,4 +1,4 @@
-# OpenSpec + Beads + Ruflo + GitNexus — Developer Workflow Runbook
+# OpenSpec + Beads + Ruflo — Developer Workflow Runbook
 
 > **Audience:** Developers and AI assistants onboarding to this workflow, and engineers porting it to a different assistant runtime (Cursor, Codex, etc.).
 >
@@ -13,9 +13,8 @@
 | **OpenSpec** (`openspec`) | Spec-driven change management. Maintains proposal → design → tasks artifacts per change. Validates spec integrity. | Keeps AI and human aligned on scope before any code is written. Archive operation merges deltas back to main specs. |
 | **Beads** (`bd`) | Dolt-powered dependency-aware issue tracker. Computes a `bd ready` queue of unblocked work. Provides epics, gates, merge-slots, Dolt audit trail. | Turns a tasks.md file into an executable, queryable dependency graph. Work is always pulled from `bd ready` — no ad-hoc task assignment. |
 | **Ruflo** (`ruflo`) | Memory (AgentDB WASM SQLite), background workers, neural pattern learning, session save/restore. | Cross-session memory so context survives compaction, new sessions, and worktree switches. Worker findings auto-file Beads issues. |
-| **GitNexus** (`npx gitnexus`) | Code knowledge graph (symbols, call graph, execution flows). MCP server exposes `gitnexus_impact`, `gitnexus_context`, `gitnexus_query`, `gitnexus_detect_changes`. | Blast-radius awareness before editing. Prevents hidden breakage across the codebase. |
 
-Together: OpenSpec owns **scope** → Beads owns **execution** → Ruflo owns **memory** → GitNexus owns **safety**.
+Together: OpenSpec owns **scope** → Beads owns **execution** → Ruflo owns **memory**.
 
 ---
 
@@ -28,7 +27,6 @@ Together: OpenSpec owns **scope** → Beads owns **execution** → Ruflo owns **
 | `bd` (Beads) | `brew install gastownhall/beads/bd` |
 | `openspec` | `npm install -g @fission-ai/openspec` |
 | `ruflo` | `npm install -g ruflo@ruflo` |
-| `gitnexus` | used via `npx gitnexus` (no global install needed) |
 | `jq` | `brew install jq` |
 
 ### Project setup
@@ -48,13 +46,10 @@ scripts/setup-worktree-beads.sh
 ruflo embeddings init
 ruflo memory init
 
-# 5. Index the codebase in GitNexus (first run; ~2 min)
-npx gitnexus analyze
-
-# 6. (Optional) Install .githooks pre-commit
+# 5. (Optional) Install .githooks pre-commit
 git config core.hooksPath .githooks
 
-# 7. Verify
+# 6. Verify
 bd doctor --agent --json
 openspec list
 ruflo memory stats
@@ -93,7 +88,7 @@ See `.claude/skills/openspec-beads-sync/SKILL.md` for the full skill definition.
 **Key steps:**
 1. Repair worktree Beads runtime + warm up embeddings (`ruflo embeddings warmup`)
 2. `bd prime` + `bd dolt pull`
-3. Resolve `_gitnexus_repo=$(basename "$(git rev-parse --show-toplevel)")` → read `gitnexus://repo/${_gitnexus_repo}/context` MCP resource; run `openspec validate --all --strict --json`
+3. Run `openspec validate --all --strict --json`; show active changes via `openspec list`
 4. Advisory preflight (`obws_gate_preflight`) + surface open worker-filed issues (`ruflo:*` label count)
 5. `bd ready --explain --json` + `bd blocked`
 6. Write one-paragraph state summary
@@ -109,7 +104,7 @@ See `.claude/skills/openspec-beads-import/SKILL.md` for the full skill definitio
 **Key steps:**
 1. `obws_gate_validate <change-id> strict` + `obws_gate_status`
 2. Read tasks.md — 1:1 mapping, every `- [ ] N.M` → one Beads node
-3. Build dependency graph (cognitive step) enriched via `gitnexus_query`
+3. Build dependency graph (cognitive step) from explicit task references and logical chains
 4. Write `.bd-graph.json` to `openspec/changes/<change-id>/`
 5. `obws_import_graph <change-id>` — atomic create + tag + wire deps
 6. Verify: `bd children <epic-id> --pretty`; all issues carry the four context labels + `openspec:<change-id>`
@@ -127,11 +122,10 @@ See `.claude/skills/openspec-beads-work/SKILL.md` for the full skill definition.
 1. `bd dolt pull` + `bd ready`
 2. `bd show` + `obws_assert_claimable` + `bd update --claim`; recall memory
 3. Re-read OpenSpec artifacts; fetch task-relevant guidance via `ruflo guidance retrieve`
-4. `obws_gate_impact "<Symbol>"` + MCP calls `gitnexus_context` + `gitnexus_impact` — **mandatory before editing**
-5. Implement scoped to this issue only; TDD
-6. `obws_gate_unit_tests` + `obws_gate_validate` + `obws_gate_guidance_gates` + `obws_gate_detect_changes`
-7. `obws_tick_task <change-id> "$TASK_REF"` — mandatory checkbox tick
-8. `bd close --reason --suggest-next`; `git commit`; `obws_mem_write_trajectory`
+4. Implement scoped to this issue only; TDD
+5. `obws_gate_unit_tests` + `obws_gate_validate` + `obws_gate_guidance_gates`
+6. `obws_tick_task <change-id> "$TASK_REF"` — mandatory checkbox tick
+7. `bd close --reason --suggest-next`; `git commit`; `obws_mem_write_trajectory`
 
 ---
 
@@ -145,7 +139,7 @@ See `.claude/skills/openspec-beads-complete/SKILL.md` for the full skill definit
 1. Query `openspec:<change-id> AND status!=closed AND (type=task OR type=bug)` — must return 0 rows
 2. Confirm all tasks.md checkboxes are `- [x]`
 3. `obws_gate_validate <change-id> strict` + `obws_gate_status` — both must pass
-4. `obws_gate_unit_tests` + `obws_gate_guidance_gates` + `obws_gate_lint` + `obws_gate_detect_changes` + `obws_affected_processes` + `obws_gate_orphans` + `obws_gate_preflight`
+4. `obws_gate_unit_tests` + `obws_gate_guidance_gates` + `obws_gate_lint` + `obws_gate_orphans` + `obws_gate_preflight`
 5. `bd epic close-eligible --dry-run --json` → `bd close "$_epic_id"`
 6. `obws_mem_write` retrospective + `obws_mem_consolidate` + `ruflo neural train`
 7. Invoke `openspec-archive-change`
@@ -216,7 +210,6 @@ All hooks live under `.claude/hooks/`. They fire automatically within Claude Cod
 | PreToolUse: `Bash` | `ruflo-pre-commit.sh` | On `git commit`: `ruflo analyze diff --risk`; validates active OpenSpec change — **blocking (exit 1)** |
 | PostToolUse: `Edit\|Write` | `ruflo-post-edit.sh` | Fires `ruflo hooks post-edit -f <file>` in background |
 | PostToolUse: `Bash` | `ruflo-post-push.sh` | On `git push`: `ruflo neural train` in background |
-| PostToolUse: `Bash` | `gitnexus-analyze.sh` | On `git push`: `npx gitnexus analyze` async (300s timeout) |
 | Stop | `ruflo-session-end.sh` | Saves session state and trains neural patterns |
 
 **Stack-specific hooks (present but NOT wired — opt-in):**
@@ -321,20 +314,18 @@ Verify with `bd show <id>` — `LABELS:` must contain all three context labels.
 | Skill files (`.claude/skills/*.md`) | Yes — loaded by Claude Code slash-command harness | Copy skill content into your assistant's system prompt or a `AGENTS.md`-style instruction file |
 | Hook wiring (`.claude/settings.json`) | Yes — Claude Code hook system | Wire equivalent shell scripts as pre/post-commit git hooks or editor on-save hooks |
 | `bd prime` SessionStart injection | Yes — Claude Code `SessionStart` hook | Call `bd prime` manually at the start of each agent session, or add it to your assistant's init prompt |
-| MCP tool calls (`{}` syntax) | Yes — Claude MCP client | Replace `gitnexus_impact({...})` with the CLI fallback: `gitnexus impact <symbol> --upstream --depth 3` |
 
 ### What ports directly
 
 All shell helpers in `scripts/openspec-beads/` are POSIX `sh` and work in any terminal. Any assistant that can run shell commands can call `obws_gate_validate`, `obws_import_graph`, etc. after `. init.sh`.
 
-`bd`, `openspec`, `ruflo`, and `npx gitnexus` are all CLI tools — they work from any shell regardless of the AI runtime.
+`bd`, `openspec`, and `ruflo` are all CLI tools — they work from any shell regardless of the AI runtime.
 
 ### Porting checklist
 
 1. Copy `scripts/openspec-beads/` into the target repo or reference it via submodule.
 2. Copy the 7 skill files' content into your assistant's instruction set (system prompt, AGENTS.md, etc.).
 3. Wire the quality gates (tsc, formatter) as native git hooks if the runtime doesn't have a hook system.
-4. Replace MCP tool calls (`gitnexus_impact({...})`) with CLI equivalents: `gitnexus impact <symbol> --upstream --depth 3`.
-5. Replace `bd prime` SessionStart hook with a manual `bd prime` invocation in the assistant's init.
-6. Replace `ruflo hooks session-restore` with `ruflo memory search -q "recent context $(git branch --show-current)"` for session recovery.
-7. The `biome-fix.sh` auto-format hook becomes a git `post-checkout` or `post-commit` hook, or an editor on-save action.
+4. Replace `bd prime` SessionStart hook with a manual `bd prime` invocation in the assistant's init.
+5. Replace `ruflo hooks session-restore` with `ruflo memory search -q "recent context $(git branch --show-current)"` for session recovery.
+6. The `biome-fix.sh` auto-format hook becomes a git `post-checkout` or `post-commit` hook, or an editor on-save action.

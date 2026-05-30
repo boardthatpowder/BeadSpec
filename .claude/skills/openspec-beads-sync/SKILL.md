@@ -49,19 +49,7 @@ obws_init sync || return 1
 
    `bd prime` failure is fatal — stop here. `bd dolt pull` failure is a warning only.
 
-3. **Check GitNexus index freshness + show active OpenSpec changes**
-
-   Resolve the repo name and read the GitNexus context MCP resource:
-   ```bash
-   _gitnexus_repo=$(basename "$(git rev-parse --show-toplevel)")
-   echo "[sync] GitNexus URI: gitnexus://repo/${_gitnexus_repo}/context"
-   ```
-   Read MCP resource at the URI printed above using the `ReadMcpResource` tool with `server="gitnexus"` and the resolved URI (use the literal string value of `$_gitnexus_repo`, not the shell expression).
-
-   Check the indexed-at timestamp against HEAD. If the index is older than the last few commits, emit:
-   ```
-   [sync] WARN: GitNexus index may be stale. Run `gitnexus analyze` before relying on mcp__gitnexus__impact, mcp__gitnexus__context, or mcp__gitnexus__query results.
-   ```
+3. **Show active OpenSpec changes**
 
    Validate all active OpenSpec changes in one pass:
    ```bash
@@ -107,7 +95,6 @@ obws_init sync || return 1
    Output one paragraph covering:
    - How many OpenSpec changes are active and how many have Beads issues not yet imported
    - Whether `openspec validate --all` found any failing changes (by name)
-   - GitNexus index freshness status
    - How many Beads issues are ready to work, in progress, and blocked
    - Which change has the most ready work (if any)
    - Any preflight warnings or blockers needing user attention

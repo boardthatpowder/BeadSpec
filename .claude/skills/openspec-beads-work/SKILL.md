@@ -1,6 +1,6 @@
 ---
 name: openspec-beads-work
-description: Single-issue agent execution loop for OpenSpec-backed Beads work. Claim one ready issue, re-read the referenced OpenSpec artifacts, run GitNexus impact analysis before editing, implement scoped changes, run unit tests and openspec validate, then close or update with blockers. Self-contained — no runbook needed.
+description: Single-issue agent execution loop for OpenSpec-backed Beads work. Claim one ready issue, re-read the referenced OpenSpec artifacts, implement scoped changes, run unit tests and openspec validate, then close or update with blockers. Self-contained — no runbook needed.
 license: MIT
 compatibility: Requires openspec CLI and bd (beads) CLI.
 metadata:
@@ -102,28 +102,7 @@ obws_init work || return 1
 
    State a short implementation plan (files, tests, validation command, primary symbols) before editing.
 
-4. **GitNexus impact analysis (MANDATORY before editing)**
-
-   Verify GitNexus index freshness first. For each primary symbol you plan to modify:
-
-   ```bash
-   obws_gate_impact "<SymbolName>"
-   ```
-
-   Call both MCP tools (context before impact):
-   ```
-   mcp__gitnexus__context({name: "<SymbolName>"})
-   mcp__gitnexus__impact({target: "<SymbolName>", direction: "upstream", maxDepth: 3})
-   ```
-
-   `mcp__gitnexus__context` surfaces process membership — tells you if the change is single-touch or cuts across a flow.
-
-   - `riskLevel: HIGH` or `CRITICAL` → halt, present blast radius and affected processes to the user, require explicit confirmation
-   - `riskLevel: LOW` or `MEDIUM` → proceed; record affected caller count in issue notes
-
-   Skip only for brand-new symbols with no existing callers.
-
-5. **Implement — scoped to this issue only**
+4. **Implement — scoped to this issue only**
 
    Allowed: files and modules named in the issue and its OpenSpec task.
    Not allowed: route wiring, frontend changes, unrelated refactors, schema changes not named in this issue.
@@ -133,7 +112,7 @@ obws_init work || return 1
    Discovered extra work → **openspec-beads-followup** (bug or out-of-scope follow-up).
    Discovered spec gap → **openspec-beads-scope-change** (OpenSpec update first, then Beads).
 
-6. **Validate**
+5. **Validate**
 
    ```bash
    obws_gate_unit_tests
@@ -152,15 +131,9 @@ obws_init work || return 1
    obws_gate_guidance_gates "$(git diff --cached)"
    ```
 
-   Before closing — run symbol-scope check:
-   ```bash
-   obws_gate_detect_changes
-   ```
-   Claude: call `mcp__gitnexus__detect_changes({scope: "compare", base_ref: "<base-branch>"})`. Every changed symbol must fall within this issue's scope.
-
    Do not run integration tests without explicit user approval.
 
-7. **Tick the tasks.md checkbox (MANDATORY)**
+6. **Tick the tasks.md checkbox (MANDATORY)**
 
    Tick `- [x]` in tasks.md before calling `bd close` — `openspec-beads-complete`'s clean-state check reads this file.
 
@@ -175,7 +148,7 @@ obws_init work || return 1
 
    Stage the tasks.md change alongside the implementation files.
 
-8. **Close or update**
+7. **Close or update**
 
    If complete:
    ```bash
@@ -200,6 +173,5 @@ obws_init work || return 1
    ```
 
 **Non-obvious traps**
-- Never edit a symbol without running `mcp__gitnexus__context` + `mcp__gitnexus__impact` first (step 4)
 - Checkbox tick is required for `openspec-beads-complete`'s clean-state check — skipping leaves tasks.md permanently stale
 - Use `OBWS_UNIT_TEST_CMD` env var for subdirectory tests, not `cd backend` inline
