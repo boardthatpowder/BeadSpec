@@ -73,18 +73,6 @@ obws_init complete || return 1
    obws_gate_lint --change <change-id>
    ```
 
-   Then run the GitNexus symbol-scope check (MCP tool call — `{}` syntax):
-   ```bash
-   obws_gate_detect_changes
-   ```
-   Claude: call `mcp__gitnexus__detect_changes({scope: "compare", base_ref: "<base-branch from obws_base_branch>"})` as instructed by the output. Unexpected symbols → investigate before archiving.
-
-   For a machine-readable list of which execution processes were touched:
-   ```bash
-   obws_affected_processes <change-id>
-   ```
-   Claude: call `mcp__gitnexus__cypher(...)` as printed by the output. Use the returned process names in the retrospective entry (step 6).
-
    ```bash
    obws_gate_orphans <change-id>
    obws_gate_preflight
@@ -106,15 +94,14 @@ obws_init complete || return 1
    ```
 
    ```bash
-   bd close "$_epic_id" --reason="All required Beads issues closed; openspec validates (strict); unit tests pass; gitnexus detect_changes confirms scope."
+   bd close "$_epic_id" --reason="All required Beads issues closed; openspec validates (strict); unit tests pass."
    ```
 
 6. **Write change retrospective to memory**
 
-   Use the process list from `obws_affected_processes` / `mcp__gitnexus__cypher` (step 4) as the "affected flows" section:
    ```bash
    obws_mem_write "${_change_id}" "" "retrospective" "archived" \
-     "Change ${_change_id} archived. Summary: <what shipped>. Affected flows: <process list from mcp__gitnexus__cypher in step 4>. What worked: <observations>. Surprises: <unexpected complexity or gaps>."
+     "Change ${_change_id} archived. Summary: <what shipped>. What worked: <observations>. Surprises: <unexpected complexity or gaps>."
    obws_mem_consolidate "${_change_id}"
    ruflo neural patterns 2>/dev/null || true
    ```

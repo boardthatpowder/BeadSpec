@@ -90,10 +90,6 @@
           {
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-edit.sh",
             "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-impact-reminder.sh",
-            "type": "command"
           }
         ],
         "matcher": "Write|Edit"
@@ -102,10 +98,6 @@
         "hooks": [
           {
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-pre-commit.sh",
-            "type": "command"
-          },
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-commit-reminder.sh",
             "type": "command"
           },
           {
@@ -122,13 +114,6 @@
         "hooks": [
           {
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruflo-post-push.sh",
-            "type": "command"
-          },
-          {
-            "async": true,
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-analyze.sh",
-            "statusMessage": "Updating GitNexus index...",
-            "timeout": 300,
             "type": "command"
           },
           {
@@ -159,15 +144,6 @@
           }
         ],
         "matcher": "Agent"
-      },
-      {
-        "hooks": [
-          {
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gitnexus-impact-ack.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": "mcp__gitnexus__impact|mcp__gitnexus__detect_changes"
       }
     ],
     "Stop": [

@@ -11,7 +11,7 @@ metadata:
 
 Guide the user through their first complete OpenSpec workflow cycle. This is a teaching experience—you'll do real work in their codebase while explaining each step.
 
-> **Note:** This onboarding covers the core OpenSpec artifact cycle. The full project workflow also includes Beads issue tracking, GitNexus impact analysis, and Ruflo memory. After completing this onboarding, read `docs/developers/openspec-beads-runbook.md` to learn how these systems integrate. In daily work, use the `openspec-*` skill family (`/openspec-new-change`, `/openspec-beads-import`, `/openspec-beads-work`, etc.) — do NOT mix with `opsx:*` aliases within the same change.
+> **Note:** This onboarding covers the core OpenSpec artifact cycle. The full project workflow also includes Beads issue tracking and Ruflo memory. After completing this onboarding, read `docs/developers/openspec-beads-runbook.md` to learn how these systems integrate. In daily work, use the `openspec-*` skill family (`/openspec-new-change`, `/openspec-beads-import`, `/openspec-beads-work`, etc.) — do NOT mix with `opsx:*` aliases within the same change.
 
 ---
 
@@ -480,7 +480,7 @@ This same rhythm works for any size change—a small fix or a major feature.
 
 Try `/openspec-new-change` or `/openspec-ff-change` on something you actually want to build. You've got the rhythm now!
 
-For the full workflow with Beads tracking and GitNexus impact analysis, see `docs/developers/openspec-beads-runbook.md`.
+For the full workflow with Beads tracking and Ruflo memory, see `docs/developers/openspec-beads-runbook.md`.
 ```
 
 ---

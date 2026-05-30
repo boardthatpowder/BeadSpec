@@ -47,12 +47,7 @@ obws_init import || return 1
 
    For each task, look for: explicit task references ("the repo from 2.1"), named artifact references (task B names a function task A creates), and logical chains within a section.
 
-   Enrich with GitNexus execution-flow data for any capability name or service mentioned in a task (MCP tool call — `{}` syntax).
-   Note: The `mcp__gitnexus__query` tool accepts a `query` string param for natural-language or concept lookups:
-   ```
-   mcp__gitnexus__query({query: "<capability or service name from task>"})
-   ```
-   If tasks A and B both appear in the same process, infer a dependency edge. Report the inferred edges and reasoning to the user.
+   Report the inferred edges and reasoning to the user.
 
 4. **Write the graph JSON file**
 
