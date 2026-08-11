@@ -68,7 +68,7 @@
     "@tauri-apps/cli": "^2",
     "@types/cytoscape": "^3.31.0",
     "@types/dompurify": "^3.2.0",
-    "@types/jsdom": "^28.0.2",
+    "@types/jsdom": "^30.0.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@typescript-eslint/eslint-plugin": "^8.59.3",
