@@ -29,4 +29,4 @@ Type to fuzzy-search across three categories:
 | `Enter` | Run selected item |
 | `Escape` | Close palette |
 
-Results update as you type. Task search is live — queries are sent to the Dolt SQL backend as you type (debounced).
+Results update as you type. Task search is live — queries are sent to the Beads data source as you type (debounced).

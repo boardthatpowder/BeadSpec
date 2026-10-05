@@ -5,41 +5,26 @@
 **Symptom**: BeadSpec shows a setup dialog saying "bd CLI not found on PATH" on launch.
 
 **Fix**:
-1. Confirm `bd` is installed: open a terminal and run `bd --version`
+1. Confirm `bd` 1.3 or newer is installed: open a terminal and run `bd --version`
 2. If `bd` is installed but BeadSpec can't find it, use **Settings → Binary Paths → bd** to specify the full path (e.g. `/usr/local/bin/bd`)
 3. If `bd` is not installed, see the [Installation guide](/guide/installation)
 
-## Dolt server crash / recovery dialog
+## Beads connection fails
 
-**Symptom**: A recovery dialog appears saying the Dolt SQL server stopped unexpectedly.
+Open **bd Health** to inspect read/write transport, journal state and the reported reason. Verify `bd --version` is at least 1.3, check the configured binary path, and reopen the project. BeadSpec owns a loopback `bd serve` process for HTTP projects; embedded projects use native CLI commands.
 
-**What happened**: BeadSpec starts a Dolt SQL server process in the background. If that process crashes (due to a port conflict, an OS-level signal, or a Dolt bug), BeadSpec detects it and shows the recovery dialog.
-
-**Fix**:
-1. Click **Restart Dolt** in the recovery dialog. BeadSpec will attempt to start a new Dolt server.
-2. If restart fails, check whether another process is using the Dolt port:
-   ```bash
-   lsof -i :PORT   # macOS/Linux; use the port shown in the error
-   ```
-3. If the issue persists, override the `dolt` binary path in **Settings → Binary Paths → dolt** (requires app restart).
-4. Check the recovery log in the dialog for the underlying error.
-
-See [Recovery](/guide/features/recovery) for more detail.
-
-## Port conflict
-
-**Symptom**: Dolt server fails to start with "address already in use".
-
-**Fix**: BeadSpec normally auto-assigns a free port. If a persistent conflict occurs, check what's occupying the port with `lsof -i :PORT` and stop that process.
+A project can use HTTP reads and CLI writes when hooks or maintenance policies require native commands. This is expected and is shown in the connection status.
 
 ## Issues not updating after bd command
 
-**Symptom**: You ran `bd create` or `bd close` in the terminal but the change doesn't appear in BeadSpec.
+- Open **bd Health** and choose **Enable live updates** if journaling is disabled. This is a per-project opt-in and changes the project journal configuration.
+- Journal updates should appear promptly. Full refreshes run every 30 seconds, including changes from pull, merge and direct database edits that may not create journal events.
+- Return focus to BeadSpec or press `⌘R` / `Ctrl+R` to refresh immediately.
+- If the connection reports an error, reopen the project and inspect the connection reason.
 
-**Fix**:
-- Wait a moment — BeadSpec polls `dolt_log()` every 2 seconds by default. Changes should appear within a few seconds.
-- If changes don't appear after 10 seconds, check the connection status indicator in the bottom bar. A red indicator means the Dolt SQL connection is broken — try restarting via the recovery dialog.
-- Press `⌘R` / `Ctrl+R` to manually force a refresh.
+## Activity history is incomplete
+
+The activity feed contains retained journal and session activity, bounded to seven days or 5,000 events per project. Events from before journaling was enabled or outside retention may be absent. Open an individual task timeline for native history and comments.
 
 ## OpenSpec features missing
 

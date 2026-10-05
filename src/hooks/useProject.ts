@@ -83,7 +83,7 @@ export async function connectProjectWithContext(path: string): Promise<void> {
   store.setConnecting({
     path,
     startedAt: Date.now(),
-    status: 'Starting Dolt database server…',
+    status: 'Connecting to Beads…',
   })
   try {
     // Fetch workspace context in parallel with connect_project

@@ -1,10 +1,8 @@
 use crate::commands::external::{find_ruflo_with_override, run_ruflo_managed};
-use crate::commands::read::decode_datetime;
 use crate::db::pool::ProjectRegistry;
 use serde_json::{json, Value};
 use sqlx::types::chrono::{DateTime, Utc};
-use sqlx::Row;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -34,6 +32,9 @@ impl ActivityRingBuffer {
 
     pub fn push(&self, event: ActivityEvent) {
         let mut guard = self.events.lock().unwrap();
+        if guard.iter().any(|existing| existing.id == event.id) {
+            return;
+        }
         guard.push_back(event);
         let horizon_epoch = Utc::now().timestamp() - 7 * 24 * 60 * 60;
         while guard.len() > 5000 {
@@ -47,11 +48,17 @@ impl ActivityRingBuffer {
     }
 
     pub fn since(&self, since_ts: Option<DateTime<Utc>>, limit: usize) -> Vec<ActivityEvent> {
+        let horizon = Utc::now().timestamp() - 7 * 24 * 60 * 60;
         let mut items: Vec<ActivityEvent> = self
             .events
             .lock()
             .unwrap()
             .iter()
+            .filter(|event| {
+                parse_ts(&event.ts)
+                    .map(|ts| ts.timestamp() >= horizon)
+                    .unwrap_or(true)
+            })
             .filter(|event| {
                 since_ts
                     .map(|since| parse_ts(&event.ts).map(|ts| ts > since).unwrap_or(false))
@@ -104,7 +111,39 @@ fn merge_recent_events(
     merged
 }
 
+static PROJECT_RINGS: OnceLock<Mutex<HashMap<String, Arc<ActivityRingBuffer>>>> = OnceLock::new();
+fn project_ring(project: &str) -> Arc<ActivityRingBuffer> {
+    PROJECT_RINGS
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .unwrap()
+        .entry(project.into())
+        .or_insert_with(|| Arc::new(ActivityRingBuffer::new()))
+        .clone()
+}
+fn activity_channel(project: &str) -> String {
+    let identity: String = project
+        .as_bytes()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    format!("workflow:activity:{identity}")
+}
+pub fn emit_project_event(handle: &AppHandle, project: &str, event: ActivityEvent) {
+    project_ring(project).push(event.clone());
+    handle.emit(&activity_channel(project), event).ok();
+}
+pub fn retain_project_event(project: &str, event: ActivityEvent) {
+    project_ring(project).push(event);
+}
 pub fn emit_event(handle: &AppHandle, event: ActivityEvent) {
+    if let Ok(detail) = serde_json::from_str::<Value>(&event.detail) {
+        if let Some(project) = detail.get("project_dir").and_then(Value::as_str) {
+            emit_project_event(handle, project, event);
+            return;
+        }
+    }
+    // Native global producers have no project identity; Beads journal events use the scoped emitter.
     ring().push(event.clone());
     handle.emit("workflow:activity", event).ok();
 }
@@ -347,7 +386,7 @@ pub async fn list_recent_events(
     project_path: String,
     limit: u32,
     since_ts: Option<String>,
-    registry: State<'_, Arc<ProjectRegistry>>,
+    _registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<Vec<ActivityEvent>, String> {
     start_all_sources(handle, project_path.clone());
     let since = match since_ts {
@@ -360,7 +399,7 @@ pub async fn list_recent_events(
     };
     let limit = limit.min(1000) as usize;
     let live_events = ring().since(since, limit);
-    let history_events = load_beads_history_events(&project_path, &registry, limit).await;
+    let history_events = project_ring(&project_path).since(since, limit);
     Ok(merge_recent_events(
         live_events,
         history_events,
@@ -369,110 +408,28 @@ pub async fn list_recent_events(
     ))
 }
 
-async fn load_beads_history_events(
-    project_path: &str,
-    registry: &State<'_, Arc<ProjectRegistry>>,
-    limit: usize,
-) -> Vec<ActivityEvent> {
-    let Ok(project) = registry.get(project_path).await else {
-        return Vec::new();
-    };
-    let row_limit = limit.min(1000) as i64;
-
-    let comment_rows = sqlx::query(
-        "SELECT c.id, c.issue_id, c.author, c.text, c.created_at, i.title \
-         FROM comments c \
-         LEFT JOIN issues i ON i.id = c.issue_id \
-         ORDER BY c.created_at DESC \
-         LIMIT ?",
-    )
-    .bind(row_limit)
-    .fetch_all(project.pool())
-    .await
-    .unwrap_or_default();
-
-    let mut events: Vec<ActivityEvent> = comment_rows
-        .iter()
-        .filter_map(|row| {
-            let id: String = row.try_get("id").ok()?;
-            let issue_id: String = row.try_get("issue_id").ok()?;
-            let ts = decode_datetime(row, "created_at");
-            if ts.is_empty() {
-                return None;
-            }
-            let title: Option<String> = row.try_get("title").ok().flatten();
-            let author: String = row.try_get("author").unwrap_or_else(|_| "unknown".into());
-            let text: String = row.try_get("text").unwrap_or_default();
-            Some(ActivityEvent {
-                id: format!("bd:comment:{id}"),
-                ts,
-                kind: "bd.comment".into(),
-                source: "bd".into(),
-                summary: title
-                    .map(|title| format!("Comment on {issue_id}: {title}"))
-                    .unwrap_or_else(|| format!("Comment on {issue_id}")),
-                detail: json!({
-                    "issue_id": issue_id,
-                    "author": author,
-                    "text": text,
-                })
-                .to_string(),
-                correlation_id: Some(issue_id),
-            })
-        })
-        .collect();
-
-    let status_rows = sqlx::query(
-        "SELECT COALESCE(to_id, from_id) AS issue_id, from_status, to_status, to_commit_date \
-         FROM dolt_diff_issues \
-         WHERE diff_type != 'removed' \
-           AND (from_status IS NULL OR from_status != to_status) \
-         ORDER BY to_commit_date DESC \
-         LIMIT ?",
-    )
-    .bind(row_limit)
-    .fetch_all(project.pool())
-    .await
-    .unwrap_or_default();
-
-    for (i, row) in status_rows.iter().enumerate() {
-        let issue_id: String = row
-            .try_get::<Option<String>, _>("issue_id")
-            .ok()
-            .flatten()
-            .unwrap_or_default();
-        if issue_id.is_empty() {
-            continue;
-        }
-        let ts = decode_datetime(row, "to_commit_date");
-        if ts.is_empty() {
-            continue;
-        }
-        let old_status: Option<String> = row.try_get("from_status").ok().flatten();
-        let new_status: Option<String> = row.try_get("to_status").ok().flatten();
-        events.push(ActivityEvent {
-            id: format!("bd:status:{issue_id}:{ts}:{i}"),
-            ts,
-            kind: "bd.status_changed".into(),
-            source: "bd".into(),
-            summary: format!("Status changed for {issue_id}"),
-            detail: json!({
-                "issue_id": issue_id,
-                "from_status": old_status,
-                "to_status": new_status,
-            })
-            .to_string(),
-            correlation_id: Some(issue_id),
-        });
-    }
-
-    events
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn quiet_buffer_expires_events_on_reads() {
+        let buffer = ActivityRingBuffer::new();
+        buffer
+            .events
+            .lock()
+            .unwrap()
+            .push_back(event(1, Utc::now() - Duration::from_secs(8 * 24 * 60 * 60)));
+        assert!(buffer.since(None, 10).is_empty());
+    }
+    #[test]
+    fn scoped_channels_encode_paths_without_invalid_event_characters() {
+        assert_eq!(activity_channel("/one"), "workflow:activity:2f6f6e65");
+        assert!(activity_channel("/my project/.worktrees/é")
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "_:/-".contains(c)));
+        assert_ne!(activity_channel("/one"), activity_channel("/two"));
+    }
     fn event(id: usize, ts: DateTime<Utc>) -> ActivityEvent {
         ActivityEvent {
             id: id.to_string(),

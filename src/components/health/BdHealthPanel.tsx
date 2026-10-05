@@ -7,6 +7,7 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { Tabs } from '../ui/Tabs'
 import { WorkerFindingsPanel } from './WorkerFindingsPanel'
+import { ProjectBackendPanel } from './ProjectBackendPanel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -229,6 +230,8 @@ export function BdHealthPanel() {
           </Button>
         )}
       </div>
+
+      <ProjectBackendPanel key={project} project={project} />
 
       <Tabs.List className="flex-shrink-0 gap-5 px-5 pt-0">
         {([

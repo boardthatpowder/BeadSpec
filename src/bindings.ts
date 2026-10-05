@@ -17,6 +17,8 @@ export const commands = {
 	linkDependency: (projectPath: string, blockedId: string, blockingId: string) => typedError<WriteResult, string>(__TAURI_INVOKE("link_dependency", { projectPath, blockedId, blockingId })),
 	unlinkDependency: (projectPath: string, blockedId: string, blockingId: string) => typedError<WriteResult, string>(__TAURI_INVOKE("unlink_dependency", { projectPath, blockedId, blockingId })),
 	connectProject: (projectPath: string) => typedError<ProjectMeta, string>(__TAURI_INVOKE("connect_project", { projectPath })),
+	getProjectBackendStatus: (projectPath: string) => typedError<ProjectBackendStatus, string>(__TAURI_INVOKE("get_project_backend_status", { projectPath })),
+	enableProjectJournal: (projectPath: string) => typedError<ProjectBackendStatus, string>(__TAURI_INVOKE("enable_project_journal", { projectPath })),
 	/**
 	 *  Drop any half-spawned sidecar registration and re-run `connect_project`.
 	 *  Used by the recovery dialog's "Retry" button after a spawn failure: the
@@ -116,10 +118,6 @@ export const commands = {
 	getWorkspaceContext: (projectPath: string) => typedError<WorkspaceContext, string>(__TAURI_INVOKE("get_workspace_context", { projectPath })),
 	/**  Find git commits and branches that mention a given issue ID. */
 	getGitRefsForIssue: (projectPath: string, issueId: string) => typedError<GitRefs, string>(__TAURI_INVOKE("get_git_refs_for_issue", { projectPath, issueId })),
-	/**
-	 *  Query `dolt_diff('issues', 'HEAD~20', 'HEAD')` filtered to the given
-	 *  issue_id. Returns an empty vec on any error (graceful degradation).
-	 */
 	getDoltHistoryForIssue: (projectPath: string, issueId: string) => typedError<DoltRevision[], string>(__TAURI_INVOKE("get_dolt_history_for_issue", { projectPath, issueId })),
 	runGitnexusImpact: (projectPath: string, symbol: string) => typedError<GitnexusImpactReport, string>(__TAURI_INVOKE("run_gitnexus_impact", { projectPath, symbol })),
 	lookupSymbols: (projectPath: string, names: string[]) => typedError<(SymbolHit | null)[], string>(__TAURI_INVOKE("lookup_symbols", { projectPath, names })),
@@ -151,12 +149,7 @@ export const commands = {
 	 *  feature/epic-typed issue, if present).
 	 */
 	getChangeBeadsProgress: (projectPath: string, changeSlug: string) => typedError<ChangeBeadsProgress, string>(__TAURI_INVOKE("get_change_beads_progress", { projectPath, changeSlug })),
-	/**
-	 *  Inter-change dependency lookup for a change. Resolves the change's imported
-	 *  epic, then queries the Beads `dependencies` table for direct upstream
-	 *  (blockers) and downstream (dependents) epics carrying any `openspec:*`
-	 *  label. Non-OpenSpec dependencies and self-loops are filtered out.
-	 */
+	/**  Resolve direct upstream and downstream OpenSpec epics from raw Beads edges. */
 	getChangeDependencies: (projectPath: string, changeSlug: string) => typedError<ChangeDependencies, string>(__TAURI_INVOKE("get_change_dependencies", { projectPath, changeSlug })),
 	/**  Run `openspec validate <change>` via the `ruflo` CLI and parse the output. */
 	runOpenspecValidate: (projectPath: string, change: string) => typedError<ValidationResult, string>(__TAURI_INVOKE("run_openspec_validate", { projectPath, change })),
@@ -380,6 +373,8 @@ export type IssueMatch = {
 	overlap_count: number,
 };
 
+export type LiveUpdateMode = "streaming" | "polling" | "disabled" | "reconnecting";
+
 export type MemoryEntry = {
 	key: string,
 	score: number | null,
@@ -419,6 +414,16 @@ export type ProcessSummary = {
 	name: string,
 	cluster: string,
 	step_count: number,
+};
+
+export type ProjectBackendStatus = {
+	project_path: string,
+	read_transport: Transport,
+	write_transport: Transport,
+	live_update_mode: LiveUpdateMode,
+	journal_enabled: boolean,
+	historical_coverage: string,
+	reason: string | null,
 };
 
 export type ProjectMeta = {
@@ -484,7 +489,7 @@ export type ShortcutStatus = {
 	available: boolean,
 };
 
-export type SnapshotSource = "BdCli" | "Dolt";
+export type SnapshotSource = "BdCli" | "Dolt" | "Http";
 
 export type SymbolHit = {
 	name: string,
@@ -543,6 +548,8 @@ export type TasksResponse = {
 	tasks: Task[],
 	total_count: number,
 };
+
+export type Transport = "http" | "cli";
 
 export type ValidationHistoryEntry = {
 	change_slug: string,

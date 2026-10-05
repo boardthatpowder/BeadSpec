@@ -1,12 +1,10 @@
-use crate::bd::runner::{find_bd, invoke_bd_in_project};
-use crate::commands::workers::parse_worker_provenance;
+use crate::commands::read::{issue_labels, string_field, task_from_issue};
 use crate::db::dolt_server::DoltServerRegistry;
 use crate::db::pool::ProjectRegistry;
 use crate::settings::AppSettings;
 use serde_json::Value;
-use sqlx::Row;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tauri::State;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -30,14 +28,7 @@ pub struct BlockerLink {
 pub enum SnapshotSource {
     BdCli,
     Dolt,
-}
-
-fn settings_paths(settings: &State<'_, Arc<Mutex<AppSettings>>>) -> (String, String) {
-    let guard = settings.lock().unwrap();
-    (
-        guard.binary_paths.bd.clone(),
-        guard.binary_paths.dolt.clone(),
-    )
+    Http,
 }
 
 fn id_from_value(value: &Value) -> Option<String> {
@@ -51,11 +42,20 @@ fn id_from_value(value: &Value) -> Option<String> {
 
 pub(crate) fn parse_bd_ready(raw: &str) -> Option<EpicReadySnapshot> {
     let json: Value = serde_json::from_str(raw).ok()?;
+    if !json.is_object() {
+        return None;
+    }
     let ready: Vec<String> = json
         .get("ready")
         .or_else(|| json.get("ready_tasks"))
+        .or_else(|| json.get("steps"))
         .and_then(Value::as_array)
-        .map(|items| items.iter().filter_map(id_from_value).collect())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| id_from_value(item.get("issue").unwrap_or(item)))
+                .collect()
+        })
         .unwrap_or_default();
     let blocked = json
         .get("blocked")
@@ -104,200 +104,160 @@ pub(crate) fn parse_bd_ready(raw: &str) -> Option<EpicReadySnapshot> {
     })
 }
 
+fn child_ids(issues: &[Value], edges: &[Value], epic_id: &str) -> Vec<String> {
+    let label = issues.iter().find(|v| v["id"] == epic_id).and_then(|v| {
+        issue_labels(v)
+            .into_iter()
+            .find(|label| label.starts_with("openspec:"))
+    });
+    issues
+        .iter()
+        .filter(|issue| {
+            let id = issue["id"].as_str().unwrap_or_default();
+            if let Some(label) = &label {
+                id != epic_id
+                    && issue["status"] != "deleted"
+                    && issue["issue_type"] != "epic"
+                    && issue["issue_type"] != "feature"
+                    && issue_labels(issue).contains(label)
+            } else {
+                edges
+                    .iter()
+                    .any(|edge| edge["issue_id"] == id && edge["depends_on_id"] == epic_id)
+            }
+        })
+        .filter_map(|v| v["id"].as_str().map(ToOwned::to_owned))
+        .collect()
+}
+
+fn snapshot_from_ready(
+    issues: &[Value],
+    edges: &[Value],
+    epic_id: &str,
+    ready_ids: &[String],
+    source: SnapshotSource,
+) -> EpicReadySnapshot {
+    let children = child_ids(issues, edges, epic_id);
+    let by_id: HashMap<_, _> = issues
+        .iter()
+        .filter_map(|issue| Some((issue["id"].as_str()?, issue)))
+        .collect();
+    let mut total_open = 0;
+    let mut total_in_progress = 0;
+    let mut ready = Vec::new();
+    let mut paused_task_ids = Vec::new();
+    let mut first_blocked_child = None;
+    for id in &children {
+        let Some(issue) = by_id.get(id.as_str()) else {
+            continue;
+        };
+        if issue_labels(issue).iter().any(|l| l == "openspec:paused") {
+            paused_task_ids.push(id.clone());
+        }
+        match issue["status"].as_str().unwrap_or_default() {
+            "open" => {
+                total_open += 1;
+                if ready_ids.contains(id) {
+                    ready.push(id.clone());
+                } else if first_blocked_child.is_none() {
+                    first_blocked_child = Some(id);
+                }
+            }
+            "in_progress" => total_in_progress += 1,
+            _ => {}
+        }
+    }
+    let blocked = first_blocked_child
+        .map(|child| {
+            edges
+                .iter()
+                .filter(|edge| edge["issue_id"] == child.as_str())
+                .filter_map(|edge| {
+                    let id = edge["depends_on_id"].as_str()?;
+                    let kind = edge["type"].as_str().unwrap_or("blocks");
+                    let issue = by_id.get(id);
+                    let status = issue
+                        .map(|v| string_field(v, "status"))
+                        .unwrap_or_else(|| "unknown".to_string());
+                    let blocking = (kind == "blocks" && status != "closed")
+                        || (kind == "parent-child" && status == "closed");
+                    if !blocking {
+                        return None;
+                    }
+                    Some(BlockerLink {
+                        blocker_id: id.to_string(),
+                        blocker_title: issue
+                            .map(|v| string_field(v, "title"))
+                            .unwrap_or_else(|| id.to_string()),
+                        blocker_status: status,
+                    })
+                })
+                .take(5)
+                .collect()
+        })
+        .unwrap_or_default();
+    EpicReadySnapshot {
+        ready,
+        blocked,
+        paused_task_ids,
+        total_open,
+        total_in_progress,
+        source,
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn get_epic_ready_snapshot(
     project_path: String,
     epic_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<EpicReadySnapshot, String> {
-    let (bd_override, dolt_override) = settings_paths(&settings);
-    if let Some(bd) = find_bd(&bd_override) {
-        let cli = invoke_bd_in_project(
-            &bd,
-            &["ready", "--mol", &epic_id, "--json"],
-            &project_path,
-            &server_registry,
-            &dolt_override,
-            Duration::from_secs(10),
-        )
-        .await;
-        if let Ok(stdout) = cli {
-            if let Some(mut parsed) = parse_bd_ready(&stdout) {
-                parsed.paused_task_ids =
-                    paused_children(&project_path, &epic_id, registry.inner()).await;
-                return Ok(parsed);
-            }
-        }
-    }
-    dolt_snapshot(&project_path, &epic_id, registry.inner()).await
-}
-
-async fn epic_openspec_label(
-    project_path: &str,
-    epic_id: &str,
-    registry: &Arc<ProjectRegistry>,
-) -> Option<String> {
-    let pool = registry.get(project_path).await.ok()?;
-    sqlx::query("SELECT label FROM labels WHERE issue_id = ? AND label LIKE 'openspec:%' LIMIT 1")
-        .bind(epic_id)
-        .fetch_optional(pool.pool())
-        .await
-        .ok()
-        .flatten()
-        .and_then(|r| r.try_get("label").ok())
-}
-
-async fn child_ids(
-    project_path: &str,
-    epic_id: &str,
-    registry: &Arc<ProjectRegistry>,
-) -> Vec<String> {
-    let pool = match registry.get(project_path).await {
-        Ok(pool) => pool,
-        Err(_) => return Vec::new(),
-    };
-    let label = epic_openspec_label(project_path, epic_id, registry).await;
-    if let Some(label) = label {
-        let rows = sqlx::query(
-            "SELECT i.id FROM issues i JOIN labels l ON l.issue_id = i.id \
-             WHERE l.label = ? AND i.id != ? AND i.status != 'deleted' \
-             AND COALESCE(i.issue_type, '') NOT IN ('epic','feature')",
-        )
-        .bind(label)
-        .bind(epic_id)
-        .fetch_all(pool.pool())
-        .await
-        .unwrap_or_default();
-        return rows.iter().filter_map(|r| r.try_get("id").ok()).collect();
-    }
-    let rows = sqlx::query("SELECT issue_id FROM dependencies WHERE depends_on_id = ?")
-        .bind(epic_id)
-        .fetch_all(pool.pool())
-        .await
-        .unwrap_or_default();
-    rows.iter()
-        .filter_map(|r| r.try_get("issue_id").ok())
-        .collect()
-}
-
-async fn paused_children(
-    project_path: &str,
-    epic_id: &str,
-    registry: &Arc<ProjectRegistry>,
-) -> Vec<String> {
-    let ids = child_ids(project_path, epic_id, registry).await;
-    if ids.is_empty() {
-        return Vec::new();
-    }
-    let pool = match registry.get(project_path).await {
-        Ok(pool) => pool,
-        Err(_) => return Vec::new(),
-    };
-    let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
-        "SELECT issue_id FROM labels WHERE label = 'openspec:paused' AND issue_id IN (",
-    );
-    let mut sep = qb.separated(", ");
-    for id in ids {
-        sep.push_bind(id);
-    }
-    qb.push(")");
-    qb.build()
-        .fetch_all(pool.pool())
-        .await
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|r| r.try_get("issue_id").ok())
-        .collect()
-}
-
-async fn dolt_snapshot(
-    project_path: &str,
-    epic_id: &str,
-    registry: &Arc<ProjectRegistry>,
-) -> Result<EpicReadySnapshot, String> {
-    let pool = registry
-        .get(project_path)
+    let source = registry
+        .get(&project_path)
         .await
         .map_err(|_| format!("project_not_connected: '{project_path}'"))?;
-    let ids = child_ids(project_path, epic_id, registry).await;
-    if ids.is_empty() {
-        return Ok(EpicReadySnapshot {
-            ready: Vec::new(),
-            blocked: Vec::new(),
-            paused_task_ids: Vec::new(),
-            total_open: 0,
-            total_in_progress: 0,
-            source: SnapshotSource::Dolt,
-        });
-    }
-    let mut total_open = 0;
-    let mut total_in_progress = 0;
-    let mut ready = Vec::new();
-    let mut first_blocked_child: Option<String> = None;
-    for id in &ids {
-        let row = sqlx::query("SELECT status FROM issues WHERE id = ?")
-            .bind(id)
-            .fetch_optional(pool.pool())
-            .await
-            .ok()
-            .flatten();
-        let status: String = row
-            .and_then(|r| r.try_get("status").ok())
-            .unwrap_or_default();
-        if status == "open" {
-            total_open += 1;
-            let blocker_count: i64 = sqlx::query(
-                "SELECT COUNT(*) AS cnt FROM dependencies d JOIN issues b ON b.id = d.depends_on_id \
-                 WHERE d.issue_id = ? AND d.depends_on_id != ? AND b.status != 'closed'",
-            )
-            .bind(id)
-            .bind(epic_id)
-            .fetch_one(pool.pool())
-            .await
-            .ok()
-            .and_then(|r| r.try_get("cnt").ok())
-            .unwrap_or(0);
-            if blocker_count == 0 {
-                ready.push(id.clone());
-            } else if first_blocked_child.is_none() {
-                first_blocked_child = Some(id.clone());
-            }
-        } else if status == "in_progress" {
-            total_in_progress += 1;
-        }
-    }
-    let blocked = if let Some(child) = first_blocked_child {
-        sqlx::query(
-            "SELECT b.id, b.title, b.status FROM dependencies d JOIN issues b ON b.id = d.depends_on_id \
-             WHERE d.issue_id = ? AND d.depends_on_id != ? AND b.status != 'closed' LIMIT 5",
-        )
-        .bind(child)
-        .bind(epic_id)
-        .fetch_all(pool.pool())
-        .await
-        .unwrap_or_default()
+    let issues = source.list_issues().await?;
+    let ids: Vec<_> = issues
         .iter()
-        .map(|r| BlockerLink {
-            blocker_id: r.try_get("id").unwrap_or_default(),
-            blocker_title: r.try_get("title").unwrap_or_default(),
-            blocker_status: r.try_get("status").unwrap_or_default(),
-        })
-        .collect()
-    } else {
-        Vec::new()
-    };
-
-    Ok(EpicReadySnapshot {
-        ready,
-        blocked,
-        paused_task_ids: paused_children(project_path, epic_id, registry).await,
-        total_open,
-        total_in_progress,
-        source: SnapshotSource::Dolt,
-    })
+        .filter_map(|v| v["id"].as_str().map(ToOwned::to_owned))
+        .collect();
+    let edges = source.dependencies(&ids).await?;
+    let children: HashSet<_> = child_ids(&issues, &edges, &epic_id).into_iter().collect();
+    let parent_children: HashSet<_> = edges
+        .iter()
+        .filter(|v| v["depends_on_id"] == epic_id && v["type"] == "parent-child")
+        .filter_map(|v| v["issue_id"].as_str().map(ToOwned::to_owned))
+        .collect();
+    if source.is_http() && children == parent_children {
+        let ready: Vec<_> = source
+            .ready(Some(&epic_id))
+            .await?
+            .iter()
+            .filter_map(id_from_value)
+            .collect();
+        return Ok(snapshot_from_ready(
+            &issues,
+            &edges,
+            &epic_id,
+            &ready,
+            SnapshotSource::Http,
+        ));
+    }
+    let raw = source
+        .run_cli(&["ready", "--mol", &epic_id, "--json"])
+        .await?;
+    let snapshot =
+        parse_bd_ready(&raw).ok_or_else(|| "Invalid bd molecule-ready JSON".to_string())?;
+    Ok(snapshot_from_ready(
+        &issues,
+        &edges,
+        &epic_id,
+        &snapshot.ready,
+        SnapshotSource::BdCli,
+    ))
 }
 
 #[tauri::command]
@@ -305,65 +265,30 @@ async fn dolt_snapshot(
 pub async fn claim_task(
     project_path: String,
     task_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<crate::commands::read::Task, String> {
-    let (bd_override, dolt_override) = settings_paths(&settings);
-    let bd = find_bd(&bd_override).ok_or_else(|| "bd CLI not found".to_string())?;
-    invoke_bd_in_project(
-        &bd,
-        &["update", &task_id, "--claim"],
-        &project_path,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(30),
-    )
-    .await?;
-    read_task_summary(&project_path, &task_id, registry.inner()).await
-}
-
-async fn read_task_summary(
-    project_path: &str,
-    task_id: &str,
-    registry: &Arc<ProjectRegistry>,
-) -> Result<crate::commands::read::Task, String> {
-    let pool = registry
-        .get(project_path)
+    let source = registry
+        .get(&project_path)
         .await
         .map_err(|_| format!("project_not_connected: '{project_path}'"))?;
-    let row = sqlx::query(
-        "SELECT id, title, status, priority, issue_type, assignee, notes, created_at, updated_at \
-         FROM issues WHERE id = ? LIMIT 1",
-    )
-    .bind(task_id)
-    .fetch_one(pool.pool())
-    .await
-    .map_err(|e| format!("Task not found: {e}"))?;
-    let labels = sqlx::query("SELECT label FROM labels WHERE issue_id = ? ORDER BY label")
-        .bind(task_id)
-        .fetch_all(pool.pool())
-        .await
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|r| r.try_get("label").ok())
-        .collect();
-    Ok(crate::commands::read::Task {
-        id: row.try_get("id").unwrap_or_default(),
-        title: row.try_get("title").unwrap_or_default(),
-        status: row.try_get("status").unwrap_or_default(),
-        priority: row.try_get::<i32, _>("priority").unwrap_or(2),
-        task_type: row.try_get("issue_type").unwrap_or_else(|_| "task".into()),
-        assignee: row.try_get("assignee").ok(),
-        labels,
-        worker_provenance: row
-            .try_get::<Option<String>, _>("notes")
-            .ok()
-            .flatten()
-            .and_then(|notes| parse_worker_provenance(&notes)),
-        created_at: crate::commands::read::decode_datetime(&row, "created_at"),
-        updated_at: crate::commands::read::decode_datetime(&row, "updated_at"),
-    })
+    let mut encoded = reqwest::Url::parse("http://127.0.0.1/").map_err(|e| e.to_string())?;
+    encoded
+        .path_segments_mut()
+        .map_err(|_| "Invalid claim URL".to_string())?
+        .push(&task_id);
+    let path = format!("/issues/{}:claim", encoded.path().trim_start_matches('/'));
+    source
+        .write(
+            &["update", &task_id, "--claim"],
+            "issues.claim",
+            "POST",
+            &path,
+            serde_json::json!({}),
+        )
+        .await?;
+    Ok(task_from_issue(&source.get_issue(&task_id).await?))
 }
 
 #[cfg(test)]
@@ -377,5 +302,43 @@ mod tests {
         assert_eq!(snap.ready, vec!["A", "B"]);
         assert_eq!(snap.total_open, 3);
         assert_eq!(snap.source, SnapshotSource::BdCli);
+    }
+
+    #[test]
+    fn pinned_molecule_ready_parser_reads_nested_step_issues() {
+        let snapshot = parse_bd_ready(r#"{"molecule_id":"B-epic","total_steps":3,"ready_steps":2,"steps":[{"issue":{"id":"B-first","status":"open"}},{"issue":{"id":"B-next","status":"open"}}]}"#).unwrap();
+        assert_eq!(snapshot.ready, ["B-first", "B-next"]);
+    }
+
+    #[test]
+    fn http_snapshot_uses_authoritative_ready_ids_and_preserves_counts_paused_and_typed_blockers() {
+        let issues = serde_json::json!([
+            {"id":"B-epic","issue_type":"epic","status":"open","labels":["openspec:change"]},
+            {"id":"B-blocked","issue_type":"task","status":"open","labels":["openspec:change","openspec:paused"]},
+            {"id":"B-ready","issue_type":"gate","status":"open","labels":["openspec:change"]},
+            {"id":"B-active","issue_type":"bug","status":"in_progress","labels":["openspec:change"]},
+            {"id":"B-closed","issue_type":"task","status":"closed","labels":["openspec:change"]},
+            {"id":"B-related","title":"Related work","status":"open"}
+        ]);
+        let edges = serde_json::json!([
+            {"issue_id":"B-blocked","depends_on_id":"B-epic","type":"parent-child"},
+            {"issue_id":"B-blocked","depends_on_id":"B-related","type":"related"},
+            {"issue_id":"B-blocked","depends_on_id":"other:missing","type":"blocks"}
+        ]);
+        let snapshot = snapshot_from_ready(
+            issues.as_array().unwrap(),
+            edges.as_array().unwrap(),
+            "B-epic",
+            &["B-ready".into()],
+            SnapshotSource::Http,
+        );
+        assert_eq!(snapshot.ready, ["B-ready"]);
+        assert_eq!(snapshot.total_open, 2);
+        assert_eq!(snapshot.total_in_progress, 1);
+        assert_eq!(snapshot.paused_task_ids, ["B-blocked"]);
+        assert_eq!(snapshot.blocked.len(), 1);
+        assert_eq!(snapshot.blocked[0].blocker_id, "other:missing");
+        assert_eq!(snapshot.blocked[0].blocker_status, "unknown");
+        assert_eq!(snapshot.source, SnapshotSource::Http);
     }
 }

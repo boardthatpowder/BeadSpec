@@ -1,8 +1,8 @@
+use crate::bd::api::ProjectBackendStatus;
 use crate::db::dolt_server::DoltServerRegistry;
-use crate::db::poller::DoltPoller;
+use crate::db::poller::BeadsSync;
 use crate::db::pool::ProjectRegistry;
-use crate::db::recovery;
-use crate::db::watchers::{JsonlWatcher, OpenSpecWatcher, WatcherRegistry};
+use crate::db::watchers::{OpenSpecWatcher, WatcherRegistry};
 use crate::settings::AppSettings;
 use sha2::{Digest, Sha256};
 use std::path::Path;
@@ -82,9 +82,7 @@ mod tests {
 
 #[derive(serde::Deserialize)]
 pub(crate) struct BeadsMetadata {
-    pub(crate) dolt_mode: Option<String>,
     pub(crate) dolt_database: Option<String>,
-    pub(crate) dolt_port: Option<u16>,
 }
 
 pub(crate) fn read_metadata(beads_dir: &Path) -> Option<BeadsMetadata> {
@@ -121,106 +119,13 @@ fn discover_db_name_fallback(beads_dir: &Path) -> Option<String> {
     None
 }
 
-fn server_url(
-    beads_dir: &Path,
-    db_name: &str,
-    metadata_port: Option<u16>,
-) -> Result<(String, u16), String> {
-    // dolt-server.port is written fresh by bd on every start — check it first.
-    // metadata.json dolt_port is a static hint that can go stale across restarts.
-    let port = if let Ok(s) = std::fs::read_to_string(beads_dir.join("dolt-server.port")) {
-        s.trim().parse::<u16>().map_err(|_| {
-            "port_not_configured: .beads/dolt-server.port contains an invalid port number"
-                .to_string()
-        })?
-    } else if let Ok(s) = std::fs::read_to_string(beads_dir.join("port")) {
-        s.trim().parse::<u16>().map_err(|_| {
-            "port_not_configured: .beads/port contains an invalid port number".to_string()
-        })?
-    } else if let Some(p) = metadata_port {
-        p
-    } else {
-        return Err("port_not_configured: no .beads/dolt-server.port, .beads/port, or dolt_port in metadata.json — start the server with `bd dolt-start`".to_string());
-    };
-    Ok((format!("mysql://root:@127.0.0.1:{port}/{db_name}"), port))
-}
-
-/// Structured failure from `ensure_bd_server` so the caller can emit a
-/// `dolt-recovery-required` event carrying bd's stderr tail to the
-/// frontend recovery dialog.
-#[derive(Debug, Clone)]
-pub struct EnsureBdError {
-    pub last_error: String,
-    pub stderr_tail: String,
-}
-
-impl std::fmt::Display for EnsureBdError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.last_error)
-    }
-}
-
-fn ensure_err(last_error: impl Into<String>, stderr_tail: impl Into<String>) -> EnsureBdError {
-    EnsureBdError {
-        last_error: last_error.into(),
-        stderr_tail: stderr_tail.into(),
-    }
-}
-
-/// Ensure bd's managed Dolt server is running. Calls `bd dolt start` if the
-/// server is absent or the port file is missing, then probes for readiness.
-/// Returns the MySQL connection URL.
-async fn ensure_bd_server(
-    beads_dir: &Path,
-    db_name: &str,
-    metadata_port: Option<u16>,
-    project_path: &str,
-    bd_path: &str,
-) -> Result<String, EnsureBdError> {
-    // Fast path: port file exists and server is already healthy.
-    if let Ok((url, port)) = server_url(beads_dir, db_name, metadata_port) {
-        if matches!(
-            recovery::probe_with_deadline(port).await,
-            recovery::DoltHealth::Ok
-        ) {
-            return Ok(url);
-        }
-    }
-    // Server is absent or not responding — start it via bd.
-    let runner = crate::bd::runner::BdRunner::new_with_override(project_path, bd_path)
-        .map_err(|e| ensure_err(format!("bd not found, cannot start Dolt server: {e}"), ""))?;
-    if let Err(e) = runner.run(&["dolt", "start"]).await {
-        let stderr_tail = match &e {
-            crate::bd::runner::BdError::CommandFailed { stderr, .. } => stderr.clone(),
-            crate::bd::runner::BdError::Timeout { stderr } => stderr.clone(),
-            _ => String::new(),
-        };
-        return Err(ensure_err(
-            format!("bd dolt start failed: {e}"),
-            stderr_tail,
-        ));
-    }
-    // Give the server a moment to bind if bd dolt start returns before the port is open.
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-    // Re-read the fresh port file written by bd dolt start.
-    let (url, port) =
-        server_url(beads_dir, db_name, metadata_port).map_err(|e| ensure_err(e, ""))?;
-    match recovery::probe_with_deadline(port).await {
-        recovery::DoltHealth::Ok => Ok(url),
-        other => Err(ensure_err(
-            format!("Dolt server not ready after `bd dolt start` (port {port}): {other:?}"),
-            "",
-        )),
-    }
-}
-
 #[tauri::command]
 #[specta::specta]
 pub async fn connect_project(
     project_path: String,
     app: AppHandle,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
     watcher_registry: State<'_, Arc<WatcherRegistry>>,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
 ) -> Result<ProjectMeta, String> {
@@ -240,162 +145,36 @@ pub async fn connect_project(
         .to_string_lossy()
         .into_owned();
 
-    let meta = read_metadata(&beads_dir);
-    let dolt_mode = meta
-        .as_ref()
-        .and_then(|m| m.dolt_mode.as_deref())
-        .unwrap_or("server");
-    let db_name = meta
-        .as_ref()
-        .and_then(|m| m.dolt_database.clone())
-        .or_else(|| discover_db_name_fallback(&beads_dir))
-        .ok_or("Cannot determine database name — no metadata.json or Dolt data directory found")?;
-
+    let gate = watcher_registry.lifecycle_gate(&canonical_project_path);
+    let _lifecycle = gate.lock().await;
     let project_name = Path::new(&canonical_project_path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or(&canonical_project_path)
         .to_string();
-
-    let bd_path = settings.lock().unwrap().binary_paths.bd.clone();
-    let dolt_path_override = settings.lock().unwrap().binary_paths.dolt.clone();
-
-    // Determine effective mode: if metadata says "server" but the database only
-    // exists in embeddeddolt/ (bd dolt start uses dolt/ as its data dir), fall
-    // back to embedded so we spawn from the correct directory.
-    let effective_dolt_mode = if dolt_mode == "server"
-        && !beads_dir.join("dolt").join(&db_name).is_dir()
-        && beads_dir.join("embeddeddolt").join(&db_name).is_dir()
-    {
-        eprintln!("[project] server mode requested but db only in embeddeddolt/ — using embedded");
-        "embedded"
-    } else {
-        dolt_mode
+    let (bd_path, actor) = {
+        let settings = settings.lock().map_err(|_| "Settings unavailable")?;
+        (settings.binary_paths.bd.clone(), settings.actor.clone())
     };
-
-    let database_url = if effective_dolt_mode == "embedded" {
-        // Embedded mode: BeadSpec spawns its own Dolt sidecar from embeddeddolt/.
-        // Write dolt-server.port so bd CLI commands can discover this sidecar.
-        let embeddeddolt_dir = beads_dir.join("embeddeddolt");
-        // Skip recovery when the sidecar is already registered by this session.
-        // The guard's no_clients_connected check would escalate on our own open pool.
-        if server_registry
-            .get_port(&canonical_project_path)
-            .await
-            .is_none()
-        {
-            if let Err(e) =
-                recovery::guard(&canonical_project_path, &embeddeddolt_dir, &db_name).await
-            {
-                if matches!(&e, recovery::RecoveryError::Escalated { .. }) {
-                    let configured_port =
-                        recovery::read_configured_port(&embeddeddolt_dir).unwrap_or(0);
-                    let probe_health = recovery::probe_with_deadline(configured_port).await;
-                    let report = crate::commands::recovery::build_health_report(
-                        canonical_project_path.clone(),
-                        configured_port,
-                        probe_health,
-                    )
-                    .await;
-                    let _ = app.emit("dolt-recovery-required", report);
-                }
-                return Err(format!("Dolt recovery failed: {e}"));
-            }
-        }
-        let port = match server_registry
-            .spawn_or_get(
-                &canonical_project_path,
-                &embeddeddolt_dir,
-                &dolt_path_override,
-            )
-            .await
-        {
-            Ok(p) => p,
-            Err(failure) => {
-                let configured_port =
-                    recovery::read_configured_port(&embeddeddolt_dir).unwrap_or(0);
-                let health = recovery::DoltHealth::SpawnFailed {
-                    attempts: failure.attempts,
-                    last_error: failure.last_error.clone(),
-                    stderr_tail: failure.stderr_tail.clone(),
-                };
-                let report = crate::commands::recovery::build_health_report(
-                    canonical_project_path.clone(),
-                    configured_port,
-                    health,
-                )
-                .await;
-                let _ = app.emit("dolt-recovery-required", report);
-                return Err(format!("{failure}"));
-            }
-        };
-        let _ = std::fs::write(beads_dir.join("dolt-server.port"), port.to_string());
-        format!("mysql://root:@127.0.0.1:{port}/{db_name}")
-    } else {
-        let metadata_port = meta.as_ref().and_then(|m| m.dolt_port);
-        match ensure_bd_server(
-            &beads_dir,
-            &db_name,
-            metadata_port,
-            &canonical_project_path,
-            &bd_path,
-        )
-        .await
-        {
-            Ok(url) => url,
-            Err(failure) => {
-                // Best-effort port resolution for the recovery dialog. 0 is
-                // acceptable — the dialog tolerates "no port known".
-                let configured_port = std::fs::read_to_string(beads_dir.join("dolt-server.port"))
-                    .ok()
-                    .and_then(|s| s.trim().parse::<u16>().ok())
-                    .or(metadata_port)
-                    .unwrap_or(0);
-                let health = recovery::DoltHealth::SpawnFailed {
-                    attempts: 1,
-                    last_error: failure.last_error.clone(),
-                    stderr_tail: failure.stderr_tail.clone(),
-                };
-                let report = crate::commands::recovery::build_health_report(
-                    canonical_project_path.clone(),
-                    configured_port,
-                    health,
-                )
-                .await;
-                let _ = app.emit("dolt-recovery-required", report);
-                return Err(failure.last_error);
-            }
-        }
-    };
-
-    let pool = registry
-        .get_or_connect(&canonical_project_path, &database_url)
-        .await
-        .map_err(|e| format!("connection_failed:{e}"))?;
-
-    let poll_handle = DoltPoller::new(pool, app.clone()).start();
-    let watch_handle = JsonlWatcher::new(
-        canonical_project_path.clone(),
-        app.clone(),
-        settings.inner().clone(),
-        server_registry.inner().clone(),
-    )
-    .start();
-    let openspec_watch_handle = OpenSpecWatcher::new(canonical_project_path.clone(), app).start();
+    let source = registry
+        .get_or_connect(&canonical_project_path, &bd_path, &actor)
+        .await?;
+    let prefix = resolve_db_name(&canonical_project_path).unwrap_or_default();
+    let poll_handle = BeadsSync::new(source, app.clone()).start();
+    let openspec_watch_handle =
+        OpenSpecWatcher::new(canonical_project_path.clone(), app.clone()).start();
     watcher_registry.register(
         canonical_project_path.clone(),
         poll_handle,
-        watch_handle,
         openspec_watch_handle,
     );
-
     Ok(ProjectMeta {
         project_id: project_id_from_path(&canonical_project_path),
         project_path: canonical_project_path,
         name: project_name,
-        prefix: db_name,
+        prefix,
         compatible: true,
-        schema_message: "Schema compatible".into(),
+        schema_message: "Beads backend compatible".into(),
     })
 }
 
@@ -413,7 +192,13 @@ pub async fn retry_connect_project(
     watcher_registry: State<'_, Arc<WatcherRegistry>>,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
 ) -> Result<ProjectMeta, String> {
-    server_registry.invalidate(&project_path).await;
+    {
+        let gate = watcher_registry.lifecycle_gate(&project_path);
+        let _lifecycle = gate.lock().await;
+        watcher_registry.stop_project(&project_path);
+        registry.close(&project_path).await;
+        server_registry.invalidate(&project_path).await;
+    }
     connect_project(
         project_path,
         app,
@@ -433,11 +218,9 @@ pub async fn disconnect_project(
     _server_registry: State<'_, Arc<DoltServerRegistry>>,
     watcher_registry: State<'_, Arc<WatcherRegistry>>,
 ) -> Result<(), String> {
-    // Stop the poller and file watcher before closing the pool.
+    let gate = watcher_registry.lifecycle_gate(&project_path);
+    let _lifecycle = gate.lock().await;
     watcher_registry.stop_project(&project_path);
-    // Close the SQL pool so queries stop, but leave the dolt sidecar running.
-    // Sidecars live for the app session and are killed together on exit via stop_all().
-    // Killing and immediately respawning causes a lock conflict on the data dir.
     registry.close(&project_path).await;
     Ok(())
 }
@@ -489,4 +272,41 @@ pub async fn list_projects() -> Result<Vec<ProjectMeta>, String> {
         }
     }
     Ok(projects)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_project_backend_status(
+    project_path: String,
+    registry: State<'_, Arc<ProjectRegistry>>,
+) -> Result<ProjectBackendStatus, String> {
+    Ok(registry.get(&project_path).await?.status().await)
+}
+#[tauri::command]
+#[specta::specta]
+pub async fn enable_project_journal(
+    project_path: String,
+    app: AppHandle,
+    registry: State<'_, Arc<ProjectRegistry>>,
+    watcher_registry: State<'_, Arc<WatcherRegistry>>,
+) -> Result<ProjectBackendStatus, String> {
+    let gate = watcher_registry.lifecycle_gate(&project_path);
+    let _lifecycle = gate.lock().await;
+    watcher_registry.stop_project(&project_path);
+    let source = registry.get(&project_path).await?;
+    let result = source.enable_journal().await;
+    if registry.get(&project_path).await.is_err() {
+        return Err("Project disconnected while enabling live updates".into());
+    }
+    let project_path = source.project_path.clone();
+    let poll = BeadsSync::new(source, app.clone()).start();
+    watcher_registry.register(
+        project_path.clone(),
+        poll,
+        OpenSpecWatcher::new(project_path, app.clone()).start(),
+    );
+    if let Ok(status) = &result {
+        app.emit("project_backend_status_changed", status).ok();
+    }
+    result
 }

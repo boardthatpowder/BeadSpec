@@ -4,12 +4,13 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use crate::bd::runner::{find_bd, invoke_bd_in_project};
+use crate::bd::api::BeadsDataSource;
 use crate::commands::external::CommandOutput;
+use crate::commands::read::{issue_labels, string_field};
 use crate::db::dolt_server::DoltServerRegistry;
 use crate::db::pool::ProjectRegistry;
 use crate::settings::AppSettings;
-use sqlx::Row;
+use serde_json::Value;
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -346,81 +347,89 @@ pub async fn get_change_beads_progress(
     change_slug: String,
     registry: tauri::State<'_, Arc<ProjectRegistry>>,
 ) -> Result<ChangeBeadsProgress, String> {
-    let pool = registry.get(&project_path).await.map_err(|_| {
+    let source = registry.get(&project_path).await.map_err(|_| {
         format!("Project not connected — call connect_project first for '{project_path}'")
     })?;
+    Ok(change_beads_progress(
+        &source.list_issues().await?,
+        &change_slug,
+    ))
+}
 
+fn change_beads_progress(issues: &[Value], change_slug: &str) -> ChangeBeadsProgress {
     let label = format!("openspec:{change_slug}");
-
-    let rows = sqlx::query(
-        "SELECT i.id, i.issue_type, i.status \
-         FROM issues i \
-         JOIN labels l ON l.issue_id = i.id \
-         WHERE l.label = ? AND i.status != 'deleted'",
-    )
-    .bind(&label)
-    .fetch_all(pool.pool())
-    .await
-    .map_err(|e| format!("Query failed: {e}"))?;
-
-    let mut total: u32 = 0;
-    let mut done: u32 = 0;
-    let mut epic_id: Option<String> = None;
-
-    for row in rows {
-        let id: String = row.try_get("id").unwrap_or_default();
-        let issue_type: String = row.try_get("issue_type").unwrap_or_default();
-        let status: String = row.try_get("status").unwrap_or_default();
-
-        if issue_type == "feature" || issue_type == "epic" {
-            if epic_id.is_none() {
-                epic_id = Some(id);
+    let mut progress = ChangeBeadsProgress {
+        done: 0,
+        total: 0,
+        epic_id: None,
+    };
+    for issue in issues
+        .iter()
+        .filter(|v| v["status"] != "deleted" && issue_labels(v).contains(&label))
+    {
+        if issue["issue_type"] == "epic" || issue["issue_type"] == "feature" {
+            if progress.epic_id.is_none() {
+                progress.epic_id = Some(string_field(issue, "id"));
             }
         } else {
-            total = total.saturating_add(1);
-            if status == "closed" {
-                done = done.saturating_add(1);
+            progress.total = progress.total.saturating_add(1);
+            if issue["status"] == "closed" {
+                progress.done = progress.done.saturating_add(1);
             }
         }
     }
-
-    Ok(ChangeBeadsProgress {
-        done,
-        total,
-        epic_id,
-    })
+    progress
 }
 
-/// Resolve the imported epic ID for an OpenSpec change by looking up the
-/// single epic/feature-typed Beads issue carrying the `openspec:<slug>` label.
-/// Returns `None` if the change has not been imported (no matching issue) or
-/// only has task-level issues with the label.
-async fn resolve_change_epic_id(
-    pool: &sqlx::MySqlPool,
-    change_slug: &str,
-) -> Result<Option<String>, String> {
-    let label = format!("openspec:{change_slug}");
-    let row = sqlx::query(
-        "SELECT i.id \
-         FROM issues i \
-         JOIN labels l ON l.issue_id = i.id \
-         WHERE l.label = ? \
-           AND i.issue_type IN ('epic', 'feature') \
-           AND i.status != 'deleted' \
-         LIMIT 1",
-    )
-    .bind(&label)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| format!("Query failed: {e}"))?;
-
-    Ok(row.and_then(|r| r.try_get::<String, _>("id").ok()))
+fn change_dependency_links(issues: &[Value], edges: &[Value], epic_id: &str) -> ChangeDependencies {
+    let links = |upstream: bool| {
+        let mut seen = std::collections::HashSet::new();
+        let mut links = Vec::new();
+        for edge in edges {
+            let (anchor, other) = if upstream {
+                ("issue_id", "depends_on_id")
+            } else {
+                ("depends_on_id", "issue_id")
+            };
+            if edge[anchor] != epic_id {
+                continue;
+            }
+            let Some(id) = edge[other].as_str() else {
+                continue;
+            };
+            if id == epic_id || seen.contains(id) {
+                continue;
+            }
+            let Some(issue) = issues.iter().find(|v| {
+                v["id"] == id
+                    && v["status"] != "deleted"
+                    && (v["issue_type"] == "epic" || v["issue_type"] == "feature")
+            }) else {
+                continue;
+            };
+            let slug = issue_labels(issue).into_iter().find_map(|label| {
+                label
+                    .strip_prefix("openspec:")
+                    .filter(|slug| !slug.is_empty())
+                    .map(ToOwned::to_owned)
+            });
+            if let Some(slug) = slug {
+                seen.insert(id.to_string());
+                links.push(ChangeDepLink {
+                    slug,
+                    epic_id: id.to_string(),
+                });
+            }
+        }
+        links
+    };
+    ChangeDependencies {
+        upstream: links(true),
+        downstream: links(false),
+    }
 }
 
-/// Inter-change dependency lookup for a change. Resolves the change's imported
-/// epic, then queries the Beads `dependencies` table for direct upstream
-/// (blockers) and downstream (dependents) epics carrying any `openspec:*`
-/// label. Non-OpenSpec dependencies and self-loops are filtered out.
+/// Resolve direct upstream and downstream OpenSpec epics from raw Beads edges.
 #[tauri::command]
 #[specta::specta]
 pub async fn get_change_dependencies(
@@ -428,78 +437,25 @@ pub async fn get_change_dependencies(
     change_slug: String,
     registry: tauri::State<'_, Arc<ProjectRegistry>>,
 ) -> Result<ChangeDependencies, String> {
-    let pool = registry.get(&project_path).await.map_err(|_| {
+    let source = registry.get(&project_path).await.map_err(|_| {
         format!("Project not connected — call connect_project first for '{project_path}'")
     })?;
-
-    let Some(epic_id) = resolve_change_epic_id(pool.pool(), &change_slug).await? else {
+    let issues = source.list_issues().await?;
+    let Some(epic_id) = change_beads_progress(&issues, &change_slug).epic_id else {
         return Ok(ChangeDependencies {
             upstream: vec![],
             downstream: vec![],
         });
     };
-
-    // Upstream: epics this change's epic depends on (blockers).
-    // Convention from read.rs: `issue_id` = dependent, `depends_on_id` = blocker.
-    let upstream_rows = sqlx::query(
-        "SELECT DISTINCT i.id AS epic_id, l.label AS label \
-         FROM dependencies d \
-         JOIN issues i ON i.id = d.depends_on_id \
-         JOIN labels l ON l.issue_id = i.id \
-         WHERE d.issue_id = ? \
-           AND l.label LIKE 'openspec:%' \
-           AND i.issue_type IN ('epic', 'feature') \
-           AND i.status != 'deleted' \
-           AND i.id != ?",
-    )
-    .bind(&epic_id)
-    .bind(&epic_id)
-    .fetch_all(pool.pool())
-    .await
-    .map_err(|e| format!("Upstream query failed: {e}"))?;
-
-    // Downstream: epics that depend on this change's epic (dependents).
-    let downstream_rows = sqlx::query(
-        "SELECT DISTINCT i.id AS epic_id, l.label AS label \
-         FROM dependencies d \
-         JOIN issues i ON i.id = d.issue_id \
-         JOIN labels l ON l.issue_id = i.id \
-         WHERE d.depends_on_id = ? \
-           AND l.label LIKE 'openspec:%' \
-           AND i.issue_type IN ('epic', 'feature') \
-           AND i.status != 'deleted' \
-           AND i.id != ?",
-    )
-    .bind(&epic_id)
-    .bind(&epic_id)
-    .fetch_all(pool.pool())
-    .await
-    .map_err(|e| format!("Downstream query failed: {e}"))?;
-
-    fn rows_to_links(rows: Vec<sqlx::mysql::MySqlRow>) -> Vec<ChangeDepLink> {
-        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-        let mut out: Vec<ChangeDepLink> = Vec::new();
-        for row in rows {
-            let epic_id: String = row.try_get("epic_id").unwrap_or_default();
-            let label: String = row.try_get("label").unwrap_or_default();
-            let Some(slug) = label.strip_prefix("openspec:") else {
-                continue;
-            };
-            if slug.is_empty() || !seen.insert(epic_id.clone()) {
-                continue;
-            }
-            out.push(ChangeDepLink {
-                slug: slug.to_string(),
-                epic_id,
-            });
-        }
-        out
-    }
-
-    Ok(ChangeDependencies {
-        upstream: rows_to_links(upstream_rows),
-        downstream: rows_to_links(downstream_rows),
-    })
+    let ids = issues
+        .iter()
+        .filter_map(|v| v["id"].as_str().map(ToOwned::to_owned))
+        .collect::<Vec<_>>();
+    Ok(change_dependency_links(
+        &issues,
+        &source.dependencies(&ids).await?,
+        &epic_id,
+    ))
 }
 
 /// Run `openspec validate <change>` via the `ruflo` CLI and parse the output.
@@ -569,9 +525,7 @@ pub async fn import_change_to_beads(
 /// This function never returns an error — failures are collected in `SyncReport::errors`.
 pub async fn reconcile_tasks_checkboxes(
     project_path: &str,
-    bd_path: &std::path::Path,
-    server_registry: &DoltServerRegistry,
-    dolt_path_override: &str,
+    source: &BeadsDataSource,
 ) -> SyncReport {
     let mut report = SyncReport {
         changes_scanned: 0_u32,
@@ -601,31 +555,20 @@ pub async fn reconcile_tasks_checkboxes(
             .collect(),
     };
 
+    let all_issues = match source.list_issues().await {
+        Ok(issues) => issues,
+        Err(error) => {
+            report.errors.push(format!("bd list failed: {error}"));
+            return report;
+        }
+    };
     for change_id in &change_slugs {
         report.changes_scanned = report.changes_scanned.saturating_add(1);
-
-        // Query bd for all issues tagged with this change.
-        let label_arg = format!("--label=openspec:{change_id}");
-        let json_out = match invoke_bd_in_project(
-            bd_path,
-            &["list", &label_arg, "--json"],
-            project_path,
-            server_registry,
-            dolt_path_override,
-            std::time::Duration::from_secs(10),
-        )
-        .await
-        {
-            Ok(s) => s,
-            Err(e) => {
-                report
-                    .errors
-                    .push(format!("{change_id}: bd list failed: {e}"));
-                continue;
-            }
-        };
-
-        let issues: Vec<serde_json::Value> = serde_json::from_str(&json_out).unwrap_or_default();
+        let label = format!("openspec:{change_id}");
+        let issues: Vec<_> = all_issues
+            .iter()
+            .filter(|v| v["status"] != "deleted" && issue_labels(v).contains(&label))
+            .collect();
 
         // Build task_num → is_closed map from issue titles.
         let mut status_map: std::collections::HashMap<String, bool> =
@@ -714,18 +657,12 @@ pub async fn reconcile_tasks_checkboxes(
 #[specta::specta]
 pub async fn reconcile_openspec_checkboxes(
     project_path: String,
-    settings: tauri::State<'_, Arc<Mutex<AppSettings>>>,
-    server_registry: tauri::State<'_, Arc<DoltServerRegistry>>,
+    _settings: tauri::State<'_, Arc<Mutex<AppSettings>>>,
+    _server_registry: tauri::State<'_, Arc<DoltServerRegistry>>,
+    registry: tauri::State<'_, Arc<ProjectRegistry>>,
 ) -> Result<SyncReport, String> {
-    let (bd_path_override, dolt_path_override) = {
-        let guard = settings.lock().unwrap();
-        (
-            guard.binary_paths.bd.clone(),
-            guard.binary_paths.dolt.clone(),
-        )
-    };
-    let bd = find_bd(&bd_path_override).ok_or_else(|| "bd CLI not found".to_string())?;
-    Ok(reconcile_tasks_checkboxes(&project_path, &bd, &server_registry, &dolt_path_override).await)
+    let source = registry.get(&project_path).await?;
+    Ok(reconcile_tasks_checkboxes(&project_path, &source).await)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -733,6 +670,48 @@ pub async fn reconcile_openspec_checkboxes(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn beads_progress_counts_closed_and_gate_tasks_with_feature_epic() {
+        let issues = serde_json::json!([
+            {"id":"B-epic","issue_type":"feature","status":"closed","labels":["openspec:change"]},
+            {"id":"B-done","issue_type":"task","status":"closed","labels":["openspec:change"]},
+            {"id":"B-gate","issue_type":"gate","status":"open","labels":["openspec:change"]},
+            {"id":"B-deleted","issue_type":"task","status":"deleted","labels":["openspec:change"]},
+            {"id":"B-other","issue_type":"task","status":"closed","labels":["openspec:other"]}
+        ]);
+        let progress = change_beads_progress(issues.as_array().unwrap(), "change");
+        assert_eq!(progress.done, 1);
+        assert_eq!(progress.total, 2);
+        assert_eq!(progress.epic_id.as_deref(), Some("B-epic"));
+    }
+
+    #[test]
+    fn change_links_preserve_direction_dedup_and_skip_missing_nonchange_or_self_targets() {
+        let issues = serde_json::json!([
+            {"id":"B-center","issue_type":"epic","status":"open","labels":["openspec:center"]},
+            {"id":"B-up","issue_type":"feature","status":"closed","labels":["openspec:up"]},
+            {"id":"B-down","issue_type":"epic","status":"open","labels":["openspec:down"]},
+            {"id":"B-task","issue_type":"task","status":"open","labels":["openspec:task"]}
+        ]);
+        let edges = serde_json::json!([
+            {"issue_id":"B-center","depends_on_id":"B-up"},
+            {"issue_id":"B-center","depends_on_id":"B-up"},
+            {"issue_id":"B-down","depends_on_id":"B-center"},
+            {"issue_id":"B-center","depends_on_id":"external:missing"},
+            {"issue_id":"B-center","depends_on_id":"B-center"},
+            {"issue_id":"B-center","depends_on_id":"B-task"}
+        ]);
+        let links = change_dependency_links(
+            issues.as_array().unwrap(),
+            edges.as_array().unwrap(),
+            "B-center",
+        );
+        assert_eq!(links.upstream.len(), 1);
+        assert_eq!(links.upstream[0].slug, "up");
+        assert_eq!(links.downstream.len(), 1);
+        assert_eq!(links.downstream[0].epic_id, "B-down");
+    }
 
     #[test]
     fn parse_progress_counts_only_numbered_tasks() {
