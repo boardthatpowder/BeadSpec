@@ -5,9 +5,7 @@
 Defines the global data-refresh action that lets users force an immediate re-fetch of all active TanStack Query caches without restarting the app.
 
 ---
-
 ## Requirements
-
 ### Requirement: Global refresh action
 The app SHALL provide a global refresh action that invalidates all TanStack Query caches, forcing an immediate re-fetch of all active queries. The action SHALL be reachable via the TopBar button, a keyboard shortcut (`Cmd+R` on macOS / `Ctrl+R` on Windows/Linux), and the CommandPalette.
 
@@ -40,3 +38,10 @@ The refresh action SHALL not change the current view, close any open panels, or 
 #### Scenario: Refresh preserves current view
 - **WHEN** the user triggers a refresh while on the "Ready" view with a task selected
 - **THEN** the view remains "Ready", the task remains selected, and only the data updates
+
+### Requirement: Project reconciliation on focus and interval
+The system SHALL refresh all project-owned active caches every 30 seconds, on focus and on existing manual refresh without changing selection, navigation, tabs or scroll state.
+
+#### Scenario: Focus refresh
+- **WHEN** the application regains focus
+- **THEN** active project data SHALL reconcile while UI state remains intact

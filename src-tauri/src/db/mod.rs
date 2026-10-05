@@ -3,3 +3,5 @@ pub mod poller;
 pub mod pool;
 pub mod recovery;
 pub mod watchers;
+
+pub mod sse;

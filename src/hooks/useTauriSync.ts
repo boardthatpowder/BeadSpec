@@ -1,76 +1,37 @@
-import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { listen } from "@tauri-apps/api/event";
+import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { listen } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invalidateProjectData } from './projectInvalidation'
+import type { ProjectBackendStatus } from '../ipc'
 
 interface TasksChangedPayload {
-  project: string;
-  task_ids: string[];
+  project: string
+  task_ids: string[]
 }
 
-interface TaskListChangedPayload {
-  project: string;
-}
-
-/**
- * Listens for Dolt real-time events from the Rust poller and invalidates
- * TanStack Query cache entries accordingly.
- *
- * Call once at the app root — inside the QueryClientProvider.
- */
+/** Journal events and focus reconcile all issue-derived views in this workspace. */
 export function useTauriSync(activeProject?: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    // Listen for targeted task changes — invalidate only those task queries
-    const unlistenChanged = listen<TasksChangedPayload>(
-      "tasks_changed",
-      (event) => {
-        const { project, task_ids } = event.payload;
-        if (activeProject && project !== activeProject) return;
-
-        // Invalidate each changed task's detail query
-        task_ids.forEach((id) => {
-          queryClient.invalidateQueries({ queryKey: ["task", project, id] });
-        });
-
-        // Also invalidate the list (changed tasks affect filters/KPIs)
-        queryClient.invalidateQueries({
-          queryKey: ["tasks", project],
-          exact: false,
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["worker-findings", project],
-        });
-      },
-    );
-
-    // Listen for full list refresh (structural changes)
-    const unlistenListChanged = listen<TaskListChangedPayload>(
-      "task_list_changed",
-      (event) => {
-        const { project } = event.payload;
-        if (activeProject && project !== activeProject) return;
-
-        queryClient.invalidateQueries({
-          queryKey: ["tasks", project],
-          exact: false,
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["worker-findings", project],
-        });
-      },
-    );
-
-    // Listen for bd not found startup event
-    const unlistenBdNotFound = listen("bd_not_found", () => {
-      console.warn("[BeadSpec] bd CLI not found — write operations will fail");
-      // The UI will show this via the bd_not_found event handler (added in 9.x)
-    });
-
+    const refresh = (project: string) => {
+      if (activeProject && project !== activeProject) return
+      void invalidateProjectData(queryClient, project)
+    }
+    const listeners = [
+      listen<TasksChangedPayload>('tasks_changed', event => refresh(event.payload.project)),
+      listen<{ project: string }>('task_list_changed', event => refresh(event.payload.project)),
+      listen<ProjectBackendStatus>('project_backend_status_changed', event => {
+        queryClient.setQueryData(['project-backend-status', event.payload.project_path], event.payload)
+      }),
+      listen('bd_not_found', () => console.warn('[BeadSpec] bd CLI not found — install Beads 1.3 or newer')),
+      getCurrentWindow().onFocusChanged(event => {
+        if (event.payload && activeProject) refresh(activeProject)
+      }),
+    ]
     return () => {
-      unlistenChanged.then((fn) => fn());
-      unlistenListChanged.then((fn) => fn());
-      unlistenBdNotFound.then((fn) => fn());
-    };
-  }, [queryClient, activeProject]);
+      listeners.forEach(listener => { void listener.then(unlisten => unlisten()).catch(() => {}) })
+    }
+  }, [queryClient, activeProject])
 }

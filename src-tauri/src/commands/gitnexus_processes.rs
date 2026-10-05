@@ -2,7 +2,6 @@ use crate::bd::runner::spawn_managed;
 use crate::db::pool::ProjectRegistry;
 use crate::events::activity::{emit_event, ActivityEvent};
 use serde_json::Value;
-use sqlx::Row;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -406,23 +405,21 @@ pub async fn find_issues_touching_process(
     if process_files.is_empty() {
         return Ok(vec![]);
     }
-    let pool = registry
+    let source = registry
         .get(&project_path)
         .await
         .map_err(|_| format!("project_not_connected: '{project_path}'"))?;
-    let rows = sqlx::query(
-        "SELECT DISTINCT i.id, i.title \
-         FROM issues i JOIN labels l ON l.issue_id = i.id \
-         WHERE i.status != 'deleted' AND l.label LIKE 'branch:%' LIMIT 200",
-    )
-    .fetch_all(pool.pool())
-    .await
-    .map_err(|e| format!("Query failed: {e}"))?;
+    let issues = source.list_issues().await?;
 
     let mut matches = Vec::new();
-    for row in rows {
-        let id: String = row.try_get("id").unwrap_or_default();
-        let title: String = row.try_get("title").unwrap_or_default();
+    for issue in issues.iter().filter(|issue| {
+        issue["status"] != "deleted"
+            && crate::commands::read::issue_labels(issue)
+                .iter()
+                .any(|label| label.starts_with("branch:"))
+    }) {
+        let id = crate::commands::read::string_field(issue, "id");
+        let title = crate::commands::read::string_field(issue, "title");
         let files = files_for_issue(&project_path, &id).await;
         let overlap = files.intersection(&process_files).count() as u32;
         if overlap > 0 {

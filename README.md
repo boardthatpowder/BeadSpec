@@ -18,7 +18,7 @@
 - **Stay in flow** — a global quick-capture shortcut and system tray let you log issues without switching apps.
 - **Spec-first** — BeadSpec is the only Beads GUI that surfaces [OpenSpec](https://github.com/gastownhall/openspec) change proposals alongside your task list. Browse in-flight specs, see which Beads issues were imported from a change, and validate implementation status — without leaving the app. If you use OpenSpec to drive development, BeadSpec closes the loop between "what we agreed to build" and "what's been built."
 
-BeadSpec is a frontend. The `bd` CLI remains the source of truth — BeadSpec reads Dolt SQL directly for speed and writes through `bd` to preserve its hook logic, ID assignment, and branch tracking.
+BeadSpec is a frontend. The `bd` CLI remains the source of truth — BeadSpec uses the local Beads HTTP API for supported reads and writes, with native `bd` commands for embedded projects and operations that need hooks or command-side maintenance. Beads 1.3 or newer is required.
 
 ---
 
@@ -37,7 +37,7 @@ BeadSpec is a frontend. The `bd` CLI remains the source of truth — BeadSpec re
 | Quick capture | Global shortcut opens a floating issue-creation window |
 | System tray | Create issues from the menu bar without opening the app |
 | Rich description editor | TipTap Markdown editor with slash commands and task references |
-| Real-time sync | Auto-refreshes via `dolt_log()` polling — no manual refresh needed |
+| Real-time sync | Journal updates with a 30-second full refresh, plus focus and manual refresh |
 | Multi-project | Switch between Beads repos; each gets its own isolated connection |
 | Keyboard shortcuts | Platform-aware (Cmd on macOS, Ctrl elsewhere) throughout |
 | Recovery dialog | Detects and recovers from Dolt server crashes automatically |
@@ -76,7 +76,7 @@ Download the latest installer from the [Releases page](https://github.com/boardt
 | Windows | `.msi` or `.exe` |
 | Linux | `.AppImage`, `.deb`, or `.rpm` |
 
-**Before launching BeadSpec, install `bd`** — it provides the database layer (`dolt` is provisioned automatically by `bd` on first run):
+**Before launching BeadSpec, install `bd` 1.3 or newer** — it provides the database layer (`dolt` is provisioned automatically by `bd` on first run):
 
 | Platform | Command |
 |---|---|
@@ -100,7 +100,9 @@ If BeadSpec can't find `bd` on launch, a setup dialog appears where you can spec
 
 2. Launch BeadSpec and open the project folder when prompted.
 
-3. Your issues, dependencies, and views appear immediately. Use `bd` in the terminal for scripting and automation; use BeadSpec for visual work.
+3. Open **bd Health** to see read/write transport and live-update status. Choose **Enable live updates** to opt this project into journaling; BeadSpec does not change journal settings automatically. Without journaling, complete refreshes run every 30 seconds and on focus or manual refresh.
+
+4. Your issues, dependencies, and views appear immediately. Use `bd` in the terminal for scripting and automation; use BeadSpec for visual work.
 
 ---
 
@@ -110,8 +112,8 @@ BeadSpec is a **visual frontend** for `bd`. It does not replace the CLI — they
 
 | Operation | How |
 |---|---|
-| Creating / editing issues | BeadSpec calls `bd` under the hood (preserves hooks + ID logic) |
-| Querying / filtering | BeadSpec reads Dolt SQL directly (fast, no CLI overhead) |
+| Creating / editing issues | Local Beads API, or native `bd` when hooks or project policies require it |
+| Querying / filtering | Local Beads API, with native CLI reads for embedded projects |
 | Scripting / automation | Use `bd` directly in the terminal |
 | Branching / merging | Use `bd` (BeadSpec shows the result) |
 

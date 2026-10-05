@@ -1,6 +1,8 @@
 # Dolt Recovery
 
-BeadSpec starts a Dolt SQL server process in the background when you open a project. If that process stops unexpectedly, BeadSpec detects the problem automatically and shows a recovery dialog.
+BeadSpec opens projects through the Beads data source. Supported projects use an app-owned loopback `bd serve`; embedded projects use native CLI commands without a BeadSpec Dolt sidecar. Open **bd Health** for current transport, live-update status and connection errors.
+
+The Dolt recovery tools below remain available for database diagnostics where applicable.
 
 ## Recovery dialog
 
@@ -26,4 +28,4 @@ A log of all recovery events (including timestamps and exit codes) is kept for t
 
 ## Troubleshooting
 
-See [Troubleshooting → Dolt server crash](/guide/troubleshooting#dolt-server-crash--recovery-dialog) for more detail.
+See [Troubleshooting → Beads connection fails](/guide/troubleshooting#beads-connection-fails) for more detail.

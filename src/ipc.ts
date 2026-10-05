@@ -4,6 +4,7 @@ export { commands } from './bindings'
 import { commands } from './bindings'
 import type {
   ActivityEvent,
+  ProjectBackendStatus,
   ChangeBeadsProgress,
   ChangeDependencies,
   ChangeInfo,
@@ -143,4 +144,14 @@ export function getEpicReadySnapshot(projectPath: string, epicId: string): Promi
 
 export function claimTask(projectPath: string, taskId: string): Promise<Task> {
   return unwrap(commands.claimTask(projectPath, taskId))
+}
+
+export type { ProjectBackendStatus } from './bindings'
+
+export function getProjectBackendStatus(projectPath: string): Promise<ProjectBackendStatus> {
+  return unwrap(commands.getProjectBackendStatus(projectPath))
+}
+
+export function enableProjectJournal(projectPath: string): Promise<ProjectBackendStatus> {
+  return unwrap(commands.enableProjectJournal(projectPath))
 }

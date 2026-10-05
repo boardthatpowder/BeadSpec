@@ -1,14 +1,9 @@
+use crate::bd::api::BeadsDataSource;
 use crate::commands::workers::{parse_worker_provenance, WorkerProvenance};
 use crate::db::pool::ProjectRegistry;
-use sqlx::Row;
+use serde_json::Value;
 use std::sync::Arc;
 use tauri::State;
-
-pub(crate) fn decode_datetime(row: &sqlx::mysql::MySqlRow, col: &str) -> String {
-    row.try_get::<sqlx::types::chrono::NaiveDateTime, _>(col)
-        .map(|dt| dt.and_utc().to_rfc3339())
-        .unwrap_or_default()
-}
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -25,10 +20,6 @@ pub struct Task {
     pub created_at: String,
     pub updated_at: String,
 }
-
-const TASK_WORKER_NOTES_FIRST_LINE_SQL: &str = "CASE WHEN notes LIKE 'Auto-filed by ruflo-%' \
-     THEN SUBSTRING_INDEX(notes, CHAR(10), 1) \
-     ELSE NULL END AS worker_notes_first_line";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct TaskDetail {
@@ -80,7 +71,109 @@ pub struct TasksResponse {
     pub total_count: u32,
 }
 
-// ── Commands ──────────────────────────────────────────────────────────────────
+pub(crate) fn string_field(value: &Value, field: &str) -> String {
+    value[field].as_str().unwrap_or_default().to_string()
+}
+
+pub(crate) fn compare_timestamps(a: &str, b: &str) -> std::cmp::Ordering {
+    use sqlx::types::chrono::DateTime;
+    match (
+        DateTime::parse_from_rfc3339(a),
+        DateTime::parse_from_rfc3339(b),
+    ) {
+        (Ok(a), Ok(b)) => a.cmp(&b),
+        _ => a.cmp(b),
+    }
+}
+
+pub(crate) fn issue_labels(value: &Value) -> Vec<String> {
+    let mut labels: Vec<_> = value["labels"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(ToOwned::to_owned)
+        .collect();
+    labels.sort();
+    labels.dedup();
+    labels
+}
+
+pub(crate) fn task_from_issue(value: &Value) -> Task {
+    Task {
+        id: string_field(value, "id"),
+        title: string_field(value, "title"),
+        status: string_field(value, "status"),
+        priority: value["priority"].as_i64().unwrap_or(2) as i32,
+        task_type: value["issue_type"].as_str().unwrap_or("task").to_string(),
+        assignee: value["assignee"].as_str().map(ToOwned::to_owned),
+        labels: issue_labels(value),
+        worker_provenance: value["notes"].as_str().and_then(parse_worker_provenance),
+        created_at: string_field(value, "created_at"),
+        updated_at: string_field(value, "updated_at"),
+    }
+}
+
+fn merge_filters(direct: Option<Vec<String>>, legacy: Option<&Vec<String>>) -> Vec<String> {
+    let mut values = direct.unwrap_or_default();
+    for value in legacy.into_iter().flatten() {
+        if !values.contains(value) {
+            values.push(value.clone());
+        }
+    }
+    values
+}
+
+fn filter_tasks(
+    mut tasks: Vec<Task>,
+    filters: Option<TaskFilters>,
+    status_filter: Option<Vec<String>>,
+    label_filter: Option<Vec<String>>,
+    sort_col: Option<String>,
+    sort_dir: Option<String>,
+) -> TasksResponse {
+    let statuses = merge_filters(status_filter, filters.as_ref().map(|f| &f.status));
+    let labels = merge_filters(label_filter, filters.as_ref().map(|f| &f.labels));
+    let search = filters
+        .as_ref()
+        .and_then(|f| f.search.as_ref())
+        .map(|query| query.to_lowercase());
+    tasks.retain(|task| {
+        task.status != "deleted"
+            && (statuses.is_empty() || statuses.contains(&task.status))
+            && labels.iter().all(|label| task.labels.contains(label))
+            && filters.as_ref().is_none_or(|f| {
+                (f.priority.is_empty() || f.priority.contains(&task.priority))
+                    && search.as_ref().is_none_or(|query| {
+                        task.id.to_lowercase().contains(query)
+                            || task.title.to_lowercase().contains(query)
+                    })
+            })
+    });
+    let ascending = sort_dir
+        .as_deref()
+        .is_some_and(|s| s.eq_ignore_ascii_case("asc"));
+    tasks.sort_by(|a, b| {
+        let primary = match sort_col.as_deref().unwrap_or("priority") {
+            "status" => a.status.to_lowercase().cmp(&b.status.to_lowercase()),
+            "title" => a.title.to_lowercase().cmp(&b.title.to_lowercase()),
+            "created_at" => compare_timestamps(&a.created_at, &b.created_at),
+            _ => a.priority.cmp(&b.priority),
+        };
+        let primary = if ascending {
+            primary
+        } else {
+            primary.reverse()
+        };
+        primary
+            .then_with(|| compare_timestamps(&b.created_at, &a.created_at))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    TasksResponse {
+        total_count: tasks.len() as u32,
+        tasks,
+    }
+}
 
 #[tauri::command]
 #[specta::specta]
@@ -93,174 +186,40 @@ pub async fn list_tasks(
     sort_dir: Option<String>,
     registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<TasksResponse, String> {
-    let pool = registry
+    let source = registry
         .get(&project_path)
         .await
         .map_err(|_| not_connected(&project_path))?;
-
-    // ── Validate / normalise sort parameters ──────────────────────────────────
-    let safe_col = match sort_col.as_deref().unwrap_or("priority") {
-        "priority" => "priority",
-        "status" => "status",
-        "title" => "title",
-        "created_at" => "created_at",
-        _ => "priority",
-    };
-    let safe_dir = if sort_dir
-        .as_deref()
-        .unwrap_or("DESC")
-        .eq_ignore_ascii_case("asc")
-    {
-        "ASC"
-    } else {
-        "DESC"
-    };
-
-    // ── Merge legacy TaskFilters into the individual filter params ────────────
-    // Legacy callers may pass filters.status / filters.labels; new callers use
-    // status_filter / label_filter directly.  Merge so both code paths work.
-    let effective_status: Option<Vec<String>> = {
-        let mut combined: Vec<String> = status_filter.unwrap_or_default();
-        if let Some(ref f) = filters {
-            for s in &f.status {
-                if !combined.contains(s) {
-                    combined.push(s.clone());
-                }
-            }
-        }
-        if combined.is_empty() {
-            None
-        } else {
-            Some(combined)
-        }
-    };
-
-    let effective_labels: Option<Vec<String>> = {
-        let mut combined: Vec<String> = label_filter.unwrap_or_default();
-        if let Some(ref f) = filters {
-            for l in &f.labels {
-                if !combined.contains(l) {
-                    combined.push(l.clone());
-                }
-            }
-        }
-        if combined.is_empty() {
-            None
-        } else {
-            Some(combined)
-        }
-    };
-
-    // ── Data query ────────────────────────────────────────────────────────────
-    let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
-        "SELECT id, title, status, priority, issue_type, assignee, ",
-    );
-    qb.push(TASK_WORKER_NOTES_FIRST_LINE_SQL);
-    qb.push(", created_at, updated_at FROM issues WHERE status != 'deleted'");
-
-    // status_filter → WHERE status IN (...)
-    if let Some(ref statuses) = effective_status {
-        if !statuses.is_empty() {
-            qb.push(" AND status IN (");
-            let mut sep = qb.separated(", ");
-            for s in statuses {
-                sep.push_bind(s);
-            }
-            qb.push(")");
-        }
-    }
-
-    // label_filter → WHERE id IN (SELECT issue_id FROM labels WHERE label IN (...) GROUP BY … HAVING …)
-    if let Some(ref labels) = effective_labels {
-        if !labels.is_empty() {
-            qb.push(" AND id IN (SELECT issue_id FROM labels WHERE label IN (");
-            let mut sep = qb.separated(", ");
-            for l in labels {
-                sep.push_bind(l);
-            }
-            qb.push(format!(
-                ") GROUP BY issue_id HAVING COUNT(DISTINCT label) = {})",
-                labels.len()
-            ));
-        }
-    }
-
-    // ORDER BY
-    qb.push(format!(
-        " ORDER BY {} {}, created_at DESC, id ASC",
-        safe_col, safe_dir
-    ));
-
-    let rows = qb
-        .build()
-        .fetch_all(pool.pool())
-        .await
-        .map_err(|e| format!("Query failed: {e}"))?;
-
-    let mut tasks: Vec<Task> = rows
+    let tasks = source
+        .list_issues()
+        .await?
         .iter()
-        .map(|r| Task {
-            id: r.try_get("id").unwrap_or_default(),
-            title: r.try_get("title").unwrap_or_default(),
-            status: r.try_get("status").unwrap_or_default(),
-            priority: r.try_get::<i32, _>("priority").unwrap_or(2),
-            task_type: r.try_get("issue_type").unwrap_or_else(|_| "task".into()),
-            assignee: r.try_get("assignee").ok(),
-            labels: vec![], // fetched below
-            worker_provenance: r
-                .try_get::<Option<String>, _>("worker_notes_first_line")
-                .ok()
-                .flatten()
-                .and_then(|notes_first_line| parse_worker_provenance(&notes_first_line)),
-            created_at: decode_datetime(r, "created_at"),
-            updated_at: decode_datetime(r, "updated_at"),
-        })
+        .map(task_from_issue)
         .collect();
+    Ok(filter_tasks(
+        tasks,
+        filters,
+        status_filter,
+        label_filter,
+        sort_col,
+        sort_dir,
+    ))
+}
 
-    // Fetch labels for all tasks in one query using bound parameters (Task 6.1)
-    if !tasks.is_empty() {
-        let mut lqb = sqlx::QueryBuilder::<sqlx::MySql>::new(
-            "SELECT issue_id, label FROM labels WHERE issue_id IN (",
-        );
-        let mut sep = lqb.separated(", ");
-        for task in &tasks {
-            sep.push_bind(&task.id);
+pub(crate) fn dependency_ids(edges: &[Value], issue_id: &str) -> (Vec<String>, Vec<String>) {
+    let mut dependencies = Vec::new();
+    let mut dependents = Vec::new();
+    for edge in edges {
+        let from = edge["issue_id"].as_str().unwrap_or_default();
+        let to = edge["depends_on_id"].as_str().unwrap_or_default();
+        if from == issue_id && !dependencies.iter().any(|id| id == to) {
+            dependencies.push(to.to_string());
         }
-        lqb.push(")");
-        if let Ok(label_rows) = lqb.build().fetch_all(pool.pool()).await {
-            for row in label_rows {
-                let issue_id: String = row.try_get("issue_id").unwrap_or_default();
-                let label: String = row.try_get("label").unwrap_or_default();
-                if let Some(task) = tasks.iter_mut().find(|t| t.id == issue_id) {
-                    task.labels.push(label);
-                }
-            }
-        }
-    }
-
-    // Apply any remaining client-side search filter (text search not yet in SQL)
-    if let Some(ref f) = filters {
-        if !f.priority.is_empty() || f.search.is_some() {
-            tasks.retain(|t| {
-                if !f.priority.is_empty() && !f.priority.contains(&t.priority) {
-                    return false;
-                }
-                if let Some(ref q) = f.search {
-                    let q_lower = q.to_lowercase();
-                    if !t.title.to_lowercase().contains(&q_lower)
-                        && !t.id.to_lowercase().contains(&q_lower)
-                    {
-                        return false;
-                    }
-                }
-                true
-            });
+        if to == issue_id && !dependents.iter().any(|id| id == from) {
+            dependents.push(from.to_string());
         }
     }
-
-    let total_count = tasks.len() as u32;
-
-    Ok(TasksResponse { tasks, total_count })
+    (dependencies, dependents)
 }
 
 #[tauri::command]
@@ -270,70 +229,38 @@ pub async fn get_task(
     issue_id: String,
     registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<TaskDetail, String> {
-    let pool = registry
+    let source = registry
         .get(&project_path)
         .await
         .map_err(|_| not_connected(&project_path))?;
-
-    let row = sqlx::query(
-        "SELECT id, title, status, priority, issue_type, assignee, description, created_at, updated_at \
-         FROM issues WHERE id = ? LIMIT 1",
-    )
-    .bind(&issue_id)
-    .fetch_one(pool.pool())
-    .await
-    .map_err(|e| format!("Task not found: {e}"))?;
-
-    // Fetch labels
-    let labels: Vec<String> =
-        sqlx::query("SELECT label FROM labels WHERE issue_id = ? ORDER BY label")
-            .bind(&issue_id)
-            .fetch_all(pool.pool())
-            .await
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|r| r.try_get("label").ok())
-            .collect();
-
-    // Fetch dependencies (issues this task depends on)
-    let dependencies: Vec<String> =
-        sqlx::query("SELECT depends_on_id FROM dependencies WHERE issue_id = ?")
-            .bind(&issue_id)
-            .fetch_all(pool.pool())
-            .await
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|r| r.try_get("depends_on_id").ok())
-            .collect();
-
-    // Fetch dependents (issues that depend on this task)
-    let dependents: Vec<String> =
-        sqlx::query("SELECT issue_id FROM dependencies WHERE depends_on_id = ?")
-            .bind(&issue_id)
-            .fetch_all(pool.pool())
-            .await
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|r| r.try_get("issue_id").ok())
-            .collect();
-
+    let issue = source.get_issue(&issue_id).await?;
+    let mut ids: Vec<_> = source
+        .list_issues()
+        .await?
+        .iter()
+        .filter_map(|v| v["id"].as_str().map(ToOwned::to_owned))
+        .collect();
+    if !ids.contains(&issue_id) {
+        ids.push(issue_id.clone());
+    }
+    let edges = source.dependencies(&ids).await?;
+    let (dependencies, dependents) = dependency_ids(&edges, &issue_id);
+    let task = task_from_issue(&issue);
     Ok(TaskDetail {
-        id: row.try_get("id").unwrap_or_default(),
-        title: row.try_get("title").unwrap_or_default(),
-        status: row.try_get("status").unwrap_or_default(),
-        priority: row.try_get::<i32, _>("priority").unwrap_or(2),
-        task_type: row.try_get("issue_type").unwrap_or_else(|_| "task".into()),
-        assignee: row.try_get("assignee").ok(),
-        description: row.try_get("description").ok(),
-        labels,
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        priority: task.priority,
+        task_type: task.task_type,
+        assignee: task.assignee,
+        description: issue["description"].as_str().map(ToOwned::to_owned),
+        labels: task.labels,
         dependencies,
         dependents,
-        created_at: decode_datetime(&row, "created_at"),
-        updated_at: decode_datetime(&row, "updated_at"),
+        created_at: task.created_at,
+        updated_at: task.updated_at,
     })
 }
-
-// ── Search ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct SearchResult {
@@ -360,38 +287,19 @@ fn fuzzy_match(haystack: &str, needle: &str) -> bool {
     true
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn search_tasks(
-    project_path: String,
-    query: String,
-    registry: State<'_, Arc<ProjectRegistry>>,
-) -> Result<Vec<SearchResult>, String> {
+fn search_issue_values(issues: &[Value], query: &str) -> Vec<SearchResult> {
     if query.trim().is_empty() {
-        return Ok(vec![]);
+        return Vec::new();
     }
-    let pool = registry
-        .get(&project_path)
-        .await
-        .map_err(|_| not_connected(&project_path))?;
     let q = query.to_lowercase();
-
-    let rows =
-        sqlx::query("SELECT id, title, status FROM issues WHERE status != 'deleted' LIMIT 2000")
-            .fetch_all(pool.pool())
-            .await
-            .map_err(|e| format!("Query failed: {e}"))?;
-
-    let mut results: Vec<SearchResult> = rows
+    let mut results: Vec<_> = issues
         .iter()
-        .filter_map(|r| {
-            let id: String = r.try_get("id").unwrap_or_default();
-            let title: String = r.try_get("title").unwrap_or_default();
-            let status: String = r.try_get("status").unwrap_or_default();
-
+        .filter(|v| v["status"] != "deleted")
+        .filter_map(|issue| {
+            let id = string_field(issue, "id");
+            let title = string_field(issue, "title");
             let id_lower = id.to_lowercase();
             let title_lower = title.to_lowercase();
-
             let score = if id_lower == q || title_lower == q {
                 100
             } else if id_lower.starts_with(&q) || title_lower.starts_with(&q) {
@@ -403,19 +311,201 @@ pub async fn search_tasks(
             } else {
                 return None;
             };
-
             Some(SearchResult {
                 id,
                 title,
-                status,
+                status: string_field(issue, "status"),
                 score,
             })
         })
         .collect();
-
     results.sort_by_key(|a| std::cmp::Reverse(a.score));
     results.truncate(20);
-    Ok(results)
+    results
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn search_tasks(
+    project_path: String,
+    query: String,
+    registry: State<'_, Arc<ProjectRegistry>>,
+) -> Result<Vec<SearchResult>, String> {
+    if query.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let source = registry
+        .get(&project_path)
+        .await
+        .map_err(|_| not_connected(&project_path))?;
+    Ok(search_issue_values(&source.list_issues().await?, &query))
+}
+
+fn value_text(value: &Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(s) => Some(s.clone()),
+        _ => Some(value.to_string()),
+    }
+}
+
+fn event_value(value: &Value, field: &str) -> Option<String> {
+    let raw = value.as_str()?;
+    match serde_json::from_str::<Value>(raw) {
+        Ok(Value::Object(object)) => object.get(field).and_then(value_text),
+        _ => Some(raw.to_string()),
+    }
+}
+
+pub(crate) fn task_history_from_values(
+    events: &[Value],
+    snapshots: &[Value],
+    comments: &[Value],
+) -> Vec<HistoryEntry> {
+    let mut entries: Vec<_> = comments
+        .iter()
+        .map(|comment| HistoryEntry {
+            id: value_text(&comment["id"]).unwrap_or_default(),
+            field: "comment".to_string(),
+            old_value: None,
+            new_value: None,
+            actor: comment["author"].as_str().unwrap_or("unknown").to_string(),
+            timestamp: string_field(comment, "created_at"),
+            entry_type: "comment".to_string(),
+            body: comment["text"].as_str().map(ToOwned::to_owned),
+        })
+        .collect();
+    for event in events {
+        let event_type = event["event_type"].as_str().unwrap_or_default();
+        // Native comments are the source of comment IDs; audit rows would duplicate them.
+        if event_type == "commented" {
+            continue;
+        }
+        let fields: &[&str] = match event_type {
+            "created" | "status_changed" | "closed" | "reopened" => &["status"],
+            "claimed" => &["status", "assignee"],
+            "label_added" | "label_removed" => &["labels"],
+            "dependency_added" | "dependency_removed" => &["dependencies"],
+            "updated" => &[
+                "title",
+                "status",
+                "priority",
+                "assignee",
+                "description",
+                "notes",
+            ],
+            _ => &[],
+        };
+        for field in fields {
+            if matches!(event_type, "updated" | "claimed") {
+                let patch = event["new_value"]
+                    .as_str()
+                    .and_then(|raw| serde_json::from_str::<Value>(raw).ok());
+                if !patch
+                    .as_ref()
+                    .and_then(Value::as_object)
+                    .is_some_and(|object| object.contains_key(*field))
+                {
+                    continue;
+                }
+            }
+            let old = event_value(&event["old_value"], field);
+            let new = event_value(&event["new_value"], field);
+            if old == new {
+                continue;
+            }
+            entries.push(HistoryEntry {
+                id: format!(
+                    "event-{}-{field}",
+                    value_text(&event["id"]).unwrap_or_default()
+                ),
+                field: (*field).to_string(),
+                old_value: old,
+                new_value: new,
+                actor: event["actor"].as_str().unwrap_or("beads").to_string(),
+                timestamp: string_field(event, "created_at"),
+                entry_type: if *field == "labels" {
+                    "label_change"
+                } else {
+                    "field_change"
+                }
+                .to_string(),
+                body: None,
+            });
+        }
+    }
+    // Audit old/new values are absent for some writers; snapshots fill those status gaps.
+    let mut snapshots: Vec<_> = snapshots
+        .iter()
+        .filter(|v| v["Issue"].is_object())
+        .collect();
+    snapshots.sort_by(|a, b| {
+        compare_timestamps(
+            &string_field(a, "CommitDate"),
+            &string_field(b, "CommitDate"),
+        )
+    });
+    let mut previous: Option<String> = None;
+    let mut previous_time = None;
+    for snapshot in snapshots {
+        let new = snapshot["Issue"]["status"].as_str().map(ToOwned::to_owned);
+        let timestamp = string_field(snapshot, "CommitDate");
+        let commit_time = sqlx::types::chrono::DateTime::parse_from_rfc3339(&timestamp)
+            .ok()
+            .map(|date| date.timestamp());
+        // Commit dates have second precision; audit events can retain subsecond precision.
+        let covered_by_audit = entries.iter().any(|entry| {
+            entry.field == "status"
+                && entry.id.starts_with("event-")
+                && entry.old_value == previous
+                && entry.new_value == new
+                && match (
+                    sqlx::types::chrono::DateTime::parse_from_rfc3339(&entry.timestamp).ok(),
+                    commit_time,
+                ) {
+                    (Some(event_time), Some(commit_time)) => {
+                        event_time.timestamp() <= commit_time + 1
+                            && previous_time.is_none_or(|previous_time| {
+                                event_time.timestamp() >= previous_time - 1
+                            })
+                    }
+                    _ => entry.timestamp == timestamp,
+                }
+        });
+        if new != previous && !covered_by_audit {
+            entries.push(HistoryEntry {
+                id: format!("commit-status-{}", string_field(snapshot, "CommitHash")),
+                field: "status".to_string(),
+                old_value: previous.clone(),
+                new_value: new.clone(),
+                actor: snapshot["Committer"]
+                    .as_str()
+                    .unwrap_or("beads")
+                    .to_string(),
+                timestamp,
+                entry_type: "field_change".to_string(),
+                body: None,
+            });
+        }
+        previous = new;
+        previous_time = commit_time;
+    }
+    entries.sort_by(|a, b| {
+        compare_timestamps(&a.timestamp, &b.timestamp).then_with(|| a.id.cmp(&b.id))
+    });
+    entries
+}
+
+async fn cli_values(source: &BeadsDataSource, args: &[&str]) -> Result<Vec<Value>, String> {
+    let value: Value = serde_json::from_str(&source.run_cli(args).await?)
+        .map_err(|e| format!("Invalid bd JSON: {e}"))?;
+    if value.is_null() {
+        return Ok(Vec::new());
+    }
+    value
+        .as_array()
+        .cloned()
+        .ok_or_else(|| "Invalid bd JSON: expected an array".to_string())
 }
 
 #[tauri::command]
@@ -425,113 +515,184 @@ pub async fn get_task_history(
     issue_id: String,
     registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<Vec<HistoryEntry>, String> {
-    let pool = registry
+    let source = registry
         .get(&project_path)
         .await
         .map_err(|_| not_connected(&project_path))?;
-
-    // Fetch comments
-    let comment_rows = sqlx::query(
-        "SELECT id, author, text, created_at FROM comments \
-         WHERE issue_id = ? ORDER BY created_at ASC",
-    )
-    .bind(&issue_id)
-    .fetch_all(pool.pool())
-    .await
-    .unwrap_or_default();
-
-    let mut entries: Vec<HistoryEntry> = comment_rows
-        .iter()
-        .map(|r| HistoryEntry {
-            id: r.try_get("id").unwrap_or_default(),
-            field: "comment".into(),
-            old_value: None,
-            new_value: None,
-            actor: r.try_get("author").unwrap_or_else(|_| "unknown".into()),
-            timestamp: decode_datetime(r, "created_at"),
-            entry_type: "comment".into(),
-            body: r.try_get("text").ok(),
-        })
-        .collect();
-
-    // Fetch status changes from Dolt diff history
-    let diff_rows = sqlx::query(
-        "SELECT from_status, to_status, to_commit_date \
-         FROM dolt_diff_issues \
-         WHERE (to_id = ? OR from_id = ?) \
-           AND diff_type != 'removed' \
-           AND (from_status IS NULL OR from_status != to_status) \
-         ORDER BY to_commit_date ASC",
-    )
-    .bind(&issue_id)
-    .bind(&issue_id)
-    .fetch_all(pool.pool())
-    .await
-    .unwrap_or_default();
-
-    for (i, r) in diff_rows.iter().enumerate() {
-        let old: Option<String> = r.try_get("from_status").ok().flatten();
-        let new: Option<String> = r.try_get("to_status").ok().flatten();
-        let ts = decode_datetime(r, "to_commit_date");
-        if ts.is_empty() {
-            continue;
-        }
-        entries.push(HistoryEntry {
-            id: format!("dolt-status-{i}"),
-            field: "status".into(),
-            old_value: old,
-            new_value: new,
-            actor: "beads".into(),
-            timestamp: ts,
-            entry_type: "field_change".into(),
-            body: None,
-        });
-    }
-
-    entries.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-    Ok(entries)
+    let events = cli_values(&source, &["history", &issue_id, "--events", "--json"]).await?;
+    let comments = cli_values(&source, &["comments", &issue_id, "--json"]).await?;
+    let snapshots = cli_values(&source, &["history", &issue_id, "--json"])
+        .await
+        .unwrap_or_default();
+    Ok(task_history_from_values(&events, &snapshots, &comments))
 }
-
-// ── SQL Safety Tests (Task 6.2) ───────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn query_builder_uses_placeholders_not_interpolation() {
-        // The label-fetch IN() query in list_tasks builds parameterised SQL —
-        // values are bound via `?`, never spliced into the query text.  This
-        // test verifies that property at the QueryBuilder layer so a refactor
-        // can't silently introduce a string-interpolated query.
-        let issue_ids = vec!["abc'def".to_string(), "x,y;z".to_string()];
-        let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
-            "SELECT issue_id, label FROM labels WHERE issue_id IN (",
-        );
-        let mut sep = qb.separated(", ");
-        for id in &issue_ids {
-            sep.push_bind(id);
-        }
-        qb.push(")");
+    use super::*;
+    use serde_json::json;
 
-        let sql = qb.sql();
-        assert!(sql.contains('?'), "Query should use ? placeholders: {sql}");
-        assert!(
-            !sql.contains("abc'def"),
-            "Literal ID must not appear in query SQL: {sql}"
+    #[test]
+    fn api_issue_keeps_gate_type_labels_and_first_line_worker_provenance() {
+        let task = task_from_issue(
+            &json!({"id":"B-gate","title":"Gate","issue_type":"gate","status":"closed","priority":0,
+            "labels":["z","a"], "notes":"Auto-filed by ruflo-alpha worker on 2026-05-17\nFull notes","created_at":"2026-05-17T00:00:00Z"}),
         );
-        assert!(
-            !sql.contains("x,y;z"),
-            "Literal ID must not appear in query SQL: {sql}"
+        assert_eq!(task.task_type, "gate");
+        assert_eq!(task.labels, ["a", "z"]);
+        assert_eq!(task.status, "closed");
+        assert_eq!(
+            task.worker_provenance.unwrap().notes_first_line,
+            "Auto-filed by ruflo-alpha worker on 2026-05-17"
         );
     }
 
     #[test]
-    fn task_list_worker_provenance_projects_only_first_notes_line() {
-        assert!(
-            super::TASK_WORKER_NOTES_FIRST_LINE_SQL.contains("notes LIKE 'Auto-filed by ruflo-%'")
+    fn snapshot_filter_uses_status_or_labels_and_and_descending_priority_with_ties() {
+        let issues = json!([
+            {"id":"B-a","title":"Alpha","status":"open","priority":4,"labels":["x","y"],"created_at":"2026-05-18T00:00:00Z"},
+            {"id":"B-b","title":"Beta","status":"closed","priority":4,"labels":["x","y"],"created_at":"2026-05-18T00:00:00Z"},
+            {"id":"B-c","title":"Older","status":"open","priority":4,"labels":["x","y"],"created_at":"2026-05-17T00:00:00Z"},
+            {"id":"B-d","title":"Urgent","status":"closed","priority":0,"labels":["x","y"]},
+            {"id":"B-one-label","status":"open","priority":5,"labels":["x"]},
+            {"id":"B-deleted","status":"deleted","priority":5,"labels":["x","y"]}
+        ]);
+        let response = filter_tasks(
+            issues
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(task_from_issue)
+                .collect(),
+            Some(TaskFilters {
+                status: vec!["closed".into()],
+                priority: vec![],
+                labels: vec!["y".into()],
+                search: None,
+            }),
+            Some(vec!["open".into()]),
+            Some(vec!["x".into()]),
+            None,
+            None,
         );
-        assert!(
-            super::TASK_WORKER_NOTES_FIRST_LINE_SQL.contains("SUBSTRING_INDEX(notes, CHAR(10), 1)")
+        assert_eq!(response.total_count, 4);
+        assert_eq!(
+            response
+                .tasks
+                .iter()
+                .map(|t| t.id.as_str())
+                .collect::<Vec<_>>(),
+            ["B-a", "B-b", "B-c", "B-d"]
         );
-        assert!(super::TASK_WORKER_NOTES_FIRST_LINE_SQL.contains("AS worker_notes_first_line"));
+    }
+
+    #[test]
+    fn raw_edges_keep_external_targets_reverse_edges_and_all_dependency_types() {
+        let edges = json!([
+            {"issue_id":"B-task","depends_on_id":"other:missing","type":"related"},
+            {"issue_id":"B-task","depends_on_id":"B-epic","type":"parent-child"},
+            {"issue_id":"B-child","depends_on_id":"B-task","type":"blocks"}
+        ]);
+        let (dependencies, dependents) = dependency_ids(edges.as_array().unwrap(), "B-task");
+        assert_eq!(dependencies, ["other:missing", "B-epic"]);
+        assert_eq!(dependents, ["B-child"]);
+    }
+
+    #[test]
+    fn timestamp_ties_sort_chronologically_with_fractional_seconds_and_offsets() {
+        let issues = json!([
+            {"id":"B-zero","status":"open","priority":2,"created_at":"2026-05-18T00:00:00Z"},
+            {"id":"B-newer","status":"open","priority":2,"created_at":"2026-05-18T00:00:00.900Z"},
+            {"id":"B-old","status":"open","priority":2,"created_at":"2026-05-18T01:00:00+02:00"}
+        ]);
+        let response = filter_tasks(
+            issues
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(task_from_issue)
+                .collect(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(
+            response
+                .tasks
+                .iter()
+                .map(|task| task.id.as_str())
+                .collect::<Vec<_>>(),
+            ["B-newer", "B-zero", "B-old"]
+        );
+    }
+
+    #[test]
+    fn fuzzy_search_covers_complete_snapshot_and_keeps_legacy_scores() {
+        let mut issues = vec![json!({"id":"B-no","title":"unrelated","status":"open"}); 2001];
+        issues.extend([
+            json!({"id":"B-exact","title":"needle","status":"closed"}),
+            json!({"id":"B-prefix","title":"Needle extension","status":"open"}),
+            json!({"id":"B-sub","title":"A needle here","status":"open"}),
+            json!({"id":"B-fuzzy","title":"n e e d l e","status":"open"}),
+        ]);
+        let results = search_issue_values(&issues, "needle");
+        assert_eq!(
+            results.iter().map(|r| r.score).collect::<Vec<_>>(),
+            [100, 80, 60, 40]
+        );
+        assert_eq!(results[0].status, "closed");
+        assert!(search_issue_values(&issues, "  ").is_empty());
+    }
+
+    #[test]
+    fn native_history_uses_pascal_case_snapshot_fields_and_comments_without_duplicates() {
+        let events = json!([{"id":"e-comment","event_type":"commented","comment":"A note","created_at":"2026-05-18T12:00:00Z"},
+            {"id":"e-close","event_type":"closed","actor":"alice","created_at":"2026-05-19T00:00:00Z"}]);
+        let snapshots = json!([
+            {"CommitHash":"new","Committer":"alice","CommitDate":"2026-05-19T00:00:00Z","Issue":{"status":"closed"}},
+            {"CommitHash":"old","Committer":"bob","CommitDate":"2026-05-17T00:00:00Z","Issue":{"status":"open"}}
+        ]);
+        let comments =
+            json!([{"id":7,"author":"alice","text":"A note","created_at":"2026-05-18T12:00:00Z"}]);
+        let history = task_history_from_values(
+            events.as_array().unwrap(),
+            snapshots.as_array().unwrap(),
+            comments.as_array().unwrap(),
+        );
+        assert_eq!(history.len(), 3);
+        assert_eq!(history[1].id, "7");
+        assert_eq!(history[1].entry_type, "comment");
+        assert_eq!(history[2].old_value.as_deref(), Some("open"));
+        assert_eq!(history[2].new_value.as_deref(), Some("closed"));
+        assert_eq!(history[2].actor, "alice");
+    }
+
+    #[test]
+    fn native_update_history_only_reports_fields_present_in_patch() {
+        let events = json!([{"id":"updated","event_type":"updated","actor":"alice","old_value":"{\"title\":\"Before\",\"status\":\"open\",\"priority\":2,\"description\":\"Keep\"}","new_value":"{\"title\":\"After\"}","created_at":"2026-05-18T00:00:00Z"}]);
+        let history = task_history_from_values(events.as_array().unwrap(), &[], &[]);
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].field, "title");
+        assert_eq!(history[0].old_value.as_deref(), Some("Before"));
+        assert_eq!(history[0].new_value.as_deref(), Some("After"));
+    }
+
+    #[test]
+    fn native_history_merges_snapshot_gaps_with_audit_status_without_duplicate_transition() {
+        let events = json!([{"id":"close","event_type":"closed","actor":"alice","old_value":"{\"status\":\"open\"}","new_value":"{\"status\":\"closed\"}","created_at":"2026-05-19T00:00:00.123Z"}]);
+        let snapshots = json!([
+            {"CommitHash":"new","Committer":"alice","CommitDate":"2026-05-19T00:00:00Z","Issue":{"status":"closed"}},
+            {"CommitHash":"old","Committer":"bob","CommitDate":"2026-05-17T00:00:00Z","Issue":{"status":"open"}}
+        ]);
+        let history = task_history_from_values(
+            events.as_array().unwrap(),
+            snapshots.as_array().unwrap(),
+            &[],
+        );
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].new_value.as_deref(), Some("open"));
+        assert_eq!(history[1].id, "event-close-status");
     }
 }

@@ -5,9 +5,7 @@
 Defines the right-side detail panel for a selected task: inline editing of all fields, the rich-text markdown editor with slash commands, task reference autocomplete, the activity/history timeline with diff view, and breadcrumb navigation for tasks deep in dependency chains.
 
 ---
-
 ## Requirements
-
 ### Requirement: Task detail panel tabs respect feature flags
 The task detail panel SHALL conditionally render the OpenSpec panel section and the Ruflo memory panel section based on the corresponding feature flags. When a feature is disabled, its panel SHALL be entirely absent — not rendered, not hidden with CSS, and no Tauri IPC calls made for it.
 
@@ -220,3 +218,10 @@ The three new sections (OpenSpec, Related Memories, Git/Dolt History) SHALL appe
 #### Scenario: Section ordering maintained
 - **WHEN** a task has all three sections rendered
 - **THEN** OpenSpec appears first, Related Memories second, Git/Dolt History third in the DOM and visual layout
+
+### Requirement: Native history transport
+The system SHALL merge structured comments, native audit history and available commit snapshots into existing typed task history in timestamp order, using native diff for optional revisions where supported.
+
+#### Scenario: Embedded task history
+- **WHEN** task history is opened in an embedded workspace
+- **THEN** native history and comments SHALL populate the timeline without SQL reads

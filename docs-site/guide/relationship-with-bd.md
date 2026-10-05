@@ -4,30 +4,15 @@ BeadSpec is a **visual frontend** for the `bd` CLI. They are additive, not mutua
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────┐
-│                BeadSpec                  │
-│  (React/TypeScript frontend)             │
-│  (Rust/Tauri backend)                    │
-│                                          │
-│  Reads  ──────────── Dolt SQL (sqlx)    │
-│  Writes ──────────── bd CLI             │
-└─────────────────────────────────────────┘
-                │
-                ▼
-        .beads/  (Dolt database)
-                │
-                ▼
-         bd CLI  (writes, hooks)
-```
+Beads 1.3 or newer is required. BeadSpec starts an app-owned `bd serve` on an ephemeral loopback port for supported projects. Embedded projects use native CLI commands; BeadSpec does not start a separate Dolt sidecar for them.
 
-**Reads** go directly to the Dolt SQL server via `sqlx`. This is fast and avoids CLI overhead — BeadSpec can query thousands of issues without spawning a process.
+**Reads and supported writes** use the Beads HTTP API. Native `bd` handles unsupported operations, relevant project hooks, and command-side export, push or backup policies. The default server auto-commit policy allows HTTP writes; direct-server `off` or `batch` policies use CLI writes.
 
-**Writes** always go through the `bd` CLI. This preserves:
-- `bd` hook logic (pre/post-write automation)
-- ID assignment (`BEADSPEC-001`, `BEADSPEC-002`, ...)
-- Label normalization
-- Dolt branch tracking and commit history
+**Live updates** use the optional Beads journal. Open **bd Health** to see transport and journal status, then choose **Enable live updates** to enable it for that project. This changes the project journal configuration and restarts its Beads connection. BeadSpec never enables journaling automatically.
+
+Journal events refresh affected views promptly. Complete state refreshes run every 30 seconds and on focus or manual refresh, including changes made through pull, merge or direct database operations. Embedded journal checks run as finite native commands every two seconds.
+
+**Activity history** is retained per project for up to seven days or 5,000 events. Recent activity may exclude events from before live updates were enabled or outside retained history. Task timelines use native Beads history and comments; the activity feed is not a complete historical database export.
 
 ## Feature Parity Table
 
@@ -75,4 +60,4 @@ Use **BeadSpec** when:
 - Capturing quick ideas with the global shortcut
 - Reviewing an OpenSpec change and its associated issues together
 
-Both tools read from and write to the same `.beads/` database. Any change made in the terminal is visible in BeadSpec within seconds.
+Both tools read from and write to the same `.beads/` database. Journaled changes appear promptly; other changes appear on the next complete refresh.

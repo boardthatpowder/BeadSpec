@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { listRecentEvents } from '../../ipc'
 import type { ActivityEvent } from '../../bindings'
+import { activityChannel, appendActivityEvent } from './activityCache'
 
 export function useActivityStream(project: string | null | undefined) {
   const queryClient = useQueryClient()
@@ -15,11 +16,18 @@ export function useActivityStream(project: string | null | undefined) {
 
   useEffect(() => {
     if (!project) return
-    let unlisten: (() => void) | null = null
-    listen<ActivityEvent>('workflow:activity', event => {
-      queryClient.setQueryData<ActivityEvent[]>(['activity-feed', project], old => [event.payload, ...(old ?? [])])
-    }).then(fn => { unlisten = fn }).catch(() => { /* intentionally silent: live activity events are best-effort */ })
-    return () => unlisten?.()
+    const pending = [
+      listen<ActivityEvent>(activityChannel(project), event => {
+        queryClient.setQueryData<ActivityEvent[]>(['activity-feed', project], old => appendActivityEvent(old, event.payload))
+      }),
+      listen<ActivityEvent>('workflow:activity', event => {
+        if (event.payload.source === 'bd' || event.payload.source === 'beads') return
+        queryClient.setQueryData<ActivityEvent[]>(['activity-feed', project], old => appendActivityEvent(old, event.payload))
+      }),
+    ]
+    return () => {
+      pending.forEach(listener => { void listener.then(unlisten => unlisten()).catch(() => {}) })
+    }
   }, [project, queryClient])
 
   return query

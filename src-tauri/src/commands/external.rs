@@ -2,15 +2,15 @@
 ///
 /// These commands allow the frontend to invoke `bd` and `ruflo` subprocesses
 /// and to query git/dolt metadata associated with a project and its issues.
-use sqlx::Row;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::State;
 
-use crate::bd::runner::{find_bd, invoke_bd_in_project, spawn_managed};
+use crate::bd::runner::spawn_managed;
 use crate::db::dolt_server::DoltServerRegistry;
 use crate::db::pool::ProjectRegistry;
 use crate::settings::AppSettings;
+use serde_json::Value;
 
 // ── Output types ──────────────────────────────────────────────────────────────
 
@@ -155,27 +155,15 @@ async fn run_subprocess(program: &std::path::Path, args: &[String], cwd: &str) -
 // use a 10-second timeout.  Write ops (formula_pour, human_respond,
 // human_dismiss) use a 30-second timeout.
 
-/// Helper: resolve project path from registry (validates the project is connected).
-async fn resolve_project_cwd(
+async fn run_project_bd(
     project_id: &str,
     registry: &Arc<ProjectRegistry>,
+    args: &[&str],
 ) -> Result<String, String> {
-    let pool = registry.get(project_id).await.map_err(|_| {
+    let source = registry.get(project_id).await.map_err(|_| {
         format!("project_not_connected: '{project_id}' — call connect_project first")
     })?;
-    Ok(pool.project_path.clone())
-}
-
-/// Helper: resolve bd path + project cwd + dolt override in one shot for bd Tauri commands.
-fn bd_invocation_args(
-    settings: &State<'_, Arc<Mutex<AppSettings>>>,
-) -> Result<(std::path::PathBuf, String), String> {
-    let guard = settings.lock().unwrap();
-    let bd_path_override = guard.binary_paths.bd.clone();
-    let dolt_path_override = guard.binary_paths.dolt.clone();
-    drop(guard);
-    let bd = find_bd(&bd_path_override).ok_or_else(|| "bd CLI not found".to_string())?;
-    Ok((bd, dolt_path_override))
+    source.run_cli(args).await
 }
 
 /// Helper: run a ruflo sub-command via spawn_managed and return stdout on success.
@@ -204,21 +192,11 @@ pub(crate) async fn run_ruflo_managed(
 #[specta::specta]
 pub async fn bd_preflight(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
-        &["preflight"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(10),
-    )
-    .await
+    run_project_bd(&project_id, registry.inner(), &["preflight"]).await
 }
 
 /// Run `bd doctor --json` in the given project. Read op — 10s timeout.
@@ -226,21 +204,11 @@ pub async fn bd_preflight(
 #[specta::specta]
 pub async fn bd_doctor(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
-        &["doctor", "--json"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(10),
-    )
-    .await
+    run_project_bd(&project_id, registry.inner(), &["doctor", "--json"]).await
 }
 
 /// Run `bd lint --json` in the given project. Read op — 10s timeout.
@@ -248,21 +216,11 @@ pub async fn bd_doctor(
 #[specta::specta]
 pub async fn bd_lint(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
-        &["lint", "--json"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(10),
-    )
-    .await
+    run_project_bd(&project_id, registry.inner(), &["lint", "--json"]).await
 }
 
 /// Run `bd stale --json` in the given project. Read op — 10s timeout.
@@ -270,21 +228,11 @@ pub async fn bd_lint(
 #[specta::specta]
 pub async fn bd_stale(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
-        &["stale", "--json"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(10),
-    )
-    .await
+    run_project_bd(&project_id, registry.inner(), &["stale", "--json"]).await
 }
 
 /// Run `bd orphans --json` in the given project. Read op — 30s timeout.
@@ -292,21 +240,11 @@ pub async fn bd_stale(
 #[specta::specta]
 pub async fn bd_orphans(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
-        &["orphans", "--json"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(30),
-    )
-    .await
+    run_project_bd(&project_id, registry.inner(), &["orphans", "--json"]).await
 }
 
 /// Run `bd formula list --json` in the given project. Read op — 10s timeout.
@@ -314,19 +252,14 @@ pub async fn bd_orphans(
 #[specta::specta]
 pub async fn bd_formula_list(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
+    run_project_bd(
+        &project_id,
+        registry.inner(),
         &["formula", "list", "--json"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(10),
     )
     .await
 }
@@ -341,9 +274,9 @@ pub async fn bd_formula_list(
 pub async fn bd_formula_pour(
     project_id: String,
     formula_name: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
     if formula_name.is_empty()
         || !formula_name
@@ -354,15 +287,10 @@ pub async fn bd_formula_pour(
             "invalid formula_name '{formula_name}': only alphanumeric, hyphens, underscores, and dots are allowed"
         ));
     }
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
+    run_project_bd(
+        &project_id,
+        registry.inner(),
         &["mol", "pour", &formula_name],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(30),
     )
     .await
 }
@@ -372,21 +300,11 @@ pub async fn bd_formula_pour(
 #[specta::specta]
 pub async fn bd_human_list(
     project_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
-        &["human", "list", "--json"],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(10),
-    )
-    .await
+    run_project_bd(&project_id, registry.inner(), &["human", "list", "--json"]).await
 }
 
 /// Run `bd human respond <issue_id> <text>` in the given project. Write op — 30s timeout.
@@ -396,9 +314,9 @@ pub async fn bd_human_respond(
     project_id: String,
     issue_id: String,
     text: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
     if issue_id.is_empty() || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(format!(
@@ -408,15 +326,10 @@ pub async fn bd_human_respond(
     if text.is_empty() {
         return Err("text must not be empty".to_string());
     }
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
+    run_project_bd(
+        &project_id,
+        registry.inner(),
         &["human", "respond", &issue_id, &text],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(30),
     )
     .await
 }
@@ -427,24 +340,19 @@ pub async fn bd_human_respond(
 pub async fn bd_human_dismiss(
     project_id: String,
     issue_id: String,
-    settings: State<'_, Arc<Mutex<AppSettings>>>,
+    _settings: State<'_, Arc<Mutex<AppSettings>>>,
     registry: State<'_, Arc<ProjectRegistry>>,
-    server_registry: State<'_, Arc<DoltServerRegistry>>,
+    _server_registry: State<'_, Arc<DoltServerRegistry>>,
 ) -> Result<String, String> {
     if issue_id.is_empty() || !issue_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(format!(
             "invalid issue_id '{issue_id}': only alphanumeric characters and hyphens are allowed"
         ));
     }
-    let (bd, dolt_override) = bd_invocation_args(&settings)?;
-    let cwd = resolve_project_cwd(&project_id, registry.inner()).await?;
-    invoke_bd_in_project(
-        &bd,
+    run_project_bd(
+        &project_id,
+        registry.inner(),
         &["human", "dismiss", &issue_id],
-        &cwd,
-        &server_registry,
-        &dolt_override,
-        Duration::from_secs(30),
     )
     .await
 }
@@ -638,8 +546,30 @@ pub fn is_valid_issue_id(id: &str) -> bool {
     !id.is_empty() && id.chars().all(|c| c.is_alphanumeric() || c == '-')
 }
 
-/// Query `dolt_diff('issues', 'HEAD~20', 'HEAD')` filtered to the given
-/// issue_id. Returns an empty vec on any error (graceful degradation).
+/// Native Beads revision diff, when supported by the workspace backend.
+/// Optional history detail degrades to an empty list on unsupported refs or modes.
+fn revisions_from_diff(values: &[Value], issue_id: &str) -> Vec<DoltRevision> {
+    values
+        .iter()
+        .filter(|value| value["IssueID"] == issue_id)
+        .take(100)
+        .map(|value| {
+            let old = &value["OldValue"];
+            let new = &value["NewValue"];
+            let field = |issue: &Value, key: &str| issue[key].as_str().map(ToOwned::to_owned);
+            DoltRevision {
+                diff_type: value["DiffType"].as_str().unwrap_or_default().to_string(),
+                from_id: field(old, "id"),
+                to_id: field(new, "id"),
+                from_title: field(old, "title"),
+                to_title: field(new, "title"),
+                from_status: field(old, "status"),
+                to_status: field(new, "status"),
+            }
+        })
+        .collect()
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn get_dolt_history_for_issue(
@@ -647,40 +577,16 @@ pub async fn get_dolt_history_for_issue(
     issue_id: String,
     registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<Vec<DoltRevision>, String> {
-    let pool = match registry.get(&project_path).await {
-        Ok(p) => p,
+    let source = match registry.get(&project_path).await {
+        Ok(source) => source,
         Err(_) => return Ok(vec![]),
     };
-
-    let rows = sqlx::query(
-        "SELECT diff_type, from_id, to_id, from_title, to_title, from_status, to_status \
-         FROM dolt_diff('issues', 'HEAD~20', 'HEAD') \
-         WHERE to_id = ? OR from_id = ? \
-         LIMIT 100",
-    )
-    .bind(&issue_id)
-    .bind(&issue_id)
-    .fetch_all(pool.pool())
-    .await;
-
-    match rows {
-        Ok(rows) => {
-            let revisions = rows
-                .iter()
-                .map(|r| DoltRevision {
-                    diff_type: r.try_get("diff_type").unwrap_or_default(),
-                    from_id: r.try_get("from_id").ok(),
-                    to_id: r.try_get("to_id").ok(),
-                    from_title: r.try_get("from_title").ok(),
-                    to_title: r.try_get("to_title").ok(),
-                    from_status: r.try_get("from_status").ok(),
-                    to_status: r.try_get("to_status").ok(),
-                })
-                .collect();
-            Ok(revisions)
-        }
-        Err(_) => Ok(vec![]),
-    }
+    let raw = match source.run_cli(&["diff", "HEAD~20", "HEAD", "--json"]).await {
+        Ok(raw) => raw,
+        Err(_) => return Ok(vec![]),
+    };
+    let values: Vec<Value> = serde_json::from_str(&raw).unwrap_or_default();
+    Ok(revisions_from_diff(&values, &issue_id))
 }
 
 // ── IPC allowlist tests ───────────────────────────────────────────────────────
@@ -688,6 +594,21 @@ pub async fn get_dolt_history_for_issue(
 #[cfg(test)]
 mod ipc_allowlist_tests {
     use super::{is_valid_formula_name, is_valid_issue_id};
+
+    #[test]
+    fn native_diff_maps_added_modified_removed_and_filters_issue_id() {
+        let values = serde_json::json!([
+            {"IssueID":"B-1","DiffType":"modified","OldValue":{"id":"B-1","title":"Before","status":"open"},"NewValue":{"id":"B-1","title":"After","status":"closed"}},
+            {"IssueID":"B-2","DiffType":"added","OldValue":null,"NewValue":{"id":"B-2","title":"Other"}},
+            {"IssueID":"B-1","DiffType":"removed","OldValue":{"id":"B-1","title":"After","status":"closed"},"NewValue":null}
+        ]);
+        let revisions = super::revisions_from_diff(values.as_array().unwrap(), "B-1");
+        assert_eq!(revisions.len(), 2);
+        assert_eq!(revisions[0].from_title.as_deref(), Some("Before"));
+        assert_eq!(revisions[0].to_status.as_deref(), Some("closed"));
+        assert_eq!(revisions[1].diff_type, "removed");
+        assert_eq!(revisions[1].to_id, None);
+    }
 
     // ── (a) Disallowed args are rejected ─────────────────────────────────────
 

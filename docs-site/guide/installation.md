@@ -1,6 +1,6 @@
 # Installation
 
-BeadSpec requires the `bd` CLI to be installed first — it provides the database engine. `bd` auto-provisions Dolt on first run, so you don't need to install Dolt separately.
+BeadSpec requires Beads `bd` 1.3 or newer to be installed first — it provides the database engine. `bd` auto-provisions Dolt on first run, so you don't need to install Dolt separately.
 
 ## Step 1: Install bd
 

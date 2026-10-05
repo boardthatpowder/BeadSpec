@@ -23,12 +23,12 @@ beadspec/
 │
 ├── src-tauri/            # Rust Tauri backend
 │   ├── src/
-│   │   ├── bd/           # bd CLI discovery and runner
+│   │   ├── bd/           # Beads HTTP/CLI transport, compatibility and runner
 │   │   ├── commands/     # Tauri IPC command handlers
 │   │   │   ├── app.rs        # Focus, tray badge, zoom, shortcuts
 │   │   │   ├── openspec.rs   # OpenSpec integration commands
 │   │   │   └── recovery.rs   # Dolt health probe and recovery
-│   │   ├── db/           # Dolt server lifecycle, sqlx pools, watchers, poller
+│   │   ├── db/           # Project registry, journal sync and filesystem watchers
 │   │   ├── notifications/ # Notification manager
 │   │   ├── recovery_log.rs # Recovery event log
 │   │   ├── tray/         # System tray
@@ -46,10 +46,9 @@ beadspec/
 
 ## Core architectural rules
 
-### Read/write split
+### Beads data source
 
-- **Reads** — all data queries go directly to the Dolt SQL server via `sqlx` / `mysql_async`. Never shell out to `bd` for reads.
-- **Writes** — all mutations go through the `bd` CLI. This preserves `bd` hook logic, ID assignment, label normalization, and Dolt branch tracking.
+Issue queries and supported mutations use an app-owned loopback Beads HTTP API. Embedded projects and unsupported operations use native CLI commands. Relevant hooks and command-side commit/export/push/backup policies select CLI writes. Beads 1.3 or newer is required. Application issue data does not depend on Dolt SQL schemas.
 
 ### IPC
 
@@ -65,11 +64,11 @@ and commit the updated `src/bindings.ts`.
 
 ### Multi-project isolation
 
-Each Beads project gets its own `sqlx::Pool` and Dolt server instance. There is no global pool singleton. The project path is the key used to look up or create a pool.
+Each canonical project path owns a Beads data source, supervised HTTP child where supported, sync checkpoint and activity buffer. Embedded CLI calls serialize per resolved Beads directory. Disconnect and app exit stop owned children.
 
 ### Real-time sync
 
-`src-tauri/src/db/watchers.rs` polls `dolt_log()` on a 2-second interval. When the log changes, it emits a Tauri event. TanStack Query on the frontend responds by invalidating relevant queries, triggering a refetch. No WebSocket or SSE — just polling.
+The optional Beads journal drives HTTP SSE or finite embedded CLI probes. Journaling is enabled only through explicit per-project opt-in. Sequence checkpoints are session-local, deduplicate replay and reconcile after gaps or resets. Full snapshots refresh every 30 seconds and on focus/manual refresh to cover unjournaled changes. Frontend invalidation refreshes task lists, detail, history, lineage, epics, OpenSpec progress, worker findings and correlations together. Activity is delivered on a project-scoped channel and retained for seven days or 5,000 records per project.
 
 ### Workspace pane tree
 
@@ -96,14 +95,14 @@ Use `react-hotkeys-hook` with platform detection. Never hardcode `Ctrl` or `Cmd`
 
 Commands are registered in `src-tauri/src/lib.rs`. Grouped by domain:
 
-**Writes (via bd CLI)**
+**Writes (via Beads data source)**
 `create_task`, `update_task_field`, `change_task_status`, `add_label`, `remove_label`, `add_comment`, `delete_task`, `link_dependency`, `unlink_dependency`
 
-**Reads (via Dolt SQL)**
+**Reads (via Beads data source; native history)**
 `list_tasks`, `get_task`, `get_task_history`, `search_tasks`
 
 **Project management**
-`connect_project`, `disconnect_project`, `list_projects`
+`connect_project`, `disconnect_project`, `list_projects`, `get_project_backend_status`, `enable_project_journal`
 
 **App / window**
 `focus_main_window`, `update_tray_badge`, `set_start_at_login` *(stub — not yet implemented)*, `launch_to_tray`, `get_shortcut_status`, `register_quick_capture_shortcut`, `validate_binary_path`
@@ -128,7 +127,7 @@ Commands are registered in `src-tauri/src/lib.rs`. Grouped by domain:
 | Layer | Technology |
 |---|---|
 | App shell | Tauri 2.0 |
-| Rust backend | `sqlx`, `specta`, `tauri-specta`, `tokio` |
+| Rust backend | `reqwest` for Beads HTTP, `sqlx` for recovery diagnostics, `specta`, `tauri-specta`, `tokio` |
 | IPC bindings | Auto-generated via `specta` / `tauri-specta` |
 | Frontend | React 19, TypeScript, Vite 7 |
 | Server state | TanStack Query |

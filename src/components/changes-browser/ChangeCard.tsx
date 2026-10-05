@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getChangeProgress, getChangeBeadsProgress, getChangeDependencies } from '../../ipc'
 import { useActiveProject } from '../../hooks/useProject'
 import { useAppState } from '../../contexts/HashStateContext'
@@ -7,7 +8,7 @@ import { formatRelative } from '../../lib/format/date'
 import { STATUS_PALETTE } from '../../lib/palettes'
 import { Tooltip } from '../ui/Tooltip'
 import { ImportModal } from './ImportModal'
-import type { ChangeBeadsProgress, ChangeDependencies, ChangeDepLink, ChangeInfo, ChangeProgress, Task } from '../../bindings'
+import type { ChangeDepLink, ChangeInfo, ChangeProgress, Task } from '../../bindings'
 import { Button } from '../ui/Button'
 
 type ChangeStatus = 'draft' | 'not_started' | 'in_progress' | 'complete' | 'archived'
@@ -113,8 +114,16 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
   const openDocTab = useWorkspaceStore((s) => s.openDocTab)
   const openEpicTab = useWorkspaceStore((s) => s.openEpicTab)
   const [progress, setProgress] = useState<ChangeProgress | null>(null)
-  const [beadsProgress, setBeadsProgress] = useState<ChangeBeadsProgress | null>(null)
-  const [deps, setDeps] = useState<ChangeDependencies | null>(null)
+  const { data: beadsProgress } = useQuery({
+    queryKey: ['openspec-beads-progress', project, change.slug],
+    queryFn: () => getChangeBeadsProgress(project!, change.slug),
+    enabled: !!project,
+  })
+  const { data: deps } = useQuery({
+    queryKey: ['openspec-dependencies', project, change.slug],
+    queryFn: () => getChangeDependencies(project!, change.slug),
+    enabled: !!project && !!beadsProgress?.epic_id,
+  })
   const [showImportModal, setShowImportModal] = useState(false)
 
   const changesBySlug = useMemo(() => {
@@ -129,37 +138,6 @@ export function ChangeCard({ change, isReadOnly = false, allTasks, allChanges }:
       .then(setProgress)
       .catch(() => setProgress({ done: 0, total: 0 }))
   }, [project, change.name, change.last_modified])
-
-  // Beads progress is computed server-side from the project's Dolt DB so it
-  // stays correct regardless of the UI's global status filter (which would
-  // otherwise hide deferred/blocked/closed issues from `allTasks`).
-  // Cross-reference: tasks fetched via useTasks() are status-filtered by
-  // src/hooks/useHashState.ts DEFAULT_STATE → ['open', 'in_progress'].
-  useEffect(() => {
-    if (!project) return
-    let cancelled = false
-    getChangeBeadsProgress(project, change.slug)
-      .then(p => { if (!cancelled) setBeadsProgress(p) })
-      .catch(() => { if (!cancelled) setBeadsProgress({ done: 0, total: 0, epic_id: null }) })
-    return () => { cancelled = true }
-  }, [project, change.slug, allTasks])
-
-  // Inter-change dependency chips. Only fetch once we know the change has
-  // an imported epic — cards without an epic make no extra IPC call.
-  // Keying on allTasks lets `bd dep add/remove` (which mutates the
-  // dependencies table) trigger a refresh through the existing task-cache
-  // invalidation event.
-  useEffect(() => {
-    if (!project || !beadsProgress?.epic_id) {
-      setDeps(null)
-      return
-    }
-    let cancelled = false
-    getChangeDependencies(project, change.slug)
-      .then(d => { if (!cancelled) setDeps(d) })
-      .catch(() => { if (!cancelled) setDeps({ upstream: [], downstream: [] }) })
-    return () => { cancelled = true }
-  }, [project, change.slug, beadsProgress?.epic_id, allTasks])
 
   const changeStatus: ChangeStatus = change.is_archived
     ? 'archived'

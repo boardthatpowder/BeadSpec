@@ -57,6 +57,7 @@ export function ActivityFeed() {
           />
         )}
       />
+      <p className="px-4 py-2 text-xs text-(--color-fg-subtle)">Recent activity may exclude events from before live updates were enabled or outside retained history.</p>
       <div
         ref={scrollRef}
         onScroll={onScroll}

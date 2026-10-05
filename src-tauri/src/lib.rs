@@ -52,6 +52,8 @@ pub fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::write::link_dependency,
         commands::write::unlink_dependency,
         commands::project::connect_project,
+        commands::project::get_project_backend_status,
+        commands::project::enable_project_journal,
         commands::project::retry_connect_project,
         commands::project::disconnect_project,
         commands::project::list_projects,
@@ -139,7 +141,7 @@ pub fn run() {
                 .with_denylist(&["quick-capture"])
                 .build(),
         )
-        .manage(registry)
+        .manage(registry.clone())
         .manage(server_registry.clone())
         .manage(watcher_registry)
         .manage(app_state.clone())
@@ -254,7 +256,11 @@ pub fn run() {
         .run(move |_app_handle, event| {
             if let tauri::RunEvent::Exit = event {
                 let sr = server_registry.clone();
-                tokio::spawn(async move { sr.stop_all().await });
+                let registry = registry.clone();
+                tauri::async_runtime::block_on(async move {
+                    registry.stop_all().await;
+                    sr.stop_all().await;
+                });
             }
         });
 }

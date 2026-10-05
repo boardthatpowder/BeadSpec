@@ -24,7 +24,7 @@ Override the path BeadSpec uses to find each CLI tool. Leave blank to use auto-d
 | `bd` | Required for all writes. BeadSpec shows a setup dialog if not found. |
 | `openspec` | Required for OpenSpec integration features. |
 | `ruflo` | Required for Ruflo integration features. |
-| `dolt` | Required for the Dolt SQL server. **Changing this path requires an app restart.** |
+| `dolt` | Used for recovery diagnostics where applicable. Beads owns its database runtime. **Changing this path requires an app restart.** |
 
 Click inside a field and type the full path (e.g. `/usr/local/bin/bd`).
 

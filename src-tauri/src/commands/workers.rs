@@ -1,5 +1,4 @@
 use crate::db::pool::ProjectRegistry;
-use sqlx::Row;
 use std::sync::Arc;
 use tauri::State;
 
@@ -18,20 +17,6 @@ pub struct WorkerFinding {
 pub struct WorkerProvenance {
     pub worker: String,
     pub notes_first_line: String,
-}
-
-const LIST_WORKER_FINDINGS_SQL: &str =
-    "SELECT id, title, priority, status, issue_type, notes, created_at \
-     FROM issues \
-     WHERE notes LIKE 'Auto-filed by ruflo-%' \
-       AND status NOT IN ('closed', 'deleted') \
-       AND issue_type != 'deleted' \
-     ORDER BY created_at DESC";
-
-fn decode_datetime(row: &sqlx::mysql::MySqlRow, col: &str) -> String {
-    row.try_get::<sqlx::types::chrono::NaiveDateTime, _>(col)
-        .map(|dt| dt.and_utc().to_rfc3339())
-        .unwrap_or_default()
 }
 
 fn not_connected(project_path: &str) -> String {
@@ -73,53 +58,72 @@ pub(crate) fn is_unresolved_worker_finding_row(status: &str, issue_type: &str) -
     status != "closed" && status != "deleted" && issue_type != "deleted"
 }
 
+fn worker_findings_from_issues(issues: &[serde_json::Value]) -> Vec<WorkerFinding> {
+    let mut findings: Vec<_> = issues
+        .iter()
+        .filter_map(|issue| {
+            let status = issue["status"].as_str().unwrap_or_default();
+            let issue_type = issue["issue_type"].as_str().unwrap_or_default();
+            if !is_unresolved_worker_finding_row(status, issue_type) {
+                return None;
+            }
+            let provenance = parse_worker_provenance(issue["notes"].as_str().unwrap_or_default())?;
+            Some(WorkerFinding {
+                issue_id: issue["id"].as_str().unwrap_or_default().to_string(),
+                title: issue["title"].as_str().unwrap_or_default().to_string(),
+                worker: provenance.worker,
+                priority: issue["priority"].as_i64().unwrap_or(2) as i32,
+                status: status.to_string(),
+                notes_first_line: provenance.notes_first_line,
+                created_at: issue["created_at"].as_str().unwrap_or_default().to_string(),
+            })
+        })
+        .collect();
+    findings
+        .sort_by(|a, b| crate::commands::read::compare_timestamps(&b.created_at, &a.created_at));
+    findings
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn list_worker_findings(
     project_path: String,
     registry: State<'_, Arc<ProjectRegistry>>,
 ) -> Result<Vec<WorkerFinding>, String> {
-    let pool = registry
+    let source = registry
         .get(&project_path)
         .await
         .map_err(|_| not_connected(&project_path))?;
-
-    let rows = sqlx::query(LIST_WORKER_FINDINGS_SQL)
-        .fetch_all(pool.pool())
-        .await
-        .map_err(|e| format!("Query failed: {e}"))?;
-
-    let findings = rows
-        .iter()
-        .filter_map(|row| {
-            let notes: String = row.try_get("notes").unwrap_or_default();
-            let status: String = row.try_get("status").unwrap_or_default();
-            let issue_type: String = row.try_get("issue_type").unwrap_or_default();
-            if !is_unresolved_worker_finding_row(&status, &issue_type) {
-                return None;
-            }
-            let provenance = parse_worker_provenance(&notes)?;
-
-            Some(WorkerFinding {
-                issue_id: row.try_get("id").unwrap_or_default(),
-                title: row.try_get("title").unwrap_or_default(),
-                worker: provenance.worker,
-                priority: row.try_get::<i32, _>("priority").unwrap_or(2),
-                status,
-                notes_first_line: provenance.notes_first_line,
-                created_at: decode_datetime(row, "created_at"),
-            })
-        })
-        .collect();
-
-    Ok(findings)
+    Ok(worker_findings_from_issues(&source.list_issues().await?))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        is_unresolved_worker_finding_row, parse_worker_from_notes, LIST_WORKER_FINDINGS_SQL,
-    };
+    use super::{is_unresolved_worker_finding_row, parse_worker_from_notes};
+
+    #[test]
+    fn complete_issue_snapshot_keeps_blocked_worker_findings_and_first_line() {
+        let issues = serde_json::json!([
+            {"id":"B-closed","status":"closed","issue_type":"bug","notes":"Auto-filed by ruflo-alpha on 2026-05-17"},
+            {"id":"B-older","title":"Earlier finding","status":"blocked","issue_type":"bug","priority":1,"notes":"Auto-filed by ruflo-alpha worker on 2026-05-17\nFull notes stay available","created_at":"2026-05-17T00:00:00Z"},
+            {"id":"B-newer","title":"Latest finding","status":"open","issue_type":"gate","priority":3,"notes":"Auto-filed by ruflo-test-gap on 2026-05-18\nDetails","created_at":"2026-05-18T00:00:00Z"},
+            {"id":"B-unrelated","status":"open","issue_type":"task","notes":"Note: Auto-filed by ruflo-alpha on 2026-05-17"}
+        ]);
+        let findings = super::worker_findings_from_issues(issues.as_array().unwrap());
+        assert_eq!(
+            findings
+                .iter()
+                .map(|f| f.issue_id.as_str())
+                .collect::<Vec<_>>(),
+            ["B-newer", "B-older"]
+        );
+        assert_eq!(findings[1].status, "blocked");
+        assert_eq!(
+            findings[1].notes_first_line,
+            "Auto-filed by ruflo-alpha worker on 2026-05-17"
+        );
+        assert_eq!(findings[0].worker, "test-gap");
+    }
 
     #[test]
     fn parse_worker_from_notes_accepts_canonical_prefix() {
@@ -180,13 +184,5 @@ mod tests {
         assert!(!is_unresolved_worker_finding_row("closed", "bug"));
         assert!(!is_unresolved_worker_finding_row("deleted", "bug"));
         assert!(!is_unresolved_worker_finding_row("open", "deleted"));
-    }
-
-    #[test]
-    fn list_worker_findings_sql_matches_visibility_contract() {
-        assert!(LIST_WORKER_FINDINGS_SQL.contains("notes LIKE 'Auto-filed by ruflo-%'"));
-        assert!(LIST_WORKER_FINDINGS_SQL.contains("status NOT IN ('closed', 'deleted')"));
-        assert!(LIST_WORKER_FINDINGS_SQL.contains("issue_type != 'deleted'"));
-        assert!(LIST_WORKER_FINDINGS_SQL.contains("ORDER BY created_at DESC"));
     }
 }
