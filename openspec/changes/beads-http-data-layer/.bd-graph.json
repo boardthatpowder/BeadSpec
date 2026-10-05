@@ -1,0 +1,148 @@
+{
+  "nodes": [
+    {
+      "key": "epic",
+      "title": "OpenSpec: beads-http-data-layer",
+      "type": "epic",
+      "priority": 2,
+      "labels": [
+        "openspec:beads-http-data-layer"
+      ],
+      "description": "Implement the user-approved plan for GitHub issue #35; artifacts own behavior and done criteria.",
+      "metadata": {
+        "openspec_change": "beads-http-data-layer",
+        "local_key": "epic"
+      }
+    },
+    {
+      "key": "task-1-1",
+      "title": "1.1: Implement and test supervised Beads HTTP/CLI data source, compatibility policy, status and registry",
+      "type": "task",
+      "priority": 2,
+      "labels": [
+        "openspec:beads-http-data-layer"
+      ],
+      "description": "openspec/changes/beads-http-data-layer/tasks.md \u00a71.1. Implement and test supervised Beads HTTP/CLI data source, compatibility policy, status and registry. Own src-tauri/src/bd/api.rs; src-tauri/src/db/pool.rs; src-tauri/Cargo.toml; src-tauri/Cargo.lock. Implement the approved behavior, add behavioral tests, and run the task-specific checks.",
+      "acceptance": "Approved OpenSpec scenarios pass; core IPC preserved; focused tests and relevant full quality gates pass.",
+      "metadata": {
+        "openspec_change": "beads-http-data-layer",
+        "task_ref": "1.1",
+        "local_key": "task-1-1"
+      },
+      "dependencies": [
+        {
+          "key": "epic",
+          "type": "parent-child"
+        }
+      ]
+    },
+    {
+      "key": "task-2-1",
+      "title": "2.1: Migrate core and ancillary issue, dependency, readiness and task-history reads to the data source",
+      "type": "task",
+      "priority": 2,
+      "labels": [
+        "openspec:beads-http-data-layer"
+      ],
+      "description": "openspec/changes/beads-http-data-layer/tasks.md \u00a72.1. Migrate core and ancillary issue, dependency, readiness and task-history reads to the data source. Own src-tauri/src/commands/read.rs; workers.rs; openspec.rs; bd_mol.rs; gitnexus_processes.rs; external.rs. Implement the approved behavior, add behavioral tests, and run the task-specific checks.",
+      "acceptance": "Approved OpenSpec scenarios pass; core IPC preserved; focused tests and relevant full quality gates pass.",
+      "metadata": {
+        "openspec_change": "beads-http-data-layer",
+        "task_ref": "2.1",
+        "local_key": "task-2-1"
+      },
+      "dependencies": [
+        {
+          "key": "epic",
+          "type": "parent-child"
+        },
+        {
+          "key": "task-1-1",
+          "type": "blocks"
+        }
+      ]
+    },
+    {
+      "key": "task-2-2",
+      "title": "2.2: Implement frontend transport status, journal opt-in, complete cache invalidation and project-scoped activity",
+      "type": "task",
+      "priority": 2,
+      "labels": [
+        "openspec:beads-http-data-layer"
+      ],
+      "description": "openspec/changes/beads-http-data-layer/tasks.md \u00a72.2. Implement frontend transport status, journal opt-in, complete cache invalidation and project-scoped activity. Own src/ hooks, health/activity/epic components, ipc wrappers and tests; README.md; docs-site. Implement the approved behavior, add behavioral tests, and run the task-specific checks.",
+      "acceptance": "Approved OpenSpec scenarios pass; core IPC preserved; focused tests and relevant full quality gates pass.",
+      "metadata": {
+        "openspec_change": "beads-http-data-layer",
+        "task_ref": "2.2",
+        "local_key": "task-2-2"
+      },
+      "dependencies": [
+        {
+          "key": "epic",
+          "type": "parent-child"
+        }
+      ]
+    },
+    {
+      "key": "task-3-1",
+      "title": "3.1: Wire project lifecycle, compatible writes, checkpointed journal sync and bounded activity history",
+      "type": "task",
+      "priority": 2,
+      "labels": [
+        "openspec:beads-http-data-layer"
+      ],
+      "description": "openspec/changes/beads-http-data-layer/tasks.md \u00a73.1. Wire project lifecycle, compatible writes, checkpointed journal sync and bounded activity history. Own src-tauri/src/commands/project.rs; write.rs; src-tauri/src/db/poller.rs; watchers.rs; events/activity.rs; lib.rs; bd/mod.rs. Implement the approved behavior, add behavioral tests, and run the task-specific checks.",
+      "acceptance": "Approved OpenSpec scenarios pass; core IPC preserved; focused tests and relevant full quality gates pass.",
+      "metadata": {
+        "openspec_change": "beads-http-data-layer",
+        "task_ref": "3.1",
+        "local_key": "task-3-1"
+      },
+      "dependencies": [
+        {
+          "key": "epic",
+          "type": "parent-child"
+        },
+        {
+          "key": "task-1-1",
+          "type": "blocks"
+        }
+      ]
+    },
+    {
+      "key": "task-4-1",
+      "title": "4.1: Run contract and isolated real-Beads integration checks, full quality gates, review and delivery",
+      "type": "task",
+      "priority": 2,
+      "labels": [
+        "openspec:beads-http-data-layer"
+      ],
+      "description": "openspec/changes/beads-http-data-layer/tasks.md \u00a74.1. Run contract and isolated real-Beads integration checks, full quality gates, review and delivery. Own integration tests; generated bindings; OpenSpec completion and Beads issue state. Implement the approved behavior, add behavioral tests, and run the task-specific checks.",
+      "acceptance": "Approved OpenSpec scenarios pass; core IPC preserved; focused tests and relevant full quality gates pass.",
+      "metadata": {
+        "openspec_change": "beads-http-data-layer",
+        "task_ref": "4.1",
+        "local_key": "task-4-1"
+      },
+      "dependencies": [
+        {
+          "key": "epic",
+          "type": "parent-child"
+        },
+        {
+          "key": "task-2-1",
+          "type": "blocks"
+        },
+        {
+          "key": "task-2-2",
+          "type": "blocks"
+        },
+        {
+          "key": "task-3-1",
+          "type": "blocks"
+        }
+      ]
+    }
+  ]
+}
