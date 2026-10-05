@@ -14,7 +14,8 @@ describe('accessibility pass contract', () => {
     const tabs = read('src/components/ui/Tabs.tsx')
 
     expect(indexCss).toContain('*:focus-visible')
-    expect(indexCss).toContain('outline: none')
+    expect(indexCss).toContain('outline: 2px solid var(--color-accent)')
+    expect(indexCss).toContain('outline-offset: 2px')
     for (const source of [button, iconButton, tabs]) {
       expect(source).toContain('focus-visible:ring-2')
       expect(source).toContain('focus-visible:ring-(--color-accent)')
@@ -30,7 +31,10 @@ describe('accessibility pass contract', () => {
     const memoryBrowser = read('src/components/memory-browser/MemoryBrowser.tsx')
     const reviewsHealthTab = read('src/components/health/ReviewsHealthTab.tsx')
 
-    expect(taskList).toContain("sortField === field ? `Sort ${sortDir === 'asc' ? 'descending' : 'ascending'}` : 'Sort'")
+    expect(taskList).toContain('return `Sort ${labels[field]} ${direction}`')
+    for (const label of ['Title', 'Status', 'Priority']) {
+      expect(taskList).toContain(`'${label}'`)
+    }
     expect(taskList).toContain("aria-label={sortLabel('title')}")
     expect(taskList).toContain("aria-label={sortLabel('status')}")
     expect(taskList).toContain("aria-label={sortLabel('priority')}")

@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: All interactive elements have visible focus rings
-Every interactive element (button, link, tab trigger, input, select) SHALL show a visible focus indicator when focused via keyboard (`Tab` key). The indicator SHALL use `focus-visible:ring-2` styling referencing the `--color-accent` token. No element SHALL show the browser's default blue outline (suppressed via `*:focus-visible { outline: none }` in `src/index.css`). Mouse focus SHALL NOT show the ring (only keyboard focus).
+Every interactive element (button, link, tab trigger, input, select) SHALL show a visible focus indicator when focused via keyboard (`Tab` key). The indicator SHALL reference the `--color-accent` token, using `focus-visible:ring-2` on UI primitives and a global 2px outline with a 2px offset as a fallback for native controls. Only controls with replacement focus indicators SHALL suppress the outline. Mouse focus SHALL NOT show the ring (only keyboard focus).
 
 #### Scenario: Button shows focus ring on keyboard focus
 - **WHEN** the user focuses a `<Button>` using the Tab key
@@ -20,7 +20,7 @@ Every control that renders only an icon (no visible text label) SHALL have an ac
 
 #### Scenario: TaskList sort header has aria-label
 - **WHEN** a screen reader focuses the sort chevron in the TaskList header
-- **THEN** it announces a descriptive label (e.g., "Sort ascending")
+- **THEN** it announces the column name and the direction that activation will apply (e.g., "Sort Title ascending")
 
 #### Scenario: ChangesBrowser archived chevron has aria-label
 - **WHEN** a screen reader focuses the archived-section expand/collapse chevron

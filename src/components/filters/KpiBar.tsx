@@ -64,7 +64,7 @@ export function KpiBar() {
         variant="ghost"
         size="sm"
         onClick={() => setState({ filters: {} })}
-        className="h-auto border-0 px-1 py-0.5 text-sm font-semibold tabular-nums text-white hover:text-(--color-fg-muted) flex-shrink-0"
+        className="h-auto border-0 px-1 py-0.5 text-sm font-semibold tabular-nums text-(--color-fg) hover:text-(--color-fg-muted) flex-shrink-0"
         aria-label="Reset all filters"
       >
         {total} <span className="text-xs font-normal text-(--color-fg-subtle)">issues</span>

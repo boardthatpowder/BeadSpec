@@ -391,8 +391,16 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
     openPinned(task.id)
   }, [openPinned, clearHistory])
 
-  const sortLabel = (field: SortField) =>
-    sortField === field ? `Sort ${sortDir === 'asc' ? 'descending' : 'ascending'}` : 'Sort'
+  const sortLabel = (field: SortField) => {
+    const labels: Record<SortField, string> = {
+      title: 'Title',
+      status: 'Status',
+      priority: 'Priority',
+      updated_at: 'Updated',
+    }
+    const direction = sortField === field && sortDir === 'asc' ? 'descending' : 'ascending'
+    return `Sort ${labels[field]} ${direction}`
+  }
 
   const SortIcon = ({ field }: { field: SortField }) =>
     sortField === field ? (
