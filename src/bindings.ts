@@ -35,6 +35,7 @@ export const commands = {
 	getTask: (projectPath: string, issueId: string) => typedError<TaskDetail, string>(__TAURI_INVOKE("get_task", { projectPath, issueId })),
 	getTaskHistory: (projectPath: string, issueId: string) => typedError<HistoryEntry[], string>(__TAURI_INVOKE("get_task_history", { projectPath, issueId })),
 	searchTasks: (projectPath: string, query: string) => typedError<SearchResult[], string>(__TAURI_INVOKE("search_tasks", { projectPath, query })),
+	listWorkerFindings: (projectPath: string) => typedError<WorkerFinding[], string>(__TAURI_INVOKE("list_worker_findings", { projectPath })),
 	focusMainWindow: () => typedError<null, string>(__TAURI_INVOKE("focus_main_window")),
 	/**
 	 *  BEADSPEC-4g6 (18.2): Update the tray icon badge with the current open-task count.
@@ -511,6 +512,7 @@ export type Task = {
 	task_type: string,
 	assignee: string | null,
 	labels: string[],
+	worker_provenance: WorkerProvenance | null,
 	created_at: string,
 	updated_at: string,
 };
@@ -554,6 +556,21 @@ export type ValidationHistoryEntry = {
 export type ValidationResult = {
 	valid: boolean,
 	errors: string[],
+};
+
+export type WorkerFinding = {
+	issue_id: string,
+	title: string,
+	worker: string,
+	priority: number,
+	status: string,
+	notes_first_line: string,
+	created_at: string,
+};
+
+export type WorkerProvenance = {
+	worker: string,
+	notes_first_line: string,
 };
 
 /**  Workspace context derived from git for the connected project. */

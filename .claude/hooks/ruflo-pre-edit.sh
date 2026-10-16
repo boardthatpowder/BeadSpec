@@ -13,6 +13,9 @@ esac
 
 [ -n "$FILE" ] || exit 0
 
+# Guard: skip if ruflo is not installed (avoids "command not found" zombie subshell)
+command -v ruflo >/dev/null 2>&1 || exit 0
+
 # Fire-and-forget — never blocks the edit
 (ruflo hooks pre-edit -f "$FILE" 2>/dev/null) &
 disown $! 2>/dev/null

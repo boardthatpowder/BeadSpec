@@ -1,4 +1,5 @@
 use crate::bd::runner::{find_bd, invoke_bd_in_project};
+use crate::commands::workers::parse_worker_provenance;
 use crate::db::dolt_server::DoltServerRegistry;
 use crate::db::pool::ProjectRegistry;
 use crate::settings::AppSettings;
@@ -33,14 +34,19 @@ pub enum SnapshotSource {
 
 fn settings_paths(settings: &State<'_, Arc<Mutex<AppSettings>>>) -> (String, String) {
     let guard = settings.lock().unwrap();
-    (guard.binary_paths.bd.clone(), guard.binary_paths.dolt.clone())
+    (
+        guard.binary_paths.bd.clone(),
+        guard.binary_paths.dolt.clone(),
+    )
 }
 
 fn id_from_value(value: &Value) -> Option<String> {
-    value
-        .as_str()
-        .map(ToOwned::to_owned)
-        .or_else(|| value.get("id").and_then(Value::as_str).map(ToOwned::to_owned))
+    value.as_str().map(ToOwned::to_owned).or_else(|| {
+        value
+            .get("id")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned)
+    })
 }
 
 pub(crate) fn parse_bd_ready(raw: &str) -> Option<EpicReadySnapshot> {
@@ -83,8 +89,14 @@ pub(crate) fn parse_bd_ready(raw: &str) -> Option<EpicReadySnapshot> {
         })
         .unwrap_or_default();
     Some(EpicReadySnapshot {
-        total_open: json.get("total_open").and_then(Value::as_u64).unwrap_or(ready.len() as u64) as u32,
-        total_in_progress: json.get("total_in_progress").and_then(Value::as_u64).unwrap_or(0) as u32,
+        total_open: json
+            .get("total_open")
+            .and_then(Value::as_u64)
+            .unwrap_or(ready.len() as u64) as u32,
+        total_in_progress: json
+            .get("total_in_progress")
+            .and_then(Value::as_u64)
+            .unwrap_or(0) as u32,
         paused_task_ids: Vec::new(),
         ready,
         blocked,
@@ -114,7 +126,8 @@ pub async fn get_epic_ready_snapshot(
         .await;
         if let Ok(stdout) = cli {
             if let Some(mut parsed) = parse_bd_ready(&stdout) {
-                parsed.paused_task_ids = paused_children(&project_path, &epic_id, registry.inner()).await;
+                parsed.paused_task_ids =
+                    paused_children(&project_path, &epic_id, registry.inner()).await;
                 return Ok(parsed);
             }
         }
@@ -165,7 +178,9 @@ async fn child_ids(
         .fetch_all(pool.pool())
         .await
         .unwrap_or_default();
-    rows.iter().filter_map(|r| r.try_get("issue_id").ok()).collect()
+    rows.iter()
+        .filter_map(|r| r.try_get("issue_id").ok())
+        .collect()
 }
 
 async fn paused_children(
@@ -229,7 +244,9 @@ async fn dolt_snapshot(
             .await
             .ok()
             .flatten();
-        let status: String = row.and_then(|r| r.try_get("status").ok()).unwrap_or_default();
+        let status: String = row
+            .and_then(|r| r.try_get("status").ok())
+            .unwrap_or_default();
         if status == "open" {
             total_open += 1;
             let blocker_count: i64 = sqlx::query(
@@ -316,7 +333,7 @@ async fn read_task_summary(
         .await
         .map_err(|_| format!("project_not_connected: '{project_path}'"))?;
     let row = sqlx::query(
-        "SELECT id, title, status, priority, issue_type, assignee, created_at, updated_at \
+        "SELECT id, title, status, priority, issue_type, assignee, notes, created_at, updated_at \
          FROM issues WHERE id = ? LIMIT 1",
     )
     .bind(task_id)
@@ -339,6 +356,11 @@ async fn read_task_summary(
         task_type: row.try_get("issue_type").unwrap_or_else(|_| "task".into()),
         assignee: row.try_get("assignee").ok(),
         labels,
+        worker_provenance: row
+            .try_get::<Option<String>, _>("notes")
+            .ok()
+            .flatten()
+            .and_then(|notes| parse_worker_provenance(&notes)),
         created_at: crate::commands::read::decode_datetime(&row, "created_at"),
         updated_at: crate::commands::read::decode_datetime(&row, "updated_at"),
     })
@@ -350,7 +372,8 @@ mod tests {
 
     #[test]
     fn bd_ready_parser_handles_ready_array() {
-        let snap = parse_bd_ready(r#"{"ready":["A","B"],"total_open":3,"total_in_progress":1}"#).unwrap();
+        let snap =
+            parse_bd_ready(r#"{"ready":["A","B"],"total_open":3,"total_in_progress":1}"#).unwrap();
         assert_eq!(snap.ready, vec!["A", "B"]);
         assert_eq!(snap.total_open, 3);
         assert_eq!(snap.source, SnapshotSource::BdCli);

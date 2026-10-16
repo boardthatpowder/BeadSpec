@@ -77,7 +77,11 @@ fn string_field(v: &Value, names: &[&str]) -> Option<String> {
 fn location_for(v: &Value) -> String {
     if let Some(loc) = string_field(v, &["location", "file", "filePath", "file_path"]) {
         let line = v.get("line").and_then(Value::as_i64).unwrap_or_default();
-        return if line > 0 { format!("{loc}:{line}") } else { loc };
+        return if line > 0 {
+            format!("{loc}:{line}")
+        } else {
+            loc
+        };
     }
     string_field(v, &["id", "uid"]).unwrap_or_default()
 }
@@ -103,9 +107,11 @@ pub(crate) fn parse_impact_json(
     let risk = value
         .get("risk")
         .and_then(|v| {
-            v.as_str()
-                .map(ToOwned::to_owned)
-                .or_else(|| v.get("level").and_then(Value::as_str).map(ToOwned::to_owned))
+            v.as_str().map(ToOwned::to_owned).or_else(|| {
+                v.get("level")
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned)
+            })
         })
         .map(|s| risk_from_str(&s))
         .unwrap_or(GitnexusRisk::Unknown);
@@ -179,7 +185,9 @@ pub(crate) fn classify_gitnexus_error(stderr: &str) -> String {
         "Timeout: GitNexus impact timed out after 15 seconds".to_string()
     } else if lower.contains("symbol") && lower.contains("not found") {
         "SymbolNotFound: GitNexus could not resolve that symbol".to_string()
-    } else if lower.contains("could not determine executable") || lower.contains("command not found") {
+    } else if lower.contains("could not determine executable")
+        || lower.contains("command not found")
+    {
         "MissingCli: npx gitnexus is not available".to_string()
     } else if lower.contains("no index") || lower.contains("not indexed") {
         "NoIndex: GitNexus index not found; run npx gitnexus analyze".to_string()
@@ -209,17 +217,15 @@ pub(crate) async fn detect_index_status(project_path: &str) -> GitnexusIndexStat
     let args = ["-C", project_path, "log", "-1", "--format=%cI"];
     let head_time: Option<SystemTime> =
         match spawn_managed("git", &args, cwd, Duration::from_secs(5), &[]).await {
-        Ok(out) if out.exit_code == Some(0) => {
-            let raw = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            DateTime::parse_from_rfc3339(&raw)
-                .ok()
-                .and_then(|dt| {
+            Ok(out) if out.exit_code == Some(0) => {
+                let raw = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                DateTime::parse_from_rfc3339(&raw).ok().and_then(|dt| {
                     let secs = dt.with_timezone(&Utc).timestamp();
                     (secs >= 0).then(|| UNIX_EPOCH + Duration::from_secs(secs as u64))
                 })
-        }
-        _ => None,
-    };
+            }
+            _ => None,
+        };
 
     match (newest_ack, head_time) {
         (Some(ack), Some(head)) => {
@@ -259,7 +265,9 @@ pub async fn run_gitnexus_impact(
     .map_err(|e| classify_gitnexus_error(&e.to_string()))?;
 
     if out.exit_code != Some(0) {
-        return Err(classify_gitnexus_error(&String::from_utf8_lossy(&out.stderr)));
+        return Err(classify_gitnexus_error(&String::from_utf8_lossy(
+            &out.stderr,
+        )));
     }
 
     let json: Value = serde_json::from_slice(&out.stdout)

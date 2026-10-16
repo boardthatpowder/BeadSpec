@@ -52,7 +52,13 @@ pub(crate) fn history_value(
         .single()
         .unwrap_or_else(Utc::now)
         .to_rfc3339();
-    ValidationHistoryEntry { change_slug: change_slug.into(), valid, errors, ts_epoch, ts_iso }
+    ValidationHistoryEntry {
+        change_slug: change_slug.into(),
+        valid,
+        errors,
+        ts_epoch,
+        ts_iso,
+    }
 }
 
 fn ruflo(settings: &State<'_, Arc<Mutex<AppSettings>>>) -> Result<std::path::PathBuf, String> {
@@ -68,8 +74,8 @@ pub async fn record_openspec_validation(
     result_json: String,
     settings: State<'_, Arc<Mutex<AppSettings>>>,
 ) -> Result<(), String> {
-    let parsed: ValidationResultShape =
-        serde_json::from_str(&result_json).map_err(|e| format!("invalid validation result JSON: {e}"))?;
+    let parsed: ValidationResultShape = serde_json::from_str(&result_json)
+        .map_err(|e| format!("invalid validation result JSON: {e}"))?;
     let workspace = derive_workspace_context(&project_path).await?;
     let ts_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -109,7 +115,10 @@ pub async fn list_openspec_validations(
     Ok(filter_validation_history(&stdout, &change_slug))
 }
 
-pub(crate) fn filter_validation_history(raw: &str, change_slug: &str) -> Vec<ValidationHistoryEntry> {
+pub(crate) fn filter_validation_history(
+    raw: &str,
+    change_slug: &str,
+) -> Vec<ValidationHistoryEntry> {
     let Ok(json) = serde_json::from_str::<Value>(raw) else {
         return Vec::new();
     };

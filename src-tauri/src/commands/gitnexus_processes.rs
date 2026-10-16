@@ -1,5 +1,6 @@
 use crate::bd::runner::spawn_managed;
 use crate::db::pool::ProjectRegistry;
+use crate::events::activity::{emit_event, ActivityEvent};
 use serde_json::Value;
 use sqlx::Row;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -7,7 +8,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
-use crate::events::activity::{emit_event, ActivityEvent};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct ProcessSummary {
@@ -113,10 +113,16 @@ pub(crate) async fn gitnexus_cli_json(
     }
     let parsed: Value = serde_json::from_slice(&out.stdout).map_err(|e| {
         let raw = String::from_utf8_lossy(&out.stdout);
-        format!("gitnexus_json_parse_failed: {e}; stdout_prefix={}", &raw.chars().take(120).collect::<String>())
+        format!(
+            "gitnexus_json_parse_failed: {e}; stdout_prefix={}",
+            &raw.chars().take(120).collect::<String>()
+        )
     })?;
     if ttl_secs > 0 {
-        cache.lock().unwrap().insert(key, (Instant::now(), parsed.clone()));
+        cache
+            .lock()
+            .unwrap()
+            .insert(key, (Instant::now(), parsed.clone()));
     }
     Ok(parsed)
 }
@@ -158,7 +164,8 @@ pub(crate) fn parse_process_summaries(value: &Value) -> Vec<ProcessSummary> {
                 .unwrap_or(0);
             Some(ProcessSummary {
                 name: val_str(item, &["name", "process"])?,
-                cluster: val_str(item, &["cluster", "module"]).unwrap_or_else(|| "Unclustered".into()),
+                cluster: val_str(item, &["cluster", "module"])
+                    .unwrap_or_else(|| "Unclustered".into()),
                 step_count: item
                     .get("step_count")
                     .or_else(|| item.get("stepCount"))
@@ -240,7 +247,10 @@ pub(crate) fn clusters_from_processes(processes: &[ProcessSummary]) -> Vec<Clust
     }
     counts
         .into_iter()
-        .map(|(name, process_count)| Cluster { name, process_count })
+        .map(|(name, process_count)| Cluster {
+            name,
+            process_count,
+        })
         .collect()
 }
 
@@ -276,7 +286,11 @@ pub async fn find_issues_touching_process(
         let files = files_for_issue(&project_path, &id).await;
         let overlap = files.intersection(&process_files).count() as u32;
         if overlap > 0 {
-            matches.push(IssueMatch { id, title, overlap_count: overlap });
+            matches.push(IssueMatch {
+                id,
+                title,
+                overlap_count: overlap,
+            });
         }
     }
     matches.sort_by_key(|m| std::cmp::Reverse(m.overlap_count));
@@ -304,9 +318,20 @@ async fn files_for_issue(project_path: &str, issue_id: &str) -> HashSet<String> 
         return HashSet::new();
     }
     let mut files = HashSet::new();
-    for hash in String::from_utf8_lossy(&out.stdout).lines().filter(|l| !l.trim().is_empty()) {
-        let show_args = ["-C", project_path, "show", "--format=", "--name-only", hash.trim()];
-        if let Ok(show) = spawn_managed("git", &show_args, cwd, Duration::from_secs(10), &[]).await {
+    for hash in String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+    {
+        let show_args = [
+            "-C",
+            project_path,
+            "show",
+            "--format=",
+            "--name-only",
+            hash.trim(),
+        ];
+        if let Ok(show) = spawn_managed("git", &show_args, cwd, Duration::from_secs(10), &[]).await
+        {
             if show.exit_code == Some(0) {
                 files.extend(
                     String::from_utf8_lossy(&show.stdout)
@@ -324,7 +349,9 @@ async fn files_for_issue(project_path: &str, issue_id: &str) -> HashSet<String> 
 #[tauri::command]
 #[specta::specta]
 pub async fn get_gitnexus_index_status(project_path: String) -> Result<IndexStatus, String> {
-    let value = gitnexus_cli_json(&project_path, &["list", "--json"], 60).await.ok();
+    let value = gitnexus_cli_json(&project_path, &["list", "--json"], 60)
+        .await
+        .ok();
     let last_indexed_at = value.as_ref().and_then(find_last_indexed_at);
     let age_seconds = last_indexed_at
         .as_ref()
@@ -338,11 +365,19 @@ pub async fn get_gitnexus_index_status(project_path: String) -> Result<IndexStat
 }
 
 fn find_last_indexed_at(value: &Value) -> Option<String> {
-    let repos = value.as_array().or_else(|| value.get("repos").and_then(Value::as_array))?;
+    let repos = value
+        .as_array()
+        .or_else(|| value.get("repos").and_then(Value::as_array))?;
     repos.iter().find_map(|repo| {
         val_str(
             repo,
-            &["indexed_at", "indexedAt", "last_indexed_at", "lastIndexedAt", "updated_at"],
+            &[
+                "indexed_at",
+                "indexedAt",
+                "last_indexed_at",
+                "lastIndexedAt",
+                "updated_at",
+            ],
         )
     })
 }
@@ -354,7 +389,12 @@ fn parse_ts_age_seconds(ts: &str) -> Option<u32> {
     }
     let parsed = sqlx::types::chrono::DateTime::parse_from_rfc3339(ts).ok()?;
     let now = sqlx::types::chrono::Utc::now();
-    Some((now - parsed.with_timezone(&sqlx::types::chrono::Utc)).num_seconds().max(0).min(u32::MAX as i64) as u32)
+    Some(
+        (now - parsed.with_timezone(&sqlx::types::chrono::Utc))
+            .num_seconds()
+            .max(0)
+            .min(u32::MAX as i64) as u32,
+    )
 }
 
 fn cache_age_seconds() -> u32 {
@@ -371,13 +411,19 @@ pub async fn trigger_gitnexus_reanalyze(
     let cwd = project_path.clone();
     app.emit(
         "gitnexus_reanalyze_progress",
-        ReanalyzeProgress { stage: "started".into(), message: "GitNexus analyze started".into() },
+        ReanalyzeProgress {
+            stage: "started".into(),
+            message: "GitNexus analyze started".into(),
+        },
     )
     .ok();
     emit_event(
         &app,
         ActivityEvent {
-            id: format!("gitnexus.analyze.started:{}", sqlx::types::chrono::Utc::now().timestamp_millis()),
+            id: format!(
+                "gitnexus.analyze.started:{}",
+                sqlx::types::chrono::Utc::now().timestamp_millis()
+            ),
             ts: sqlx::types::chrono::Utc::now().to_rfc3339(),
             kind: "gitnexus.analyze_started".into(),
             source: "gitnexus".into(),
@@ -389,7 +435,10 @@ pub async fn trigger_gitnexus_reanalyze(
     tokio::spawn(async move {
         let _ = app.emit(
             "gitnexus_reanalyze_progress",
-            ReanalyzeProgress { stage: "running".into(), message: "Indexing repository".into() },
+            ReanalyzeProgress {
+                stage: "running".into(),
+                message: "Indexing repository".into(),
+            },
         );
         let result = spawn_managed(
             &npx.to_string_lossy(),
@@ -408,14 +457,26 @@ pub async fn trigger_gitnexus_reanalyze(
                 stage: "error".into(),
                 message: String::from_utf8_lossy(&out.stderr).trim().to_string(),
             },
-            Err(e) => ReanalyzeProgress { stage: "error".into(), message: e.to_string() },
+            Err(e) => ReanalyzeProgress {
+                stage: "error".into(),
+                message: e.to_string(),
+            },
         };
         emit_event(
             &app,
             ActivityEvent {
-                id: format!("gitnexus.analyze.{}:{}", payload.stage, sqlx::types::chrono::Utc::now().timestamp_millis()),
+                id: format!(
+                    "gitnexus.analyze.{}:{}",
+                    payload.stage,
+                    sqlx::types::chrono::Utc::now().timestamp_millis()
+                ),
                 ts: sqlx::types::chrono::Utc::now().to_rfc3339(),
-                kind: if payload.stage == "finished" { "gitnexus.index_refreshed" } else { "gitnexus.analyze_error" }.into(),
+                kind: if payload.stage == "finished" {
+                    "gitnexus.index_refreshed"
+                } else {
+                    "gitnexus.analyze_error"
+                }
+                .into(),
                 source: "gitnexus".into(),
                 summary: payload.message.clone(),
                 detail: serde_json::json!({}).to_string(),
@@ -439,9 +500,21 @@ mod tests {
     #[test]
     fn cluster_counts_are_sorted() {
         let clusters = clusters_from_processes(&[
-            ProcessSummary { name: "b".into(), cluster: "z".into(), step_count: 1 },
-            ProcessSummary { name: "a".into(), cluster: "a".into(), step_count: 1 },
-            ProcessSummary { name: "c".into(), cluster: "z".into(), step_count: 1 },
+            ProcessSummary {
+                name: "b".into(),
+                cluster: "z".into(),
+                step_count: 1,
+            },
+            ProcessSummary {
+                name: "a".into(),
+                cluster: "a".into(),
+                step_count: 1,
+            },
+            ProcessSummary {
+                name: "c".into(),
+                cluster: "z".into(),
+                step_count: 1,
+            },
         ]);
         assert_eq!(clusters[0].name, "a");
         assert_eq!(clusters[1].process_count, 2);

@@ -1,0 +1,1 @@
+../../../.claude/skills/openspec-explore/SKILL.md

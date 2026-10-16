@@ -13,4 +13,5 @@ pub mod recovery;
 pub mod reviews;
 pub mod ruflo_memory;
 pub mod ruflo_sessions;
+pub mod workers;
 pub mod write;

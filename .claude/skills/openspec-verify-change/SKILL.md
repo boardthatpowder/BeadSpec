@@ -20,7 +20,7 @@ Verify that an implementation matches the change artifacts (specs, tasks, design
    Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
 
    Show changes that have implementation tasks (tasks artifact exists).
-   Include the schema used for each change if available.
+   Note: `openspec list --json` does not include a schema field; use `openspec status --change <name> --json` to get `schemaName` if you need to show the schema per change.
    Mark changes with incomplete tasks as "(In Progress)".
 
    **IMPORTANT**: Do NOT guess or auto-select a change. Always let the user choose.

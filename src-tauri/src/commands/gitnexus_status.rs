@@ -1,5 +1,5 @@
-use crate::commands::gitnexus_processes::{get_gitnexus_index_status, IndexStatus};
 use crate::commands::gitnexus_processes::trigger_gitnexus_reanalyze;
+use crate::commands::gitnexus_processes::{get_gitnexus_index_status, IndexStatus};
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -20,12 +20,21 @@ pub struct GitnexusAnalyzeHandle {
 #[specta::specta]
 pub async fn get_gitnexus_status(project_path: String) -> Result<GitnexusStatus, String> {
     match get_gitnexus_index_status(project_path).await {
-        Ok(IndexStatus { last_indexed_at, age_seconds, stale }) => Ok(GitnexusStatus {
+        Ok(IndexStatus {
+            last_indexed_at,
+            age_seconds,
+            stale,
+        }) => Ok(GitnexusStatus {
             available: true,
             last_indexed_at,
             age_seconds,
             stale,
-            message: if stale { "GitNexus index is stale" } else { "GitNexus index is fresh" }.into(),
+            message: if stale {
+                "GitNexus index is stale"
+            } else {
+                "GitNexus index is fresh"
+            }
+            .into(),
         }),
         Err(e) => Ok(GitnexusStatus {
             available: false,

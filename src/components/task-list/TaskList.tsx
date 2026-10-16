@@ -451,6 +451,12 @@ export function TaskList({ tasks, isLoading, selectedIds = [], onSelectionChange
                     <div style={{ height: 54 }}>
                       <TaskListItem
                         task={item.task}
+                        provenance={item.task.worker_provenance
+                          ? {
+                              worker: item.task.worker_provenance.worker,
+                              firstLine: item.task.worker_provenance.notes_first_line,
+                            }
+                          : null}
                         isActive={(() => {
                           const { root: r, activePaneId: ap } = useWorkspaceStore.getState()
                           return r.kind === 'leaf' && r.activeTabId === item.task.id && r.id === ap

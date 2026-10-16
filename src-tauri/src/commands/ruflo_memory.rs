@@ -24,9 +24,9 @@ pub struct MemoryListResponse {
 pub(crate) fn is_valid_memory_key(key: &str) -> bool {
     !key.is_empty()
         && key.len() <= 1024
-        && key
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b':' | b'|' | b'=' | b'.' | b'_' | b'/' | b'-'))
+        && key.bytes().all(|b| {
+            b.is_ascii_alphanumeric() || matches!(b, b':' | b'|' | b'=' | b'.' | b'_' | b'/' | b'-')
+        })
 }
 
 pub(crate) fn is_valid_memory_value(value: &str) -> bool {
@@ -34,7 +34,12 @@ pub(crate) fn is_valid_memory_value(value: &str) -> bool {
 }
 
 pub(crate) fn list_args(prefix: Option<&str>, limit: Option<u32>) -> Vec<String> {
-    let mut args = vec!["memory".into(), "list".into(), "--format".into(), "json".into()];
+    let mut args = vec![
+        "memory".into(),
+        "list".into(),
+        "--format".into(),
+        "json".into(),
+    ];
     if let Some(prefix) = prefix.filter(|p| !p.is_empty()) {
         args.push("--prefix".into());
         args.push(prefix.to_string());
@@ -58,7 +63,8 @@ fn preview_for(body: &str) -> String {
 }
 
 pub(crate) fn parse_memory_list(raw: &str) -> Result<MemoryListResponse, String> {
-    let json: Value = serde_json::from_str(raw).map_err(|e| format!("memory list JSON parse failed: {e}"))?;
+    let json: Value =
+        serde_json::from_str(raw).map_err(|e| format!("memory list JSON parse failed: {e}"))?;
     let items = json
         .as_array()
         .cloned()
@@ -84,16 +90,24 @@ pub(crate) fn parse_memory_list(raw: &str) -> Result<MemoryListResponse, String>
                     .map(ToOwned::to_owned)
                     .unwrap_or_else(|| preview_for(&body)),
                 score: item.get("score").and_then(Value::as_f64).unwrap_or(0.0) as f32,
-                ts: item.get("ts").and_then(Value::as_f64).or_else(|| parse_ts(&key)),
+                ts: item
+                    .get("ts")
+                    .and_then(Value::as_f64)
+                    .or_else(|| parse_ts(&key)),
                 key,
                 body,
             })
         })
         .collect();
-    Ok(MemoryListResponse { total: entries.len() as u32, entries })
+    Ok(MemoryListResponse {
+        total: entries.len() as u32,
+        entries,
+    })
 }
 
-fn ruflo_from_settings(settings: &State<'_, Arc<Mutex<AppSettings>>>) -> Result<std::path::PathBuf, String> {
+fn ruflo_from_settings(
+    settings: &State<'_, Arc<Mutex<AppSettings>>>,
+) -> Result<std::path::PathBuf, String> {
     let settings_path = settings.lock().unwrap().binary_paths.ruflo.clone();
     find_ruflo_with_override(&settings_path).ok_or_else(|| "ruflo CLI not found".to_string())
 }
@@ -145,9 +159,13 @@ pub async fn ruflo_memory_delete(
         return Err("invalid memory key".into());
     }
     let ruflo = ruflo_from_settings(&settings)?;
-    run_ruflo_managed(ruflo, &["memory", "delete", "-k", &key], Duration::from_secs(10))
-        .await
-        .map(|_| ())
+    run_ruflo_managed(
+        ruflo,
+        &["memory", "delete", "-k", &key],
+        Duration::from_secs(10),
+    )
+    .await
+    .map(|_| ())
 }
 
 #[cfg(test)]
@@ -157,7 +175,9 @@ mod tests {
     #[test]
     fn memory_key_validator_rejects_shell_chars() {
         assert!(is_valid_memory_key("branch:foo|repo:bar|type:note"));
-        assert!(is_valid_memory_key("openspec:abc-def|issue:BEADSPEC-xqf|type:trajectory|ts:1700000000"));
+        assert!(is_valid_memory_key(
+            "openspec:abc-def|issue:BEADSPEC-xqf|type:trajectory|ts:1700000000"
+        ));
         for bad in ["", "a b", "a;b", "$x", "`x`", "x\ny"] {
             assert!(!is_valid_memory_key(bad), "{bad}");
         }
@@ -175,7 +195,16 @@ mod tests {
     fn list_argv_is_exact() {
         assert_eq!(
             list_args(Some("branch:foo"), Some(250)),
-            vec!["memory", "list", "--format", "json", "--prefix", "branch:foo", "--limit", "250"]
+            vec![
+                "memory",
+                "list",
+                "--format",
+                "json",
+                "--prefix",
+                "branch:foo",
+                "--limit",
+                "250"
+            ]
         );
         assert_eq!(
             list_args(None, None),

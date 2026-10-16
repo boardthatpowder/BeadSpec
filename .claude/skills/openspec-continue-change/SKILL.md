@@ -21,7 +21,7 @@ Continue working on a change by creating the next artifact.
 
    Present the top 3-4 most recently modified changes as options, showing:
    - Change name
-   - Schema (from `schema` field if present, otherwise "spec-driven")
+   - Schema (`openspec list --json` does not include schema; fetch via `openspec status --change <name> --json` → `schemaName` if needed, otherwise show "spec-driven" as default)
    - Status (e.g., "0/5 tasks", "complete", "no tasks")
    - How recently it was modified (from `lastModified` field)
 

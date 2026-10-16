@@ -96,8 +96,17 @@ async fn lookup_one(project_path: &str, name: &str) -> Option<SymbolHit> {
         .ok()?;
     let symbol = first_symbol(&ctx)?;
     let symbol_name = str_field(symbol, &["name", "symbol"])?;
-    let qualified_path = str_field(symbol, &["qualified_path", "qualifiedPath", "filePath", "file_path", "id"])
-        .unwrap_or_else(|| symbol_name.clone());
+    let qualified_path = str_field(
+        symbol,
+        &[
+            "qualified_path",
+            "qualifiedPath",
+            "filePath",
+            "file_path",
+            "id",
+        ],
+    )
+    .unwrap_or_else(|| symbol_name.clone());
     let kind = str_field(symbol, &["kind", "type"]).unwrap_or_else(|| "symbol".into());
     let one_line_description = str_field(symbol, &["description", "summary", "signature"])
         .unwrap_or_else(|| format!("{kind} {symbol_name}"));
@@ -105,7 +114,13 @@ async fn lookup_one(project_path: &str, name: &str) -> Option<SymbolHit> {
     let impact = gitnexus_cli_json(project_path, &["impact", "--target", name, "--json"], 30)
         .await
         .ok()
-        .map(|v| parse_impact_json(name, &v, crate::commands::gitnexus::GitnexusIndexStatus::Unknown));
+        .map(|v| {
+            parse_impact_json(
+                name,
+                &v,
+                crate::commands::gitnexus::GitnexusIndexStatus::Unknown,
+            )
+        });
 
     let risk_level = impact
         .as_ref()
@@ -117,7 +132,10 @@ async fn lookup_one(project_path: &str, name: &str) -> Option<SymbolHit> {
                 .into_iter()
                 .flat_map(|g| g.callers.into_iter())
                 .take(3)
-                .map(|c| CallerRef { name: c.name, qualified_path: c.location })
+                .map(|c| CallerRef {
+                    name: c.name,
+                    qualified_path: c.location,
+                })
                 .collect()
         })
         .unwrap_or_default();

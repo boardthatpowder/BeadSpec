@@ -1,0 +1,83 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "openspec list 2>/dev/null | head -20" }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bd prime" }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "source ~/.claude/ruflo/lib/tags.sh 2>/dev/null && ruflo memory search -q \"recent context $(git branch --show-current 2>/dev/null)\" 2>/dev/null | head -20 || true"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "ruflo hooks session-restore 2>/dev/null || true" }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bd prime" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/ruflo-pre-edit.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/ruflo-pre-commit.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/ruflo-post-push.sh" },
+          {
+            "type": "command",
+            "command": ".codex/hooks/gitnexus-analyze.sh",
+            "async": true,
+            "timeout": 300,
+            "statusMessage": "Updating GitNexus index..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/ruflo-post-edit.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/ruflo-session-end.sh" }
+        ]
+      }
+    ]
+  }
+}

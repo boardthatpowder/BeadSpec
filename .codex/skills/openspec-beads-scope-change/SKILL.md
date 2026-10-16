@@ -1,0 +1,1 @@
+../../../.claude/skills/openspec-beads-scope-change/SKILL.md

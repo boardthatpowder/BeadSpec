@@ -66,7 +66,14 @@ pub(crate) fn parse_review_key(key: &str, body: String) -> Option<ReviewEntry> {
         }
     }
     let kind_raw = kind_raw?;
-    let title = title.unwrap_or_else(|| body.lines().next().unwrap_or("Review").chars().take(80).collect());
+    let title = title.unwrap_or_else(|| {
+        body.lines()
+            .next()
+            .unwrap_or("Review")
+            .chars()
+            .take(80)
+            .collect()
+    });
     Some(ReviewEntry {
         key: key.to_string(),
         kind: review_kind(&kind_raw),
@@ -104,7 +111,11 @@ fn parse_review_entries(raw: &str) -> Vec<ReviewEntry> {
             parse_review_key(key, body)
         })
         .collect();
-    entries.sort_by(|a, b| b.ts_epoch.unwrap_or(0.0).total_cmp(&a.ts_epoch.unwrap_or(0.0)));
+    entries.sort_by(|a, b| {
+        b.ts_epoch
+            .unwrap_or(0.0)
+            .total_cmp(&a.ts_epoch.unwrap_or(0.0))
+    });
     entries
 }
 

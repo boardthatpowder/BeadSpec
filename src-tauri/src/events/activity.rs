@@ -1,6 +1,6 @@
 use crate::commands::external::{find_ruflo_with_override, run_ruflo_managed};
-use sqlx::types::chrono::{DateTime, Utc};
 use serde_json::{json, Value};
+use sqlx::types::chrono::{DateTime, Utc};
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
@@ -24,7 +24,9 @@ pub struct ActivityRingBuffer {
 
 impl ActivityRingBuffer {
     pub fn new() -> Self {
-        Self { events: Mutex::new(VecDeque::new()) }
+        Self {
+            events: Mutex::new(VecDeque::new()),
+        }
     }
 
     pub fn push(&self, event: ActivityEvent) {
@@ -34,7 +36,11 @@ impl ActivityRingBuffer {
         while guard.len() > 5000 {
             guard.pop_front();
         }
-        guard.retain(|event| parse_ts(&event.ts).map(|ts| ts.timestamp() >= horizon_epoch).unwrap_or(true));
+        guard.retain(|event| {
+            parse_ts(&event.ts)
+                .map(|ts| ts.timestamp() >= horizon_epoch)
+                .unwrap_or(true)
+        });
     }
 
     pub fn since(&self, since_ts: Option<DateTime<Utc>>, limit: usize) -> Vec<ActivityEvent> {
@@ -64,7 +70,9 @@ fn ring() -> &'static ActivityRingBuffer {
 }
 
 fn parse_ts(ts: &str) -> Option<DateTime<Utc>> {
-    DateTime::parse_from_rfc3339(ts).ok().map(|dt| dt.with_timezone(&Utc))
+    DateTime::parse_from_rfc3339(ts)
+        .ok()
+        .map(|dt| dt.with_timezone(&Utc))
 }
 
 pub fn emit_event(handle: &AppHandle, event: ActivityEvent) {
@@ -243,7 +251,11 @@ fn parse_memory_event(key: &str, value: &str) -> Option<(i64, ActivityEvent)> {
         .and_then(Value::as_str)
         .unwrap_or(&kind)
         .to_string();
-    let detail = value_json.get("detail").cloned().unwrap_or(Value::Null).to_string();
+    let detail = value_json
+        .get("detail")
+        .cloned()
+        .unwrap_or(Value::Null)
+        .to_string();
     let correlation_id = value_json
         .get("correlation_id")
         .and_then(Value::as_str)
@@ -281,7 +293,11 @@ fn gitnexus_cache_snapshot(project_dir: &Path) -> Option<(SystemTime, Option<Sys
             continue;
         };
         if name.ends_with(".json") {
-            newest_index = Some(newest_index.map(|old| old.max(modified)).unwrap_or(modified));
+            newest_index = Some(
+                newest_index
+                    .map(|old| old.max(modified))
+                    .unwrap_or(modified),
+            );
         } else if name.ends_with("-ack") {
             newest_ack = Some(newest_ack.map(|old| old.max(modified)).unwrap_or(modified));
         }
@@ -290,7 +306,9 @@ fn gitnexus_cache_snapshot(project_dir: &Path) -> Option<(SystemTime, Option<Sys
 }
 
 fn unix_secs(time: SystemTime) -> u64 {
-    time.duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    time.duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 #[tauri::command]
@@ -333,10 +351,24 @@ mod tests {
     fn ring_horizon_and_since() {
         let ring = ActivityRingBuffer::new();
         let now = Utc::now();
-        ring.push(event(1, DateTime::parse_from_rfc3339(&format_ts(now.timestamp() - 8 * 24 * 60 * 60)).unwrap().with_timezone(&Utc)));
+        ring.push(event(
+            1,
+            DateTime::parse_from_rfc3339(&format_ts(now.timestamp() - 8 * 24 * 60 * 60))
+                .unwrap()
+                .with_timezone(&Utc),
+        ));
         ring.push(event(2, now));
         assert_eq!(ring.since(None, 10).len(), 1);
-        assert!(ring.since(Some(DateTime::parse_from_rfc3339(&format_ts(now.timestamp() + 1)).unwrap().with_timezone(&Utc)), 10).is_empty());
+        assert!(ring
+            .since(
+                Some(
+                    DateTime::parse_from_rfc3339(&format_ts(now.timestamp() + 1))
+                        .unwrap()
+                        .with_timezone(&Utc)
+                ),
+                10
+            )
+            .is_empty());
     }
 
     #[test]

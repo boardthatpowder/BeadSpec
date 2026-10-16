@@ -32,17 +32,22 @@ If any condition is absent, fall back to the built-in Agent tool.
 - Independent test runs (use `Bash` background jobs)
 - Tasks where a single agent suffices
 
-## ruflo-swarm dispatch command
+## ruflo-swarm command sequence
 
 ```bash
 source ~/.claude/ruflo/lib/tags.sh
-ruflo swarm dispatch \
-  --topology mesh \
-  --tags "$(ruflo_key_prefix)|openspec:<change-id>" \
-  "<task description>"
+
+# 1. Initialise the swarm (V3 mode)
+ruflo swarm init --v3-mode
+
+# 2. Start it with an objective
+ruflo swarm start -o "<task description>" -s development
+
+# 3. Coordinate agents to consensus
+ruflo swarm coordinate --agents 15
 ```
 
-Use `--topology hierarchical` when one coordinator agent should direct workers (e.g., a planner + two implementers). Use `--topology mesh` for peer agents that must reach consensus.
+Use `--agents 3` for a single-coordinator + two-worker layout (planner + two implementers). Use `--agents 15` (default) for peer mesh consensus tasks.
 
 ## After dispatch
 

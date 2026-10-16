@@ -1,0 +1,1 @@
+../../../.claude/skills/openspec-beads-followup/SKILL.md

@@ -489,7 +489,9 @@ pub async fn ruflo_version_probe(
 /// Derive workspace labels from `git rev-parse --abbrev-ref HEAD` in the
 /// given project root. Returns unknown/fallback values gracefully if not a
 /// git repo.
-pub(crate) async fn derive_workspace_context(project_path: &str) -> Result<WorkspaceContext, String> {
+pub(crate) async fn derive_workspace_context(
+    project_path: &str,
+) -> Result<WorkspaceContext, String> {
     let cwd = std::path::Path::new(&project_path);
     let args = ["-C", &project_path, "rev-parse", "--abbrev-ref", "HEAD"];
     let out = spawn_managed("git", &args, cwd, Duration::from_secs(10), &[]).await;
@@ -587,9 +589,15 @@ pub async fn get_git_refs_for_issue(
     } else {
         let mut collected = String::new();
         for commit in commits.iter().take(20) {
-            let show_args = ["-C", &project_path, "show", "--format=", "--unified=0", &commit.hash];
-            if let Ok(o) =
-                spawn_managed("git", &show_args, cwd, Duration::from_secs(10), &[]).await
+            let show_args = [
+                "-C",
+                &project_path,
+                "show",
+                "--format=",
+                "--unified=0",
+                &commit.hash,
+            ];
+            if let Ok(o) = spawn_managed("git", &show_args, cwd, Duration::from_secs(10), &[]).await
             {
                 if o.exit_code == Some(0) {
                     collected.push_str(&String::from_utf8_lossy(&o.stdout));
@@ -600,7 +608,11 @@ pub async fn get_git_refs_for_issue(
         collected
     };
 
-    Ok(GitRefs { commits, branches, diff })
+    Ok(GitRefs {
+        commits,
+        branches,
+        diff,
+    })
 }
 
 // ── Validation helpers (exported for tests) ───────────────────────────────────

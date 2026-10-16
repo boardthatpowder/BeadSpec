@@ -25,6 +25,7 @@ import type {
   Task,
   ValidationHistoryEntry,
   ValidationResult,
+  WorkerFinding,
 } from './bindings'
 
 export async function unwrap<T>(
@@ -62,6 +63,10 @@ export function runOpenspecValidate(projectPath: string, change: string): Promis
 
 export function importChangeToBeads(projectPath: string, change: string): Promise<CommandOutput> {
   return unwrap(commands.importChangeToBeads(projectPath, change))
+}
+
+export function listWorkerFindings(projectPath: string): Promise<WorkerFinding[]> {
+  return unwrap(commands.listWorkerFindings(projectPath))
 }
 
 export function listGitnexusProcesses(projectPath: string): Promise<ProcessSummary[]> {

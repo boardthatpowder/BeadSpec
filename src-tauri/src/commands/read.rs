@@ -1,3 +1,4 @@
+use crate::commands::workers::{parse_worker_provenance, WorkerProvenance};
 use crate::db::pool::ProjectRegistry;
 use sqlx::Row;
 use std::sync::Arc;
@@ -20,9 +21,14 @@ pub struct Task {
     pub task_type: String,
     pub assignee: Option<String>,
     pub labels: Vec<String>,
+    pub worker_provenance: Option<WorkerProvenance>,
     pub created_at: String,
     pub updated_at: String,
 }
+
+const TASK_WORKER_NOTES_FIRST_LINE_SQL: &str = "CASE WHEN notes LIKE 'Auto-filed by ruflo-%' \
+     THEN SUBSTRING_INDEX(notes, CHAR(10), 1) \
+     ELSE NULL END AS worker_notes_first_line";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct TaskDetail {
@@ -147,9 +153,10 @@ pub async fn list_tasks(
 
     // ── Data query ────────────────────────────────────────────────────────────
     let mut qb = sqlx::QueryBuilder::<sqlx::MySql>::new(
-        "SELECT id, title, status, priority, issue_type, assignee, created_at, updated_at \
-         FROM issues WHERE status != 'deleted'",
+        "SELECT id, title, status, priority, issue_type, assignee, ",
     );
+    qb.push(TASK_WORKER_NOTES_FIRST_LINE_SQL);
+    qb.push(", created_at, updated_at FROM issues WHERE status != 'deleted'");
 
     // status_filter → WHERE status IN (...)
     if let Some(ref statuses) = effective_status {
@@ -200,6 +207,11 @@ pub async fn list_tasks(
             task_type: r.try_get("issue_type").unwrap_or_else(|_| "task".into()),
             assignee: r.try_get("assignee").ok(),
             labels: vec![], // fetched below
+            worker_provenance: r
+                .try_get::<Option<String>, _>("worker_notes_first_line")
+                .ok()
+                .flatten()
+                .and_then(|notes_first_line| parse_worker_provenance(&notes_first_line)),
             created_at: decode_datetime(r, "created_at"),
             updated_at: decode_datetime(r, "updated_at"),
         })
@@ -510,5 +522,16 @@ mod tests {
             !sql.contains("x,y;z"),
             "Literal ID must not appear in query SQL: {sql}"
         );
+    }
+
+    #[test]
+    fn task_list_worker_provenance_projects_only_first_notes_line() {
+        assert!(
+            super::TASK_WORKER_NOTES_FIRST_LINE_SQL.contains("notes LIKE 'Auto-filed by ruflo-%'")
+        );
+        assert!(
+            super::TASK_WORKER_NOTES_FIRST_LINE_SQL.contains("SUBSTRING_INDEX(notes, CHAR(10), 1)")
+        );
+        assert!(super::TASK_WORKER_NOTES_FIRST_LINE_SQL.contains("AS worker_notes_first_line"));
     }
 }
