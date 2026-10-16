@@ -990,6 +990,64 @@ mod transport_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn task_detail_reads_only_its_own_edges_and_preserves_both_directions() {
+        use std::os::unix::fs::PermissionsExt;
+        let directory = tempfile::tempdir().unwrap();
+        let binary = directory.path().join("bd");
+        std::fs::write(&binary, r#"#!/bin/sh
+shift 4
+printf '%s\n' "$*" >> calls
+case "$*" in
+  'show B-task --json --include-comments --include-dependents')
+    printf '%s\n' '[{"id":"B-task","title":"Task","dependents":[{"id":"B-child","dependency_type":"blocks"},{"id":"B-child","dependency_type":"related"},{"id":"B-closed","status":"closed","dependency_type":"parent-child"}]}]' ;;
+  'dep list B-task B-task --json')
+    printf '%s\n' '[{"issue_id":"B-task","depends_on_id":"other:missing","type":"related"},{"issue_id":"B-task","depends_on_id":"B-epic","type":"parent-child"}]' ;;
+  *) printf 'Unexpected project-wide or unscoped read: %s\n' "$*" >&2; exit 1 ;;
+esac
+"#).unwrap();
+        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let project_path = directory.path().to_string_lossy().into_owned();
+        let source = BeadsDataSource {
+            project_path: project_path.clone(),
+            inner: Arc::new(Inner {
+                binary,
+                beads_dir: directory.path().to_owned(),
+                context: json!({"dolt_mode":"embedded"}),
+                actor: "test".into(),
+                client: reqwest::Client::builder().no_proxy().build().unwrap(),
+                token: None,
+                cli_gate: workspace_gate(directory.path()),
+                session: Mutex::new(None),
+                lifecycle: Mutex::new(()),
+                enable_gate: Mutex::new(()),
+                closed: AtomicBool::new(false),
+                status: RwLock::new(ProjectBackendStatus {
+                    project_path,
+                    read_transport: Transport::Cli,
+                    write_transport: Transport::Cli,
+                    live_update_mode: LiveUpdateMode::Disabled,
+                    journal_enabled: false,
+                    historical_coverage: HISTORY_COVERAGE.into(),
+                    reason: None,
+                }),
+            }),
+        };
+        let detail = crate::commands::read::load_task_detail(&source, "B-task")
+            .await
+            .unwrap();
+        assert_eq!(detail.dependencies, ["other:missing", "B-epic"]);
+        assert_eq!(detail.dependents, ["B-child", "B-closed"]);
+        assert_eq!(
+            std::fs::read_to_string(directory.path().join("calls"))
+                .unwrap()
+                .lines()
+                .count(),
+            2
+        );
+    }
     #[test]
     fn redirected_embedded_workspaces_share_one_cli_gate() {
         let directory = tempfile::tempdir().unwrap();

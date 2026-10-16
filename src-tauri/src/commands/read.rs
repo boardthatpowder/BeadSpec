@@ -233,18 +233,25 @@ pub async fn get_task(
         .get(&project_path)
         .await
         .map_err(|_| not_connected(&project_path))?;
-    let issue = source.get_issue(&issue_id).await?;
-    let mut ids: Vec<_> = source
-        .list_issues()
-        .await?
-        .iter()
-        .filter_map(|v| v["id"].as_str().map(ToOwned::to_owned))
-        .collect();
-    if !ids.contains(&issue_id) {
-        ids.push(issue_id.clone());
+    load_task_detail(&source, &issue_id).await
+}
+
+pub(crate) async fn load_task_detail(
+    source: &BeadsDataSource,
+    issue_id: &str,
+) -> Result<TaskDetail, String> {
+    let issue = source.get_issue(issue_id).await?;
+    // Keep raw outbound targets (including missing/external issues). The detail
+    // read already requests incoming neighbors through include_dependents.
+    let edges = source.dependencies(&[issue_id.to_owned()]).await?;
+    let (dependencies, mut dependents) = dependency_ids(&edges, issue_id);
+    for dependent in issue["dependents"].as_array().into_iter().flatten() {
+        if let Some(id) = dependent["id"].as_str() {
+            if !dependents.iter().any(|existing| existing == id) {
+                dependents.push(id.to_owned());
+            }
+        }
     }
-    let edges = source.dependencies(&ids).await?;
-    let (dependencies, dependents) = dependency_ids(&edges, &issue_id);
     let task = task_from_issue(&issue);
     Ok(TaskDetail {
         id: task.id,

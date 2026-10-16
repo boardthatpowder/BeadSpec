@@ -1,6 +1,6 @@
 //! Journal-driven Beads refresh, with periodic reconciliation for unjournaled changes.
 use super::sse::SseParser;
-use crate::bd::api::{BeadsDataSource, FeedError, JournalRecord, LiveUpdateMode};
+use crate::bd::api::{BeadsDataSource, EventsPage, FeedError, JournalRecord, LiveUpdateMode};
 use crate::events::activity::{emit_project_event, retain_project_event, ActivityEvent};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -251,47 +251,15 @@ impl BeadsSync {
     }
     async fn bootstrap(&self) -> Result<(i64, Option<JournalRecord>), String> {
         if self.source.is_http() {
-            let page = self
-                .source
-                .events_page(i64::MAX, 1)
-                .await
-                .map_err(|e| e.to_string())?;
-            // Retained history is bounded in memory; do not substitute MAX for the actual head.
-            let mut since = 0;
-            let mut batches = 0;
-            loop {
-                match self.source.events_page(since, 1000).await {
-                    Ok(page) => {
-                        if page.records.is_empty() {
-                            break;
-                        }
-                        for record in page.records {
-                            since = since.max(record.seq);
-                            self.process(&record, false).await;
-                        }
-                    }
-                    Err(FeedError::Truncated { floor, .. }) => {
-                        since = floor.saturating_sub(1);
-                    }
-                    Err(_) => break,
-                }
-                batches += 1;
-                if batches >= 100 {
-                    break;
-                }
+            let (head, records) =
+                load_http_history(|since, limit| self.source.events_page(since, limit)).await?;
+            for record in &records {
+                self.process(record, false).await;
             }
             self.source.list_issues().await?;
             self.emit_list_changed();
-            let anchor = if page.head > 0 {
-                self.source
-                    .events_page(page.head - 1, 1)
-                    .await
-                    .ok()
-                    .and_then(|p| p.records.into_iter().find(|record| record.seq == page.head))
-            } else {
-                None
-            };
-            Ok((page.head, anchor))
+            let anchor = records.last().cloned();
+            Ok((head, anchor))
         } else {
             let (head, last) = self.cli_drain(0, false).await?;
             self.source.list_issues().await?;
@@ -419,6 +387,55 @@ impl BeadsSync {
     }
 }
 
+async fn load_http_history<F, Fut>(mut events_page: F) -> Result<(i64, Vec<JournalRecord>), String>
+where
+    F: FnMut(i64, u32) -> Fut,
+    Fut: std::future::Future<Output = Result<EventsPage, FeedError>>,
+{
+    let head = events_page(i64::MAX, 1)
+        .await
+        .map_err(|e| e.to_string())?
+        .head;
+    let mut records = Vec::new();
+    // The activity buffer retains 5000 records. Start near the captured head so
+    // large journals cannot exhaust the backfill budget on obsolete history.
+    let mut since = head.saturating_sub(5000).max(0);
+    for _ in 0..100 {
+        if since >= head {
+            return Ok((head, records));
+        }
+        match events_page(since, 1000).await {
+            Ok(page) => {
+                if page.head < head {
+                    return Err("Journal reset during history bootstrap".into());
+                }
+                let previous = since;
+                for record in page.records {
+                    if record.seq > since && record.seq <= head {
+                        since = record.seq;
+                        records.push(record);
+                    }
+                }
+                if since == previous {
+                    return Err("Journal history did not reach the captured head".into());
+                }
+            }
+            Err(FeedError::Truncated {
+                floor,
+                head: current_head,
+            }) if floor > since && floor <= head && current_head >= head => {
+                since = floor.saturating_sub(1);
+            }
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    if since >= head {
+        Ok((head, records))
+    } else {
+        Err("Journal history bootstrap exceeded its page budget".into())
+    }
+}
+
 fn truncated_window(error: &str) -> Option<(i64, i64)> {
     let start = error.find('{')?;
     let end = error[start..].rfind('}')? + start;
@@ -431,6 +448,113 @@ fn truncated_window(error: &str) -> Option<(i64, i64)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn record(seq: i64) -> JournalRecord {
+        serde_json::from_value(serde_json::json!({
+            "seq": seq, "ts": "2026-10-16T00:00:00Z", "op": "update", "issue_id": "B-1"
+        }))
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn bootstrap_loads_recent_window_even_with_over_100_batches_of_history() {
+        let (head, records) = load_http_history(|since, limit| {
+            std::future::ready(Ok(EventsPage {
+                head: 200_000,
+                records: if since == i64::MAX {
+                    vec![]
+                } else {
+                    ((since + 1)..=200_000)
+                        .take(limit as usize)
+                        .map(record)
+                        .collect()
+                },
+            }))
+        })
+        .await
+        .unwrap();
+        assert_eq!(head, 200_000);
+        assert_eq!(records.len(), 5000);
+        assert_eq!(records.first().unwrap().seq, 195_001);
+        assert_eq!(records.last().unwrap().seq, head);
+    }
+
+    #[tokio::test]
+    async fn bootstrap_does_not_accept_partial_history_after_page_failure() {
+        let result = load_http_history(|since, _| {
+            std::future::ready(match since {
+                i64::MAX => Ok(EventsPage {
+                    head: 2,
+                    records: vec![],
+                }),
+                0 => Ok(EventsPage {
+                    head: 2,
+                    records: vec![record(1)],
+                }),
+                _ => Err(FeedError::Other("temporary failure".into())),
+            })
+        })
+        .await;
+        assert_eq!(result.unwrap_err(), "temporary failure");
+    }
+
+    #[tokio::test]
+    async fn bootstrap_does_not_accept_partial_history_at_batch_limit() {
+        let result = load_http_history(|since, _| {
+            std::future::ready(Ok(EventsPage {
+                head: 5000,
+                records: if since == i64::MAX {
+                    vec![]
+                } else {
+                    vec![record(since + 1)]
+                },
+            }))
+        })
+        .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn bootstrap_rejects_empty_or_reset_pages_before_captured_head() {
+        for current_head in [0, 2] {
+            let result = load_http_history(|since, _| {
+                std::future::ready(Ok(EventsPage {
+                    head: if since == i64::MAX { 2 } else { current_head },
+                    records: vec![],
+                }))
+            })
+            .await;
+            assert!(result.is_err());
+        }
+    }
+
+    #[tokio::test]
+    async fn bootstrap_recovers_retention_and_stops_at_initial_head() {
+        let (head, records) = load_http_history(|since, _| {
+            std::future::ready(match since {
+                i64::MAX => Ok(EventsPage {
+                    head: 20,
+                    records: vec![],
+                }),
+                0 => Err(FeedError::Truncated {
+                    floor: 19,
+                    head: 20,
+                }),
+                18 => Ok(EventsPage {
+                    head: 21,
+                    records: vec![record(19), record(20), record(21)],
+                }),
+                _ => Ok(EventsPage {
+                    head: 21,
+                    records: vec![],
+                }),
+            })
+        })
+        .await
+        .unwrap();
+        assert_eq!(head, 20);
+        assert_eq!(records.iter().map(|r| r.seq).collect::<Vec<_>>(), [19, 20]);
+    }
     #[test]
     fn native_truncation_envelope_retains_window() {
         assert_eq!(
